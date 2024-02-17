@@ -1,0 +1,3 @@
+[submodule "tf/The-Forge"]
+	path = tf/The-Forge
+	url = https://github.com/ConfettiFX/The-Forge

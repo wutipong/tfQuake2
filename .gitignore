@@ -25,3 +25,5 @@ releaseppc64le
 Debug
 Release
 Quake2
+build
+.vscode

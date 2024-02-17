@@ -1,0 +1,91 @@
+#frag basic_color_quad.frag
+#include "basic_color_quad.frag.fsl"
+#end
+
+#vert basic_color_quad.vert
+#include "basic_color_quad.vert.fsl"
+#end
+
+#frag basic.frag
+#include "basic.frag.fsl"
+#end
+
+#vert basic.vert
+#include "basic.vert.fsl"
+#end
+
+#vert beam.vert
+#include "beam.vert.fsl"
+#end
+
+#vert d_light.vert
+#include "d_light.vert.fsl"
+#end
+
+#frag model.frag
+#include "model.frag.fsl"
+#end
+
+#vert model.vert
+#include "model.vert.fsl"
+#end
+
+#vert nullmodel.vert
+#include "nullmodel.vert.fsl"
+#end
+
+#vert particle.vert
+#include "particle.vert.fsl"
+#end
+
+#frag point_particle.frag
+#include "point_particle.frag.fsl"
+#end
+
+#vert point_particle.vert
+#include "point_particle.vert.fsl"
+#end
+
+#frag polygon_lmap.frag
+#include "polygon_lmap.frag.fsl"
+#end
+
+#vert polygon_lmap.vert
+#include "polygon_lmap.vert.fsl"
+#end
+
+#vert polygon_warp.vert
+#include "polygon_warp.vert.fsl"
+#end
+
+#vert polygon.vert
+#include "polygon.vert.fsl"
+#end
+
+#frag postprocess.frag
+#include "postprocess.frag.fsl"
+#end
+
+#vert postprocess.vert
+#include "postprocess.vert.fsl"
+#end
+
+#vert shadows.vert
+#include "shadows.vert.fsl"
+#end
+
+#vert skybox.vert
+#include "skybox.vert.fsl"
+#end
+
+#vert sprite.vert
+#include "sprite.vert.fsl"
+#end
+
+#frag world_warp.frag
+#include "world_warp.frag.fsl"
+#end
+
+#vert world_warp.vert
+#include "world_warp.vert.fsl"
+#end
