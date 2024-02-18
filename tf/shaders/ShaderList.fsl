@@ -35,11 +35,11 @@
 #include "nullmodel.vert.fsl"
 #end
 
-/*
 #vert particle.vert
 #include "particle.vert.fsl"
 #end
 
+/*
 #frag point_particle.frag
 #include "point_particle.frag.fsl"
 #end
