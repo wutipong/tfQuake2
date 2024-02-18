@@ -1,32 +1,38 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 inVertex;
-layout(location = 1) in vec4 inColor;
-layout(location = 2) in vec2 inTexCoord;
-
-layout(push_constant) uniform PushConstant
+PUSH_CONSTANT(PushConstant, b1)
 {
-    mat4 vpMatrix;
-} pc;
-
-layout(set = 1, binding = 0) uniform UniformBufferObject
-{
-    mat4 model;
-    int textured;
-} ubo;
-
-layout(location = 0) out vec4 color;
-layout(location = 1) out vec2 texCoord;
-layout(location = 2) out int textured;
-
-out gl_PerVertex {
-    vec4 gl_Position;
+    DATA(float4x4, vpMatrix, None);
 };
 
-void main() {
-    gl_Position = pc.vpMatrix * ubo.model * vec4(inVertex, 1.0);
-    color = inColor;
-    texCoord = inTexCoord;
-    textured = ubo.textured;
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, model, None);
+    DATA(float, textured, None);
+};
+
+STRUCT(VSInput)
+{
+	DATA(float3, inVertex, POSITION);
+    DATA(float4, inColor, COLOR);
+    DATA(float2, inTexCoord, TEXCOORD0);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+	DATA(float4, color, COLOR);
+    DATA(float, textured, COLOR1);
+};
+
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.position = mul(mul(Get(vpMatrix), Get(model)), float4(In.inVertex, 1.0));
+    Out.color = In.inColor;
+    Out.texCoord = In.inTexCoord;
+    Out.textured = Get(textured);
+
+    RETURN(Out);
 }

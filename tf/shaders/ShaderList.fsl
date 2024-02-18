@@ -27,11 +27,11 @@
 #include "model.frag.fsl"
 #end
 
-/*
 #vert model.vert
 #include "model.vert.fsl"
 #end
 
+/*
 #vert nullmodel.vert
 #include "nullmodel.vert.fsl"
 #end
