@@ -23,11 +23,11 @@
 #include "d_light.vert.fsl"
 #end
 
-/*
 #frag model.frag
 #include "model.frag.fsl"
 #end
 
+/*
 #vert model.vert
 #include "model.vert.fsl"
 #end
