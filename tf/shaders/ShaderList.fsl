@@ -6,6 +6,7 @@
 #include "basic_color_quad.vert.fsl"
 #end
 
+/*
 #frag basic.frag
 #include "basic.frag.fsl"
 #end
@@ -89,3 +90,4 @@
 #vert world_warp.vert
 #include "world_warp.vert.fsl"
 #end
+*/
