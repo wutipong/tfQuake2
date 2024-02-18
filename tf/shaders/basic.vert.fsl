@@ -17,7 +17,7 @@ STRUCT(VSOutput)
 	DATA(float4, position, SV_Position);
     DATA(float2, texCoord, TEXCOORD0);
 	DATA(float4, color, COLOR);
-    DATA(float, aTreshold, COLOR1);
+    DATA(float, aTreshold, NONE);
 };
 
 VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
@@ -25,9 +25,9 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     INIT_MAIN;
     VSOutput Out;
 
-    float2 vPos = In.inVertex.xy * scale - (float2(1.0, 1.0) - scale);
-    Out.position = float4(vPos + offset * 2.0, 0.0, 1.0);
-    Out.texCoord = In.inTexCoord.xy * uvScale + uvOffset;
+    float2 vPos = In.inVertex.xy * Get(scale) - (float2(1.0, 1.0) - Get(scale));
+    Out.position = float4(vPos + Get(offset) * 2.0, 0.0, 1.0);
+    Out.texCoord = In.inTexCoord.xy * Get(uvScale) + Get(uvOffset);
     Out.color = float4(1.0, 1.0, 1.0, 1.0);
     Out.aTreshold = 0.666;
 

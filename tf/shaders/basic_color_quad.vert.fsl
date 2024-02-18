@@ -21,9 +21,9 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     INIT_MAIN;
     VSOutput Out;
 
-    float2 vPos = In.inVertex.xy * scale - (float2(1.0, 1.0) - scale);
-    Out.position = float4(vPos + offset * 2.0, 0.0, 1.0);
-    Out.color = color;
+    float2 vPos = In.inVertex.xy * Get(scale) - (float2(1.0, 1.0) - Get(scale));
+    Out.position = float4(vPos + Get(offset) * 2.0, 0.0, 1.0);
+    Out.color = Get(color);
 
     RETURN(Out);
 }

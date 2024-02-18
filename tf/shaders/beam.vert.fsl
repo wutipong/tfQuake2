@@ -25,7 +25,7 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     VSOutput Out;
 
     Out.position = mul(Get(mvpMatrix), float4(In.inVertex, 1.0));
-    Out.color = color;
+    Out.color = Get(color);
 
     RETURN(Out);
 }
