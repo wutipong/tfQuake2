@@ -55,11 +55,11 @@
 #include "polygon_lmap.vert.fsl"
 #end
 
-/*
 #vert polygon_warp.vert
 #include "polygon_warp.vert.fsl"
 #end
 
+/*
 #vert polygon.vert
 #include "polygon.vert.fsl"
 #end
