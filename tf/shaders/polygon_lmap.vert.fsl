@@ -1,32 +1,38 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 inVertex;
-layout(location = 1) in vec2 inTexCoord;
-layout(location = 2) in vec2 inTexCoordLmap;
-
-layout(push_constant) uniform PushConstant
+STRUCT(VSInput)
 {
-    mat4 vpMatrix;
-} pc;
-
-layout(set = 1, binding = 0) uniform UniformBufferObject
-{
-    mat4 model;
-    float viewLightmaps;
-} ubo;
-
-layout(location = 0) out vec2 texCoord;
-layout(location = 1) out vec2 texCoordLmap;
-layout(location = 2) out float viewLightmaps;
-
-out gl_PerVertex {
-    vec4 gl_Position;
+	DATA(float3, inVertex, POSITION);
+    DATA(float2, inTexCoord, TEXCOORD0);
+    DATA(float2, inTexCoordLmap, TEXCOORD1);
 };
 
-void main() {
-    gl_Position = pc.vpMatrix * ubo.model * vec4(inVertex, 1.0);
-    texCoord = inTexCoord;
-    texCoordLmap = inTexCoordLmap;
-    viewLightmaps = ubo.viewLightmaps;
+PUSH_CONSTANT(PushConstant, b1)
+{
+    DATA(float4x4, vpMatrix, None);
+};
+
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, model, None);
+    DATA(float, viewLightmaps, None);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+    DATA(float2, texCoordLmap, TEXCOORD1);
+	DATA(float, viewLightmaps, COLOR0);
+};
+
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.position = mul(mul(Get(vpMatrix), Get(model)), float4(In.inVertex, 1.0));
+    Out.texCoord = In.inTexCoord;
+    Out.texCoordLmap = In.inTexCoordLmap;
+    Out.viewLightmaps = Get(viewLightmaps);
+
+    RETURN(Out);
 }

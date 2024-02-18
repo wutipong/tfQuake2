@@ -1,17 +1,21 @@
-#version 450
+RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t0, binding = 0);
+RES(Tex2D(float4), sLightmap, UPDATE_FREQ_NONE, t1, binding = 0);
+RES(SamplerState,  textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 
-layout(set = 0, binding = 0) uniform sampler2D sTexture;
-layout(set = 2, binding = 0) uniform sampler2D sLightmap;
-
-layout(location = 0) in vec2 texCoord;
-layout(location = 1) in vec2 texCoordLmap;
-layout(location = 2) in float viewLightmaps;
-
-layout(location = 0) out vec4 fragmentColor;
-
-void main()
+STRUCT(VSOutput)
 {
-    vec4 color = texture(sTexture, texCoord);
-    vec4 light = texture(sLightmap, texCoordLmap);
-    fragmentColor = (1.0 - viewLightmaps) * color * light + viewLightmaps * light;
+	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+    DATA(float2, texCoordLmap, TEXCOORD1);
+	DATA(float, viewLightmaps, COLOR0);
+};
+
+float4 PS_MAIN( VSOutput In )
+{
+    INIT_MAIN;
+    float4 color = SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord);
+    float4 light = SampleTex2D(Get(sLightmap), Get(textureSampler), In.texCoordLmap);
+
+    float4 fragmentColor = (1.0 - In.viewLightmaps) * color * light + In.viewLightmaps * light;
+    RETURN(fragmentColor);
 }
