@@ -31,11 +31,11 @@
 #include "model.vert.fsl"
 #end
 
-/*
 #vert nullmodel.vert
 #include "nullmodel.vert.fsl"
 #end
 
+/*
 #vert particle.vert
 #include "particle.vert.fsl"
 #end

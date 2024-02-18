@@ -1,26 +1,32 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 inVertex;
-layout(location = 1) in vec3 inColor;
-
-layout(push_constant) uniform PushConstant
+PUSH_CONSTANT(PushConstant, b1)
 {
-    mat4 vpMatrix;
-} pc;
-
-layout(binding = 0) uniform UniformBufferObject
-{
-    mat4 model;
-} ubo;
-
-layout(location = 0) out vec4 color;
-
-out gl_PerVertex {
-    vec4 gl_Position;
+    DATA(float4x4, vpMatrix, None);
 };
 
-void main() {
-    gl_Position = pc.vpMatrix * ubo.model * vec4(inVertex, 1.0);
-    color = vec4(inColor, 1.0);
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float4x4, model, None);
+};
+
+STRUCT(VSInput)
+{
+	DATA(float3, inVertex, POSITION);
+    DATA(float3, inColor, COLOR);
+};
+
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+	DATA(float4, color, COLOR);
+};
+
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.position = mul(mul(Get(vpMatrix), Get(model)), float4(In.inVertex, 1.0));
+    Out.color = float4(In.inColor, 1.0);
+
+    RETURN(Out);
 }
