@@ -59,11 +59,11 @@
 #include "polygon_warp.vert.fsl"
 #end
 
-/*
 #vert polygon.vert
 #include "polygon.vert.fsl"
 #end
 
+/*
 #frag postprocess.frag
 #include "postprocess.frag.fsl"
 #end
