@@ -14,11 +14,11 @@
 #include "basic.vert.fsl"
 #end
 
-/*
 #vert beam.vert
 #include "beam.vert.fsl"
 #end
 
+/*
 #vert d_light.vert
 #include "d_light.vert.fsl"
 #end
