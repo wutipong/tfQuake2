@@ -79,11 +79,11 @@
 #include "skybox.vert.fsl"
 #end
 
-/*
 #vert sprite.vert
 #include "sprite.vert.fsl"
 #end
 
+/*
 #frag world_warp.frag
 #include "world_warp.frag.fsl"
 #end
