@@ -1,37 +1,42 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(location = 0) in vec3 inVertex;
-layout(location = 1) in vec4 inColor;
-
-layout(push_constant) uniform PushConstant
+STRUCT(VSInput)
 {
-    mat4 mvpMatrix;
-} pc;
-
-layout(binding = 0) uniform UniformBufferObject
-{
-    float pointSize;
-    float pointScale;
-    float minPointSize;
-    float maxPointSize;
-    float att_a;
-    float att_b;
-    float att_c;
-} ubo;
-
-layout(location = 0) out vec4 color;
-
-out gl_PerVertex {
-    vec4 gl_Position;
-    float gl_PointSize;
+	DATA(float3, inVertex, POSITION);
+    DATA(float4, inColor, COLOR);
 };
 
-void main() {
-    gl_Position = pc.mvpMatrix * vec4(inVertex, 1.0);
+PUSH_CONSTANT(PushConstant, b1)
+{
+    DATA(float4x4, mvpMatrix, None);
+};
 
-    float dist_atten = ubo.pointScale / (ubo.att_a + ubo.att_b * gl_Position.w + ubo.att_c * gl_Position.w * gl_Position.w);
-    gl_PointSize = clamp(ubo.pointScale * ubo.pointSize * sqrt(dist_atten), ubo.minPointSize, ubo.maxPointSize);
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+{
+    DATA(float, pointSize, None);
+    DATA(float, pointScale, None);
+    DATA(float, minPointSize, None);
+    DATA(float, maxPointSize, None);
+    DATA(float, att_a, None);
+    DATA(float, att_b, None);
+    DATA(float, att_c, None);
+};
 
-    color = inColor;
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+	DATA(float4, color, COLOR);
+    DATA(float, pointSize, PSIZE);
+};
+
+VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
+{
+    INIT_MAIN;
+    VSOutput Out;
+
+    Out.position = mul(Get(mvpMatrix), float4(In.inVertex, 1.0));
+
+    float dist_atten = Get(pointScale) / (Get(att_a) + Get(att_b) * Out.position.w + Get(att_c) * pow(Out.position.w, 2) );
+    Out.pointSize = clamp(Get(pointScale) * Get(pointSize) * sqrt(dist_atten), Get(minPointSize), Get(maxPointSize));
+    Out.color = In.inColor;
+
+    RETURN(Out);
 }
