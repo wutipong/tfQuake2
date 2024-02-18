@@ -83,7 +83,6 @@
 #include "sprite.vert.fsl"
 #end
 
-/*
 #frag world_warp.frag
 #include "world_warp.frag.fsl"
 #end
@@ -91,4 +90,3 @@
 #vert world_warp.vert
 #include "world_warp.vert.fsl"
 #end
-*/

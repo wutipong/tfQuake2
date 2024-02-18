@@ -1,36 +1,39 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
 // Underwater screen warp effect similar to what software renderer provides
 
-layout(push_constant) uniform PushConstant
+PUSH_CONSTANT(PushConstant, b1)
 {
-	float time;
-	float scale;
-	float scrWidth;
-	float scrHeight;
-} pc;
+	DATA(float, time, None);
+	DATA(float, scale, None);
+	DATA(float, scrWidth, None);
+	DATA(float, scrHeight, None);
+};
 
-layout(set = 0, binding = 0) uniform sampler2D sTexture;
-
-layout(location = 0) out vec4 fragmentColor;
+RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 0);
+RES(SamplerState,  textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 
 #define PI 3.1415
 
-void main()
+STRUCT(VSOutput)
 {
-	vec2 uv = vec2(gl_FragCoord.x / pc.scrWidth, gl_FragCoord.y / pc.scrHeight);
+	DATA(float4, position, SV_Position);
+};
 
-	if (pc.time > 0)
+float4 PS_MAIN( VSOutput In )
+{
+    INIT_MAIN;
+
+    float2 uv = float2(In.position.x / Get(scrWidth), In.position.y / Get(scrHeight));
+
+	if (Get(time) > 0)
 	{
-		float sx = pc.scale - abs(pc.scrWidth  / 2.0 - gl_FragCoord.x) * 2.0 / pc.scrWidth;
-		float sy = pc.scale - abs(pc.scrHeight / 2.0 - gl_FragCoord.y) * 2.0 / pc.scrHeight;
-		float xShift = 2.0 * pc.time + uv.y * PI * 10;
-		float yShift = 2.0 * pc.time + uv.x * PI * 10;
-		vec2 distortion = vec2(sin(xShift) * sx, sin(yShift) * sy) * 0.00666;
+		float sx = Get(scale) - abs(Get(scrWidth)  / 2.0 - In.position.x) * 2.0 / Get(scrWidth);
+		float sy = Get(scale) - abs(Get(scrHeight) / 2.0 - In.position.y) * 2.0 / Get(scrHeight);
+		float xShift = 2.0 * Get(time) + uv.y * PI * 10;
+		float yShift = 2.0 * Get(time) + uv.x * PI * 10;
+		float2 distortion = float2(sin(xShift) * sx, sin(yShift) * sy) * 0.00666;
 
 		uv += distortion;
 	}
 
-	fragmentColor = texture(sTexture, uv);
+	RETURN(SampleTex2D(Get(sTexture), Get(textureSampler), uv));
 }
