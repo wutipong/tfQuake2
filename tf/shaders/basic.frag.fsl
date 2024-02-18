@@ -1,16 +1,19 @@
-#version 450
+RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 0);
+RES(SamplerState,  textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 
-layout(set = 0, binding = 0) uniform sampler2D sTexture;
-
-layout(location = 0) in vec2 texCoord;
-layout(location = 1) in vec4 color;
-layout(location = 2) in float aTreshold;
-
-layout(location = 0) out vec4 fragmentColor;
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+	DATA(float4, color, COLOR);
+    DATA(float, aTreshold, COLOR1);
+};
 
 void main()
 {
-    fragmentColor = texture(sTexture, texCoord) * color;
-    if(fragmentColor.a < aTreshold)
+    float4 fragmentColor = SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord) * In.color;
+    if(fragmentColor.a < In.aTreshold)
         discard;
+
+    RETURN(fragmentColor);
 }
