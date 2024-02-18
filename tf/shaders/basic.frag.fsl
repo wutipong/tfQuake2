@@ -9,8 +9,10 @@ STRUCT(VSOutput)
     DATA(float, aTreshold, COLOR1);
 };
 
-void main()
+float4 PS_MAIN( VSOutput In )
 {
+    INIT_MAIN;
+    
     float4 fragmentColor = SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord) * In.color;
     if(fragmentColor.a < In.aTreshold)
         discard;
