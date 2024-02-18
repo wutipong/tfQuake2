@@ -75,11 +75,11 @@
 #include "shadows.vert.fsl"
 #end
 
-/*
 #vert skybox.vert
 #include "skybox.vert.fsl"
 #end
 
+/*
 #vert sprite.vert
 #include "sprite.vert.fsl"
 #end
