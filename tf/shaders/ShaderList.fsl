@@ -71,11 +71,11 @@
 #include "postprocess.vert.fsl"
 #end
 
-/*
 #vert shadows.vert
 #include "shadows.vert.fsl"
 #end
 
+/*
 #vert skybox.vert
 #include "skybox.vert.fsl"
 #end
