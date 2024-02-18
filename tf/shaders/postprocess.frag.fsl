@@ -1,27 +1,30 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-
-layout(push_constant) uniform PushConstant
+PUSH_CONSTANT(PushConstant, b1)
 {
-	float postprocess;
-	float gamma;
-} pc;
+	DATA(float, postprocess, None);
+	DATA(float, gamma, None);
+};
 
-layout(set = 0, binding = 0) uniform sampler2D sTexture;
+RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 0);
+RES(SamplerState,  textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 
-layout(location = 0) in vec2 texCoord;
-layout(location = 0) out vec4 fragmentColor;
-
-void main() 
+STRUCT(VSOutput)
 {
+	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
+};
+
+float4 PS_MAIN( VSOutput In )
+{
+    INIT_MAIN;
+
 	// apply any additional world-only postprocessing effects here (if enabled)
-	if (pc.postprocess > 0.0)
+	if (Get(postprocess) > 0.0)
 	{
 		//gamma + color intensity bump
-		fragmentColor = vec4(pow(texture(sTexture, texCoord).rgb * 1.5, vec3(pc.gamma)), 1.0);
+		RETURN(float4(pow(SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord).rgb * 1.5, float3(Get(gamma), Get(gamma), Get(gamma))), 1.0));
 	}
 	else
 	{
-		fragmentColor = texture(sTexture, texCoord);
+		RETURN(SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord));
 	}
 }

@@ -63,7 +63,6 @@
 #include "polygon.vert.fsl"
 #end
 
-/*
 #frag postprocess.frag
 #include "postprocess.frag.fsl"
 #end
@@ -72,6 +71,7 @@
 #include "postprocess.vert.fsl"
 #end
 
+/*
 #vert shadows.vert
 #include "shadows.vert.fsl"
 #end
