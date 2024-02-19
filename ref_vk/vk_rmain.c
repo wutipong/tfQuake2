@@ -1109,7 +1109,8 @@ qboolean R_SetMode (void)
 	rserr_t err;
 	qboolean fullscreen;
 
-	fullscreen = vid_fullscreen->value;
+	/// TODO: temporary disable fullscreen to allow debugging.
+	fullscreen = false; //vid_fullscreen->value;
 
 	vid_gamma->modified = false;
 	vid_fullscreen->modified = false;
