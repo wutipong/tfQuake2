@@ -24,7 +24,7 @@ STRUCT(VSOutput)
 {
 	DATA(float4, position, SV_Position);
 	DATA(float4, color, COLOR);
-    DATA(float, pointSize, PSIZE);
+    DATA(float, pointSize, SV_PointSize);
 };
 
 VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )

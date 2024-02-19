@@ -901,10 +901,9 @@ STRUCT(VSOutput)
 {
 	DATA(float4, position, SV_Position);
 	DATA(float4, color, COLOR);
-    DATA(float, pointSize, PSIZE);
+    DATA(float, pointSize, SV_PointSize);
 };
 layout(location = 0) out(float4) out_VSOutput_color;
-layout(location = 1) out(float) out_VSOutput_pointSize;
 #line 29
 
 void main()
@@ -931,7 +930,7 @@ void main()
     	VSOutput out_VSOutput = Out;
     	gl_Position = out_VSOutput.position;
     	out_VSOutput_color = out_VSOutput.color;
-    	out_VSOutput_pointSize = out_VSOutput.pointSize;
+    	gl_PointSize = out_VSOutput.pointSize;
     	return;
     }
 #line 41
