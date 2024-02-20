@@ -870,7 +870,7 @@ PUSH_CONSTANT(PushConstant, b1)
     DATA(float4x4, vpMatrix, None);
 } PushConstant;
 
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_NONE, b0, binding = 0)
 {
 #define _Getmodel model
 #line 13

@@ -856,7 +856,7 @@ bool any(vec3 x) { return any(notEqual(x, vec3(0))); }
 #line 1 "D:/Documents/tfQuake2/tf/shaders/ShaderList.fsl"
 #line 6 "D:/Documents/tfQuake2/tf/shaders/ShaderList.fsl"
 #line 1 "D:/Documents/tfQuake2/tf/shaders/basic_color_quad.vert.fsl"
-CBUFFER(imageTransform, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+CBUFFER(imageTransform, UPDATE_FREQ_NONE, b0, binding = 0)
 {
 #define _Getoffset offset
 #line 3

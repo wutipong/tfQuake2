@@ -872,7 +872,7 @@ PUSH_CONSTANT(PushConstant, b1)
     DATA(float4x4, mvpMatrix, None);
 } PushConstant;
 
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_NONE, b0, binding = 0)
 {
 #define _GetpointSize pointSize
 #line 14

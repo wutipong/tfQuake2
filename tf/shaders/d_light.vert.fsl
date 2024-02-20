@@ -4,7 +4,7 @@ STRUCT(VSInput)
     DATA(float3, inColor, COLOR);
 };
 
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_NONE, b0, binding = 0)
 {
     DATA(float4x4, mvpMatrix, None);
 };

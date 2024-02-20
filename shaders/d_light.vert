@@ -865,7 +865,7 @@ layout(location = 0) in(float3) POSITION;
 layout(location = 1) in(float3) COLOR;
 #line 6
 
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_NONE, b0, binding = 0)
 {
 #define _GetmvpMatrix mvpMatrix
 #line 9
