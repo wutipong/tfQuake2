@@ -248,6 +248,10 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/win32/winquake.h"
 )
 
+target_compile_features(tf-quake2-main PRIVATE cxx_std_20)
+set_property(TARGET tf-quake2-main PROPERTY CXX_STANDARD 20)
+set_property(TARGET tf-quake2-main PROPERTY CXX_STANDARD_REQUIRED ON)
+
 target_include_directories(tf-quake2-main PRIVATE
     "The-Forge/Common_3/Application/Interfaces"
     "The-Forge/Common_3/Application/ThirdParty/OpenSource/gainput/lib/source"
@@ -310,8 +314,8 @@ function(compile_shaders)
         COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:tf-quake2-main>/CompiledShaders"
         COMMAND "${Python3_EXECUTABLE}"
             "${CMAKE_CURRENT_SOURCE_DIR}/The-Forge/Common_3/Tools/ForgeShadingLanguage/fsl.py"
-            "-dShaders" "-bCompiledShaders" "-l DIRECT3D12 VULKAN" --compile --verbose
-            ${COMPILE_SHADERS_SHADER_LIST}
+            "-dShaders" "-bCompiledShaders" "-l DIRECT3D12 VULKAN" "--compile" "--verbose" 
+            "${COMPILE_SHADERS_SHADER_LIST}" "--cache-args"
             WORKING_DIRECTORY "$<TARGET_FILE_DIR:tf-quake2-main>"
 )
 endfunction()
