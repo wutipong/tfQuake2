@@ -181,7 +181,7 @@ void Vk_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp, image_t *skin, fl
 
 	struct {
 		float model[16];
-		int textured;
+		float textured;
 	} meshUbo;
 
 	while (1)
