@@ -1,4 +1,5 @@
 add_library(smd SHARED
+    "smd.def"
     "g_ai.c"
     "g_camera.c"
     "g_chase.c"

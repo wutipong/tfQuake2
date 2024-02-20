@@ -1,4 +1,5 @@
 add_library(baseq2 SHARED
+    "game.def"
     "g_ai.c"
     "g_chase.c"
     "g_cmds.c"

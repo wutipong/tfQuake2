@@ -1,4 +1,5 @@
 add_library(rogue SHARED
+    "rogue.def"
     "dm_ball.c"
     "dm_tag.c"
     "g_ai.c"

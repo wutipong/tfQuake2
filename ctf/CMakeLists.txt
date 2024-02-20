@@ -1,4 +1,5 @@
 add_library(ctf SHARED
+    "ctf.def"
     "g_ai.c"
     "g_chase.c"
     "g_cmds.c"
