@@ -4,3 +4,4 @@ project(tf-quake2)
 
 add_subdirectory(tf)
 add_subdirectory(game)
+add_subdirectory(ctf)
