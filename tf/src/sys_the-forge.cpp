@@ -6,6 +6,8 @@
 #include <ILog.h>
 #include <RingBuffer.h>
 
+#include "sys_event.h"
+
 Renderer *pRenderer = NULL;
 
 Queue *pGraphicsQueue = NULL;
@@ -80,13 +82,17 @@ bool MainApp::Init()
     if (!initInputSystem(&inputDesc))
         return false;
 
+    GlobalInputActionDesc globalInputActionDesc = {GlobalInputActionDesc::ANY_BUTTON_ACTION, SYS_global_input_handler,
+                                                   this};
+    setGlobalInputAction(&globalInputActionDesc);
+
     return true;
 }
 
 void MainApp::Exit()
 {
     exitInputSystem();
-    
+
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
 
@@ -109,7 +115,8 @@ void MainApp::Unload(ReloadDesc *pReloadDesc)
 
 void MainApp::Update(float deltaTime)
 {
-    mSettings.mQuit = true;
+    updateInputSystem(deltaTime, mSettings.mWidth, mSettings.mHeight);
+    // mSettings.mQuit = true;
 }
 
 void MainApp::Draw()

@@ -176,6 +176,8 @@ endif(COMMAND cmake_policy)
 
 add_executable(tf-quake2-main
     "src/sys_the-forge.cpp"
+    "src/sys_event.cpp"
+    "src/sys_event.h"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
