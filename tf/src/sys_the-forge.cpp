@@ -4,22 +4,12 @@
 #include <IGraphics.h>
 #include <IInput.h>
 #include <ILog.h>
-#include <RingBuffer.h>
 
+#include "gra_common.h"
 #include "sys_event.h"
 
-Renderer *pRenderer = NULL;
-
-Queue *pGraphicsQueue = NULL;
-GpuCmdRing gGraphicsCmdRing = {};
-
-SwapChain *pSwapChain = NULL;
-RenderTarget *pDepthBuffer = NULL;
-Semaphore *pImageAcquiredSemaphore = NULL;
-
-Sampler *pSampler = NULL;
-
-const uint32_t gDataBufferCount = 2;
+extern Renderer *pRenderer;
+extern Queue *pGraphicsQueue;
 
 class MainApp : public IApp
 {
@@ -49,44 +39,7 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SCRIPTS, "Scripts");
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
 
-    // window and renderer setup
-    RendererDesc settings = {
-        .mD3D11Supported = false,
-        .mGLESSupported = false,
-    };
-
-    initRenderer(GetName(), &settings, &pRenderer);
-    // check for init success
-    if (!pRenderer)
-        return false;
-
-    QueueDesc queueDesc = {
-        .mType = QUEUE_TYPE_GRAPHICS,
-        .mFlag = QUEUE_FLAG_INIT_MICROPROFILE,
-    };
-    addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
-
-    GpuCmdRingDesc cmdRingDesc = {
-        .pQueue = pGraphicsQueue,
-        .mPoolCount = gDataBufferCount,
-        .mCmdPerPoolCount = 1,
-        .mAddSyncPrimitives = true,
-    };
-    addGpuCmdRing(pRenderer, &cmdRingDesc, &gGraphicsCmdRing);
-
-    addSemaphore(pRenderer, &pImageAcquiredSemaphore);
-
-    initResourceLoaderInterface(pRenderer);
-
-    SamplerDesc samplerDesc = {
-        .mMinFilter = FILTER_NEAREST,
-        .mMagFilter = FILTER_NEAREST,
-        .mMipMapMode = MIPMAP_MODE_NEAREST,
-        .mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE,
-        .mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE,
-        .mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE,
-    };
-    addSampler(pRenderer, &samplerDesc, &pSampler);
+    GRA_init_graphics(this);
 
     InputSystemDesc inputDesc = {
         .pRenderer = pRenderer,
@@ -105,25 +58,45 @@ void MainApp::Exit()
 {
     exitInputSystem();
 
-    removeSampler(pRenderer, pSampler);
-    removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
-    removeSemaphore(pRenderer, pImageAcquiredSemaphore);
-
-    exitResourceLoaderInterface(pRenderer);
-
-    removeQueue(pRenderer, pGraphicsQueue);
-
-    exitRenderer(pRenderer);
-    pRenderer = NULL;
+    GRA_exit_graphics();
 }
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
 {
+    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
+    {
+        GRA_add_shaders();
+        // addRootSignatures();
+        // addDescriptorSets();
+    }
     return true;
 }
 
 void MainApp::Unload(ReloadDesc *pReloadDesc)
 {
+    waitQueueIdle(pGraphicsQueue);
+    /*
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
+    {
+        removePipelines();
+        removeResource(pSphereVertexBuffer);
+        removeResource(pSphereIndexBuffer);
+    }
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+    {
+        removeSwapChain(pRenderer, pSwapChain);
+        removeRenderTarget(pRenderer, pDepthBuffer);
+    }
+    */
+
+    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
+    {
+        // removeDescriptorSets();
+        // removeRootSignatures();
+        GRA_remove_shaders();
+    }
 }
 
 void MainApp::Update(float deltaTime)
