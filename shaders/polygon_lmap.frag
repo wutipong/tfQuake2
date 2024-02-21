@@ -858,10 +858,10 @@ bool any(vec3 x) { return any(notEqual(x, vec3(0))); }
 #line 1 "D:/Documents/tfQuake2/tf/shaders/polygon_lmap.frag.fsl"
 #define _GetsTexture sTexture
 #line 1
-RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t0, binding = 0);
+RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 0);
 #define _GetsLightmap sLightmap
 #line 2
-RES(Tex2D(float4), sLightmap, UPDATE_FREQ_NONE, t1, binding = 0);
+RES(Tex2D(float4), sLightmap, UPDATE_FREQ_NONE, t2, binding = 0);
 #define _GettextureSampler textureSampler
 #line 3
 RES(SamplerState, textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
