@@ -17,6 +17,8 @@ SwapChain *pSwapChain = NULL;
 RenderTarget *pDepthBuffer = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
 
+Sampler *pSampler = NULL;
+
 const uint32_t gDataBufferCount = 2;
 
 class MainApp : public IApp
@@ -58,21 +60,33 @@ bool MainApp::Init()
     if (!pRenderer)
         return false;
 
-    QueueDesc queueDesc = {};
-    queueDesc.mType = QUEUE_TYPE_GRAPHICS;
-    queueDesc.mFlag = QUEUE_FLAG_INIT_MICROPROFILE;
+    QueueDesc queueDesc = {
+        .mType = QUEUE_TYPE_GRAPHICS,
+        .mFlag = QUEUE_FLAG_INIT_MICROPROFILE,
+    };
     addQueue(pRenderer, &queueDesc, &pGraphicsQueue);
 
-    GpuCmdRingDesc cmdRingDesc = {};
-    cmdRingDesc.pQueue = pGraphicsQueue;
-    cmdRingDesc.mPoolCount = gDataBufferCount;
-    cmdRingDesc.mCmdPerPoolCount = 1;
-    cmdRingDesc.mAddSyncPrimitives = true;
+    GpuCmdRingDesc cmdRingDesc = {
+        .pQueue = pGraphicsQueue,
+        .mPoolCount = gDataBufferCount,
+        .mCmdPerPoolCount = 1,
+        .mAddSyncPrimitives = true,
+    };
     addGpuCmdRing(pRenderer, &cmdRingDesc, &gGraphicsCmdRing);
 
     addSemaphore(pRenderer, &pImageAcquiredSemaphore);
 
     initResourceLoaderInterface(pRenderer);
+
+    SamplerDesc samplerDesc = {
+        .mMinFilter = FILTER_NEAREST,
+        .mMagFilter = FILTER_NEAREST,
+        .mMipMapMode = MIPMAP_MODE_NEAREST,
+        .mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE,
+        .mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE,
+        .mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE,
+    };
+    addSampler(pRenderer, &samplerDesc, &pSampler);
 
     InputSystemDesc inputDesc = {
         .pRenderer = pRenderer,
@@ -91,6 +105,7 @@ void MainApp::Exit()
 {
     exitInputSystem();
 
+    removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
 
