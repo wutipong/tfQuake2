@@ -119,6 +119,77 @@ bool GRA_exit_graphics()
     return true;
 }
 
+bool GRA_load(ReloadDesc *pReloadDesc)
+{
+    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
+    {
+        GRA_add_shaders();
+        // addRootSignatures();
+        // addDescriptorSets();
+    }
+    /*
+    if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+    {
+        if (!addSwapChain())
+            return false;
+
+        if (!addDepthBuffer())
+            return false;
+    }
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
+    {
+        generate_complex_mesh();
+        addPipelines();
+    }
+
+    prepareDescriptorSets();
+
+    UserInterfaceLoadDesc uiLoad = {};
+    uiLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
+    uiLoad.mHeight = mSettings.mHeight;
+    uiLoad.mWidth = mSettings.mWidth;
+    uiLoad.mLoadType = pReloadDesc->mType;
+    loadUserInterface(&uiLoad);
+
+    FontSystemLoadDesc fontLoad = {};
+    fontLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
+    fontLoad.mHeight = mSettings.mHeight;
+    fontLoad.mWidth = mSettings.mWidth;
+    fontLoad.mLoadType = pReloadDesc->mType;
+    loadFontSystem(&fontLoad);
+
+    initScreenshotInterface(pRenderer, pGraphicsQueue);
+    */
+    return true;
+}
+void GRA_unload(ReloadDesc *pReloadDesc)
+{
+    waitQueueIdle(pGraphicsQueue);
+    /*
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
+    {
+        removePipelines();
+        removeResource(pSphereVertexBuffer);
+        removeResource(pSphereIndexBuffer);
+    }
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+    {
+        removeSwapChain(pRenderer, pSwapChain);
+        removeRenderTarget(pRenderer, pDepthBuffer);
+    }
+    */
+
+    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
+    {
+        // removeDescriptorSets();
+        // removeRootSignatures();
+        GRA_remove_shaders();
+    }
+}
+
 void GRA_add_shaders()
 {
     ShaderLoadDesc desc = {};
@@ -150,14 +221,14 @@ void GRA_add_shaders()
     desc.mStages[1].pFileName = "basic_color_quad.frag";
 
     addShader(pRenderer, &desc, &drawNullModelShader);
-	
-	desc = {};
+
+    desc = {};
     desc.mStages[0].pFileName = "model.vert";
     desc.mStages[1].pFileName = "model.frag";
 
     addShader(pRenderer, &desc, &drawModelShader);
-	
-	desc = {};
+
+    desc = {};
     desc.mStages[0].pFileName = "sprite.vert";
     desc.mStages[1].pFileName = "basic.frag";
 
@@ -168,8 +239,8 @@ void GRA_add_shaders()
     desc.mStages[1].pFileName = "basic.frag";
 
     addShader(pRenderer, &desc, &drawPolyShader);
-	
-	desc = {};
+
+    desc = {};
     desc.mStages[0].pFileName = "polygon_lmap.vert";
     desc.mStages[1].pFileName = "polygon_lmap.frag";
 
@@ -181,12 +252,12 @@ void GRA_add_shaders()
 
     addShader(pRenderer, &desc, &drawPolyWarpShader);
 
-	desc = {};
+    desc = {};
     desc.mStages[0].pFileName = "beam.vert";
     desc.mStages[1].pFileName = "basic_color_quad.frag";
 
     addShader(pRenderer, &desc, &drawBeamShader);
-	
+
     desc = {};
     desc.mStages[0].pFileName = "skybox.vert";
     desc.mStages[1].pFileName = "basic.frag";
@@ -197,8 +268,8 @@ void GRA_add_shaders()
     desc.mStages[0].pFileName = "d_light.vert";
     desc.mStages[1].pFileName = "basic_color_quad.frag";
 
-    addShader(pRenderer, &desc, &drawDLightShader);	
-	
+    addShader(pRenderer, &desc, &drawDLightShader);
+
     desc = {};
     desc.mStages[0].pFileName = "shadows.vert";
     desc.mStages[1].pFileName = "basic_color_quad.frag";
@@ -209,13 +280,13 @@ void GRA_add_shaders()
     desc.mStages[0].pFileName = "world_warp.vert";
     desc.mStages[1].pFileName = "world_warp.frag";
 
-    addShader(pRenderer, &desc, &worldWarpShader);	
+    addShader(pRenderer, &desc, &worldWarpShader);
 
     desc = {};
     desc.mStages[0].pFileName = "postprocess.vert";
     desc.mStages[1].pFileName = "postprocess.frag";
 
-    addShader(pRenderer, &desc, &postprocessShader);	
+    addShader(pRenderer, &desc, &postprocessShader);
 }
 
 void GRA_remove_shaders()

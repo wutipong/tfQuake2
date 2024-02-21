@@ -63,40 +63,13 @@ void MainApp::Exit()
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
 {
-    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
-    {
-        GRA_add_shaders();
-        // addRootSignatures();
-        // addDescriptorSets();
-    }
+    GRA_load(pReloadDesc);
     return true;
 }
 
 void MainApp::Unload(ReloadDesc *pReloadDesc)
 {
-    waitQueueIdle(pGraphicsQueue);
-    /*
-
-    if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
-    {
-        removePipelines();
-        removeResource(pSphereVertexBuffer);
-        removeResource(pSphereIndexBuffer);
-    }
-
-    if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
-    {
-        removeSwapChain(pRenderer, pSwapChain);
-        removeRenderTarget(pRenderer, pDepthBuffer);
-    }
-    */
-
-    if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
-    {
-        // removeDescriptorSets();
-        // removeRootSignatures();
-        GRA_remove_shaders();
-    }
+    GRA_unload(pReloadDesc);
 }
 
 void MainApp::Update(float deltaTime)
