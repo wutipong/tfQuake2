@@ -112,6 +112,7 @@ enum class KeyboardMouseInputAction : uint32_t
     RIGHT_CLICK,
     SCROLL_UP,
     SCROLL_DOWN,
+    COUNT
 };
 
 ActionMappingDesc gKeyboardMouseActionMappings[] = {
@@ -707,13 +708,24 @@ ActionMappingDesc gKeyboardMouseActionMappings[] = {
     },
 };
 
-bool SYS_global_input_handler(InputActionContext *ctx)
+bool SYS_input_handler(InputActionContext *ctx)
 {
-    switch (ctx->mDeviceType)
-    {
-    case INPUT_DEVICE_MOUSE:
-        break;
-    }
+    LOGF(LogLevel::eDEBUG, "Action: %d, Value %i.", ctx->mActionId, ctx->mBool);
 
-    return false;
+    return true;
+}
+
+void SYS_register_input()
+{
+    addActionMappings(gKeyboardMouseActionMappings, TF_ARRAY_COUNT(gKeyboardMouseActionMappings),
+                      INPUT_ACTION_MAPPING_TARGET_ALL);
+
+    for (uint32_t i = 0u; i < static_cast<uint32_t>(KeyboardMouseInputAction::COUNT); ++i)
+    {
+        InputActionDesc actionDesc = {
+            .mActionId = i,
+            .pFunction = SYS_input_handler,
+        };
+        addInputAction(&actionDesc);
+    }
 }

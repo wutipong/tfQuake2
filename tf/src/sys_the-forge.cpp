@@ -82,9 +82,7 @@ bool MainApp::Init()
     if (!initInputSystem(&inputDesc))
         return false;
 
-    GlobalInputActionDesc globalInputActionDesc = {GlobalInputActionDesc::ANY_BUTTON_ACTION, SYS_global_input_handler,
-                                                   this};
-    setGlobalInputAction(&globalInputActionDesc);
+    SYS_register_input();
 
     return true;
 }

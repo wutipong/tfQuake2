@@ -3,6 +3,6 @@
 
 #include <IInput.h>
 
-bool SYS_global_input_handler(InputActionContext* ctx);
+void SYS_register_input();
 
 #endif
