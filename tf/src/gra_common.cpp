@@ -59,6 +59,14 @@ Shader *shadowsShader;
 Shader *worldWarpShader;
 Shader *postprocessShader;
 
+RootSignature *pRootSignature = NULL;
+
+void addShaders();
+void removeShaders();
+
+void addRootSignatures();
+void removeRootSignatures();
+
 bool GRA_init_graphics(IApp *app)
 {
     // window and renderer setup
@@ -123,8 +131,8 @@ bool GRA_load(ReloadDesc *pReloadDesc)
 {
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
-        GRA_add_shaders();
-        // addRootSignatures();
+        addShaders();
+        addRootSignatures();
         // addDescriptorSets();
     }
     /*
@@ -139,7 +147,6 @@ bool GRA_load(ReloadDesc *pReloadDesc)
 
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
-        generate_complex_mesh();
         addPipelines();
     }
 
@@ -185,12 +192,12 @@ void GRA_unload(ReloadDesc *pReloadDesc)
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
         // removeDescriptorSets();
-        // removeRootSignatures();
-        GRA_remove_shaders();
+        removeRootSignatures();
+        removeShaders();
     }
 }
 
-void GRA_add_shaders()
+void addShaders()
 {
     ShaderLoadDesc desc = {};
     desc.mStages[0].pFileName = "basic.vert";
@@ -289,7 +296,7 @@ void GRA_add_shaders()
     addShader(pRenderer, &desc, &postprocessShader);
 }
 
-void GRA_remove_shaders()
+void removeShaders()
 {
     removeShader(pRenderer, drawTexQuadShader);
     removeShader(pRenderer, drawColorQuadShader);
@@ -307,6 +314,29 @@ void GRA_remove_shaders()
     removeShader(pRenderer, shadowsShader);
     removeShader(pRenderer, worldWarpShader);
     removeShader(pRenderer, postprocessShader);
+}
+
+void addRootSignatures()
+{
+    Shader *shaders[] = {
+        drawTexQuadShader,  drawParticlesShader, drawModelShader,  drawSpriteShader, drawPolyShader,
+        drawPolyLmapShader, drawPolyWarpShader,  drawSkyboxShader, worldWarpShader,  postprocessShader,
+    };
+    uint32_t shadersCount = 10;
+
+    const char *pStaticSamplers[] = {"textureSampler"};
+    RootSignatureDesc rootDesc = {};
+    rootDesc.mStaticSamplerCount = 1;
+    rootDesc.ppStaticSamplerNames = pStaticSamplers;
+    rootDesc.ppStaticSamplers = &pSampler;
+    rootDesc.mShaderCount = shadersCount;
+    rootDesc.ppShaders = shaders;
+    addRootSignature(pRenderer, &rootDesc, &pRootSignature);
+}
+
+void removeRootSignatures()
+{
+    removeRootSignature(pRenderer, pRootSignature);
 }
 
 static bool create_pipelines()
