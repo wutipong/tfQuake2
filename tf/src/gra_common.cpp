@@ -67,7 +67,8 @@ static void _addRootSignatures();
 static void _removeRootSignatures();
 static void _addPipelines();
 static void _removePipelines();
-static void _addSwapChain(IApp *pApp);
+static bool _addSwapChain(IApp *pApp);
+static bool _addDepthBuffer(IApp *pApp);
 
 bool GRA_init_graphics(IApp *app)
 {
@@ -137,17 +138,18 @@ bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp)
         _addRootSignatures();
         // addDescriptorSets();
     }
-    
+
     if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
     {
-        _addSwapChain(pApp);
-        if (!pSwapChain)
+        if (!_addSwapChain(pApp))
+        {
             return false;
+        }
 
-        /*
-        if (!addDepthBuffer())
+        if (!_addDepthBuffer(pApp))
+        {
             return false;
-        */
+        }
     }
 
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
@@ -185,12 +187,12 @@ void GRA_unload(ReloadDesc *pReloadDesc)
         // removeResource(pSphereVertexBuffer);
         // removeResource(pSphereIndexBuffer);
     }
-    
-        if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
-        {
-            removeSwapChain(pRenderer, pSwapChain);
-            // removeRenderTarget(pRenderer, pDepthBuffer);
-        }
+
+    if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
+    {
+        removeSwapChain(pRenderer, pSwapChain);
+        removeRenderTarget(pRenderer, pDepthBuffer);
+    }
 
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
@@ -885,7 +887,7 @@ static void _removePipelines()
     */
 }
 
-static void _addSwapChain(IApp *pApp)
+static bool _addSwapChain(IApp *pApp)
 {
     SwapChainDesc swapChainDesc = {
         .mWindowHandle = pApp->pWindow->handle,
@@ -900,4 +902,26 @@ static void _addSwapChain(IApp *pApp)
         .mColorSpace = COLOR_SPACE_SDR_SRGB,
     };
     addSwapChain(pRenderer, &swapChainDesc, &pSwapChain);
+
+    return pSwapChain != NULL;
+}
+
+static bool _addDepthBuffer(IApp *pApp)
+{
+    // Add depth buffer
+    RenderTargetDesc depthRT = {};
+    depthRT.mArraySize = 1;
+    depthRT.mClearValue.depth = 0.0f;
+    depthRT.mClearValue.stencil = 0;
+    depthRT.mDepth = 1;
+    depthRT.mFormat = TinyImageFormat_D32_SFLOAT;
+    depthRT.mStartState = RESOURCE_STATE_DEPTH_WRITE;
+    depthRT.mHeight = pApp->mSettings.mHeight;
+    depthRT.mSampleCount = SAMPLE_COUNT_1;
+    depthRT.mSampleQuality = 0;
+    depthRT.mWidth = pApp->mSettings.mWidth;
+    depthRT.mFlags = TEXTURE_CREATION_FLAG_ON_TILE | TEXTURE_CREATION_FLAG_VR_MULTIVIEW;
+    addRenderTarget(pRenderer, &depthRT, &pDepthBuffer);
+
+    return pDepthBuffer != NULL;
 }
