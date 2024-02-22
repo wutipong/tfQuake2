@@ -346,20 +346,6 @@ static void _removeRootSignatures()
 
 static void _addPipelines()
 {
-    RasterizerStateDesc rasterizerStateDesc = {};
-    rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
-
-    RasterizerStateDesc sphereRasterizerStateDesc = {};
-    sphereRasterizerStateDesc.mCullMode = CULL_MODE_FRONT;
-
-    DepthStateDesc depthStateDesc = {};
-    depthStateDesc.mDepthTest = true;
-    depthStateDesc.mDepthWrite = true;
-    depthStateDesc.mDepthFunc = CMP_GEQUAL;
-
-    PipelineDesc desc = {};
-    desc.mType = PIPELINE_TYPE_GRAPHICS;
-
     VertexLayout vertexLayoutF2Pos = {
         .mBindings =
             {
@@ -576,22 +562,51 @@ static void _addPipelines()
         .mAttribCount = 3,
     };
 
-    /*
-    GraphicsPipelineDesc& pipelineSettings = desc.mGraphicsDesc;
-    pipelineSettings.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
-    pipelineSettings.mRenderTargetCount = 1;
-    pipelineSettings.pDepthState = &depthStateDesc;
-    pipelineSettings.pColorFormats = &pSwapChain->ppRenderTargets[0]->mFormat;
-    pipelineSettings.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
-    pipelineSettings.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
-    pipelineSettings.mDepthStencilFormat = pDepthBuffer->mFormat;
-    pipelineSettings.pRootSignature = pRootSignature;
-    pipelineSettings.pShaderProgram = pSphereShader;
-    pipelineSettings.pVertexLayout = &gSphereVertexLayout;
-    pipelineSettings.pRasterizerState = &sphereRasterizerStateDesc;
-    pipelineSettings.mVRFoveatedRendering = true;
-    addPipeline(pRenderer, &desc, &pSpherePipeline);
+    RasterizerStateDesc rasterizerStateDesc = {};
+    rasterizerStateDesc.mCullMode = CULL_MODE_BACK;
 
+    DepthStateDesc depthStateDesc = {};
+    depthStateDesc.mDepthTest = true;
+    depthStateDesc.mDepthWrite = true;
+    depthStateDesc.mDepthFunc = CMP_GEQUAL;
+
+    BlendStateDesc blendStateDesc = {
+        .mSrcFactors = {BC_SRC_ALPHA},
+        .mDstFactors = {BC_ONE_MINUS_SRC_ALPHA},
+        .mSrcAlphaFactors = {BC_ONE},
+        .mDstAlphaFactors = {BC_ZERO},
+        .mBlendModes = {BM_ADD},
+        .mBlendAlphaModes = {BM_ADD},
+        .mColorWriteMasks = {COLOR_MASK_ALL},
+        .mRenderTargetMask = BLEND_STATE_TARGET_0,
+        .mIndependentBlend = false,
+    };
+
+    PipelineDesc defaultDesc = {
+        .mGraphicsDesc =
+            {
+                .pDepthState = &depthStateDesc,
+                .pRasterizerState = &rasterizerStateDesc,
+                .pColorFormats = &pSwapChain->ppRenderTargets[0]->mFormat,
+                .mRenderTargetCount = 1,
+                .mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount,
+                .mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality,
+                .mDepthStencilFormat = pDepthBuffer->mFormat,
+                .mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST,
+            },
+        .mType = PIPELINE_TYPE_GRAPHICS,
+    };
+
+    PipelineDesc desc = defaultDesc; 
+    desc.mGraphicsDesc.pShaderProgram = drawTexQuadShader;
+    desc.mGraphicsDesc.pRootSignature = pRootSignature;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF2PosTexcoord;
+    desc.mGraphicsDesc.pDepthState = NULL;
+    desc.mGraphicsDesc.mRenderTargetCount = 1;
+            
+    addPipeline(pRenderer, &desc, &drawTexQuadPipeline);
+
+    /*
     if (pRenderer->pGpu->mSettings.mGpuBreadcrumbs)
     {
         pipelineSettings.pShaderProgram = pCrashShader;
@@ -857,8 +872,8 @@ static void _addPipelines()
 
 static void _removePipelines()
 {
-    /*
     removePipeline(pRenderer, drawTexQuadPipeline);
+    /*
     removePipeline(pRenderer, drawColorQuadPipeline[0]);
     removePipeline(pRenderer, drawColorQuadPipeline[1]);
     removePipeline(pRenderer, drawModelPipelineStrip[0]);
