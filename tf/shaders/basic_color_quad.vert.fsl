@@ -1,4 +1,8 @@
-#include "basic_color_quad.frag.h.fsl"
+STRUCT(VSOutput)
+{
+	DATA(float4, position, SV_Position);
+	DATA(float4, color,    COLOR);
+};
 
 CBUFFER(imageTransform, UPDATE_FREQ_NONE, b0, binding = 0)
 {

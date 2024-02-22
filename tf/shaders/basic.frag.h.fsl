@@ -1,7 +1,0 @@
-STRUCT(VSOutput)
-{
-	DATA(float4, position, SV_Position);
-    DATA(float2, texCoord, TEXCOORD0);
-	DATA(float4, color, COLOR);
-    DATA(float, aTreshold, COLOR1);
-};
