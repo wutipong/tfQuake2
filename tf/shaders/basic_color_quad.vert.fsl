@@ -4,7 +4,7 @@ STRUCT(VSOutput)
 	DATA(float4, color,    COLOR);
 };
 
-CBUFFER(imageTransform, UPDATE_FREQ_NONE, b0, binding = 0)
+CBUFFER(imageTransform, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float2, offset, None);
     DATA(float2, scale, None);

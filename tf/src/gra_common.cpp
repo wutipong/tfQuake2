@@ -63,7 +63,7 @@ RootSignature *pRootSignature = NULL;
 
 static void _addShaders();
 static void _removeShaders();
-static void _addRootSignatures();
+static bool _addRootSignatures();
 static void _removeRootSignatures();
 static void _addPipelines();
 static void _removePipelines();
@@ -135,7 +135,10 @@ bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp)
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
         _addShaders();
-        _addRootSignatures();
+        if (!_addRootSignatures())
+        {
+            return false;
+        }
         // addDescriptorSets();
     }
 
@@ -321,22 +324,29 @@ void _removeShaders()
     removeShader(pRenderer, postprocessShader);
 }
 
-void _addRootSignatures()
+bool _addRootSignatures()
 {
     Shader *shaders[] = {
-        drawTexQuadShader,  drawParticlesShader, drawModelShader,  drawSpriteShader, drawPolyShader,
-        drawPolyLmapShader, drawPolyWarpShader,  drawSkyboxShader, worldWarpShader,  postprocessShader,
+        drawTexQuadShader,        drawColorQuadShader, drawModelShader,  drawNullModelShader, drawParticlesShader,
+        drawPointParticlesShader, drawSpriteShader,    drawPolyShader,   drawPolyLmapShader,  drawPolyWarpShader,
+        drawBeamShader,           drawSkyboxShader,    drawDLightShader, shadowsShader,       worldWarpShader,
+        postprocessShader,
     };
-    uint32_t shadersCount = 10;
+    uint32_t shadersCount = 16;
 
     const char *pStaticSamplers[] = {"textureSampler"};
-    RootSignatureDesc rootDesc = {};
-    rootDesc.mStaticSamplerCount = 1;
-    rootDesc.ppStaticSamplerNames = pStaticSamplers;
-    rootDesc.ppStaticSamplers = &pSampler;
-    rootDesc.mShaderCount = shadersCount;
-    rootDesc.ppShaders = shaders;
+
+    RootSignatureDesc rootDesc = {
+        .ppShaders = shaders,
+        .mShaderCount = shadersCount,
+        .ppStaticSamplerNames = pStaticSamplers,
+        .ppStaticSamplers = &pSampler,
+        .mStaticSamplerCount = 1,
+    };
+
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
+
+    return pRootSignature != NULL;
 }
 
 static void _removeRootSignatures()
@@ -582,9 +592,10 @@ static void _addPipelines()
         .mIndependentBlend = false,
     };
 
-    PipelineDesc defaultDesc = {
+    PipelineDesc initDesc = {
         .mGraphicsDesc =
             {
+                .pRootSignature = pRootSignature,
                 .pDepthState = &depthStateDesc,
                 .pRasterizerState = &rasterizerStateDesc,
                 .pColorFormats = &pSwapChain->ppRenderTargets[0]->mFormat,
@@ -597,91 +608,75 @@ static void _addPipelines()
         .mType = PIPELINE_TYPE_GRAPHICS,
     };
 
-    PipelineDesc desc = defaultDesc; 
+    PipelineDesc desc = initDesc;
     desc.mGraphicsDesc.pShaderProgram = drawTexQuadShader;
-    desc.mGraphicsDesc.pRootSignature = pRootSignature;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF2PosTexcoord;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.mRenderTargetCount = 1;
-            
+
     addPipeline(pRenderer, &desc, &drawTexQuadPipeline);
 
+    desc = initDesc;
+    desc.mGraphicsDesc.pShaderProgram = drawParticlesShader;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
+    desc.mGraphicsDesc.pDepthState = NULL;
+    desc.mGraphicsDesc.mRenderTargetCount = 1;
+    desc.mGraphicsDesc.pBlendState = &blendStateDesc;
+
+    addPipeline(pRenderer, &desc, &drawParticlesPipeline);
+
+    desc = initDesc;
+    desc.mGraphicsDesc.pShaderProgram = drawPointParticlesShader;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4Color;
+    desc.mGraphicsDesc.pDepthState = NULL;
+    desc.mGraphicsDesc.mRenderTargetCount = 1;
+    desc.mGraphicsDesc.pBlendState = &blendStateDesc;
+
+    addPipeline(pRenderer, &desc, &drawPointParticlesPipeline);
+
     /*
-    if (pRenderer->pGpu->mSettings.mGpuBreadcrumbs)
+
+    // draw particles pipeline (using point list)
+    VK_LOAD_VERTFRAG_SHADERS(shaders, point_particle, point_particle);
+    vk_drawPointParticlesPipeline.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    vk_drawPointParticlesPipeline.blendOpts.blendEnable = VK_TRUE;
+    QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRGB_RGBA, &vk_drawPointParticlesPipeline,
+                       &vk_renderpasses[RP_WORLD], shaders, 2, &pushConstantRangeMatrix);
+    QVk_DebugSetObjectName((uint64_t)vk_drawPointParticlesPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                           "Pipeline
+                           Layout
+                           : point particles "); QVk_DebugSetObjectName((uint64_t)vk_drawPointParticlesPipeline.pl,
+                             VK_OBJECT_TYPE_PIPELINE,
+                             "Pipeline: point particles");
+
+    // colored quad pipeline
+    VK_LOAD_VERTFRAG_SHADERS(shaders, basic_color_quad, basic_color_quad);
+    for (int i = 0; i < 2; ++i)
     {
-        pipelineSettings.pShaderProgram = pCrashShader;
-        addPipeline(pRenderer, &desc, &pCrashPipeline);
+        vk_drawColorQuadPipeline[i].depthTestEnable = VK_FALSE;
+        vk_drawColorQuadPipeline[i].blendOpts.blendEnable = VK_TRUE;
+        QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRG, &vk_drawColorQuadPipeline[i], &vk_renderpasses[i],
+                           shaders, 2, NULL);
     }
+    QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[0].layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                           "Pipeline
+                           Layout
+                           : colored quad(RP_WORLD) "); QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[0].pl,
+                             VK_OBJECT_TYPE_PIPELINE,
+                             "Pipeline: colored quad (RP_WORLD)");
+    QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[1].layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                           "Pipeline
+                           Layout
+                           : colored quad(RP_UI) "); QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[1].pl,
+                             VK_OBJECT_TYPE_PIPELINE,
+                             "Pipeline: colored quad (RP_UI)");
 
-    // layout and pipeline for skybox draw
-    VertexLayout vertexLayout = {};
-    vertexLayout.mBindingCount = 1;
-    vertexLayout.mBindings[0].mStride = sizeof(float4);
-    vertexLayout.mAttribCount = 1;
-    vertexLayout.mAttribs[0].mSemantic = SEMANTIC_POSITION;
-    vertexLayout.mAttribs[0].mFormat = TinyImageFormat_R32G32B32A32_SFLOAT;
-    vertexLayout.mAttribs[0].mBinding = 0;
-    vertexLayout.mAttribs[0].mLocation = 0;
-    vertexLayout.mAttribs[0].mOffset = 0;
-    pipelineSettings.pVertexLayout = &vertexLayout;
-
-    pipelineSettings.pDepthState = NULL;
-    pipelineSettings.pRasterizerState = &rasterizerStateDesc;
-    pipelineSettings.pShaderProgram = pSkyBoxDrawShader; //-V519
-    addPipeline(pRenderer, &desc, &pSkyBoxDrawPipeline);
-
-    */
-
-    /*
-    // textured quad pipeline
-     VK_LOAD_VERTFRAG_SHADERS(shaders, basic, basic);
-     vk_drawTexQuadPipeline.depthTestEnable = VK_FALSE;
-     QVk_CreatePipeline(samplerUboDsLayouts, 2, &vertInfoRG_RG, &vk_drawTexQuadPipeline, &vk_renderpasses[RP_UI],
-    shaders, 2, NULL); QVk_DebugSetObjectName((uint64_t)vk_drawTexQuadPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT,
-    "Pipeline Layout: textured quad"); QVk_DebugSetObjectName((uint64_t)vk_drawTexQuadPipeline.pl,
-    VK_OBJECT_TYPE_PIPELINE, "Pipeline: textured quad");
-
-     // draw particles pipeline (using a texture)
-     VK_LOAD_VERTFRAG_SHADERS(shaders, particle, basic);
-     vk_drawParticlesPipeline.blendOpts.blendEnable = VK_TRUE;
-     QVk_CreatePipeline(&vk_samplerDescSetLayout, 1, &vertInfoRGB_RGBA_RG, &vk_drawParticlesPipeline,
-    &vk_renderpasses[RP_WORLD], shaders, 2, &pushConstantRangeMatrix);
-     QVk_DebugSetObjectName((uint64_t)vk_drawParticlesPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline Layout:
-    textured particles"); QVk_DebugSetObjectName((uint64_t)vk_drawParticlesPipeline.pl, VK_OBJECT_TYPE_PIPELINE,
-    "Pipeline: textured particles");
-
-     // draw particles pipeline (using point list)
-     VK_LOAD_VERTFRAG_SHADERS(shaders, point_particle, point_particle);
-     vk_drawPointParticlesPipeline.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-     vk_drawPointParticlesPipeline.blendOpts.blendEnable = VK_TRUE;
-     QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRGB_RGBA, &vk_drawPointParticlesPipeline,
-    &vk_renderpasses[RP_WORLD], shaders, 2, &pushConstantRangeMatrix);
-     QVk_DebugSetObjectName((uint64_t)vk_drawPointParticlesPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline
-    Layout: point particles"); QVk_DebugSetObjectName((uint64_t)vk_drawPointParticlesPipeline.pl,
-    VK_OBJECT_TYPE_PIPELINE, "Pipeline: point particles");
-
-     // colored quad pipeline
-     VK_LOAD_VERTFRAG_SHADERS(shaders, basic_color_quad, basic_color_quad);
-     for (int i = 0; i < 2; ++i)
-     {
-         vk_drawColorQuadPipeline[i].depthTestEnable = VK_FALSE;
-         vk_drawColorQuadPipeline[i].blendOpts.blendEnable = VK_TRUE;
-         QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRG, &vk_drawColorQuadPipeline[i], &vk_renderpasses[i],
-    shaders, 2, NULL);
-     }
-     QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[0].layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline
-    Layout: colored quad (RP_WORLD)"); QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[0].pl,
-    VK_OBJECT_TYPE_PIPELINE, "Pipeline: colored quad (RP_WORLD)");
-     QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[1].layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline
-    Layout: colored quad (RP_UI)"); QVk_DebugSetObjectName((uint64_t)vk_drawColorQuadPipeline[1].pl,
-    VK_OBJECT_TYPE_PIPELINE, "Pipeline: colored quad (RP_UI)");
-
-     // untextured null model
-     VK_LOAD_VERTFRAG_SHADERS(shaders, nullmodel, basic_color_quad);
-     vk_drawNullModelPipeline.cullMode = VK_CULL_MODE_NONE;
-     vk_drawNullModelPipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-     QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRGB_RGB, &vk_drawNullModelPipeline,
-    &vk_renderpasses[RP_WORLD], shaders, 2, &pushConstantRangeMatrix);
+    // untextured null model
+    VK_LOAD_VERTFRAG_SHADERS(shaders, nullmodel, basic_color_quad);
+    vk_drawNullModelPipeline.cullMode = VK_CULL_MODE_NONE;
+    vk_drawNullModelPipeline.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    QVk_CreatePipeline(&vk_uboDescSetLayout, 1, &vertInfoRGB_RGB, &vk_drawNullModelPipeline, &vk_renderpasses[RP_WORLD],
+                       shaders, 2, &pushConstantRangeMatrix);
      QVk_DebugSetObjectName((uint64_t)vk_drawNullModelPipeline.layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline Layout:
     null model"); QVk_DebugSetObjectName((uint64_t)vk_drawNullModelPipeline.pl, VK_OBJECT_TYPE_PIPELINE, "Pipeline: null
     model");
@@ -690,15 +685,15 @@ static void _addPipelines()
      VK_LOAD_VERTFRAG_SHADERS(shaders, model, model);
      for (int i = 0; i < 2; ++i)
      {
-         vk_drawModelPipelineStrip[i].topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
-         vk_drawModelPipelineStrip[i].blendOpts.blendEnable = VK_TRUE;
-         QVk_CreatePipeline(samplerUboDsLayouts, 2, &vertInfoRGB_RGBA_RG, &vk_drawModelPipelineStrip[i],
-    &vk_renderpasses[i], shaders, 2, &pushConstantRangeMatrix);
+        vk_drawModelPipelineStrip[i].topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        vk_drawModelPipelineStrip[i].blendOpts.blendEnable = VK_TRUE;
+        QVk_CreatePipeline(samplerUboDsLayouts, 2, &vertInfoRGB_RGBA_RG, &vk_drawModelPipelineStrip[i],
+                           &vk_renderpasses[i], shaders, 2, &pushConstantRangeMatrix);
 
-         vk_drawModelPipelineFan[i].topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-         vk_drawModelPipelineFan[i].blendOpts.blendEnable = VK_TRUE;
-         QVk_CreatePipeline(samplerUboDsLayouts, 2, &vertInfoRGB_RGBA_RG, &vk_drawModelPipelineFan[i],
-    &vk_renderpasses[i], shaders, 2, &pushConstantRangeMatrix);
+        vk_drawModelPipelineFan[i].topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        vk_drawModelPipelineFan[i].blendOpts.blendEnable = VK_TRUE;
+        QVk_CreatePipeline(samplerUboDsLayouts, 2, &vertInfoRGB_RGBA_RG, &vk_drawModelPipelineFan[i],
+                           &vk_renderpasses[i], shaders, 2, &pushConstantRangeMatrix);
      }
      QVk_DebugSetObjectName((uint64_t)vk_drawModelPipelineStrip[0].layout, VK_OBJECT_TYPE_PIPELINE_LAYOUT, "Pipeline
     Layout: draw model: strip (RP_WORLD)"); QVk_DebugSetObjectName((uint64_t)vk_drawModelPipelineStrip[0].pl,
@@ -873,33 +868,31 @@ static void _addPipelines()
 static void _removePipelines()
 {
     removePipeline(pRenderer, drawTexQuadPipeline);
-    /*
-    removePipeline(pRenderer, drawColorQuadPipeline[0]);
-    removePipeline(pRenderer, drawColorQuadPipeline[1]);
-    removePipeline(pRenderer, drawModelPipelineStrip[0]);
-    removePipeline(pRenderer, drawModelPipelineStrip[1]);
-    removePipeline(pRenderer, drawModelPipelineFan[0]);
-    removePipeline(pRenderer, drawModelPipelineFan[1]);
-    removePipeline(pRenderer, drawNoDepthModelPipelineStrip);
-    removePipeline(pRenderer, drawNoDepthModelPipelineFan);
-    removePipeline(pRenderer, drawLefthandModelPipelineStrip);
-    removePipeline(pRenderer, drawLefthandModelPipelineFan);
-    removePipeline(pRenderer, drawNullModelPipeline);
+    // removePipeline(pRenderer, drawColorQuadPipeline[0]);
+    // removePipeline(pRenderer, drawColorQuadPipeline[1]);
+    // removePipeline(pRenderer, drawModelPipelineStrip[0]);
+    // removePipeline(pRenderer, drawModelPipelineStrip[1]);
+    // removePipeline(pRenderer, drawModelPipelineFan[0]);
+    // removePipeline(pRenderer, drawModelPipelineFan[1]);
+    // removePipeline(pRenderer, drawNoDepthModelPipelineStrip);
+    // removePipeline(pRenderer, drawNoDepthModelPipelineFan);
+    // removePipeline(pRenderer, drawLefthandModelPipelineStrip);
+    // removePipeline(pRenderer, drawLefthandModelPipelineFan);
+    // removePipeline(pRenderer, drawNullModelPipeline);
     removePipeline(pRenderer, drawParticlesPipeline);
     removePipeline(pRenderer, drawPointParticlesPipeline);
-    removePipeline(pRenderer, drawSpritePipeline);
-    removePipeline(pRenderer, drawPolyPipeline);
-    removePipeline(pRenderer, drawPolyLmapPipeline);
-    removePipeline(pRenderer, drawPolyWarpPipeline);
-    removePipeline(pRenderer, drawBeamPipeline);
-    removePipeline(pRenderer, drawSkyboxPipeline);
-    removePipeline(pRenderer, drawDLightPipeline);
-    removePipeline(pRenderer, showTrisPipeline);
-    removePipeline(pRenderer, shadowsPipelineStrip);
-    removePipeline(pRenderer, shadowsPipelineFan);
-    removePipeline(pRenderer, worldWarpPipeline);
-    removePipeline(pRenderer, postprocessPipeline);
-    */
+    // removePipeline(pRenderer, drawSpritePipeline);
+    // removePipeline(pRenderer, drawPolyPipeline);
+    // removePipeline(pRenderer, drawPolyLmapPipeline);
+    // removePipeline(pRenderer, drawPolyWarpPipeline);
+    // removePipeline(pRenderer, drawBeamPipeline);
+    // removePipeline(pRenderer, drawSkyboxPipeline);
+    // removePipeline(pRenderer, drawDLightPipeline);
+    // removePipeline(pRenderer, showTrisPipeline);
+    // removePipeline(pRenderer, shadowsPipelineStrip);
+    // removePipeline(pRenderer, shadowsPipelineFan);
+    // removePipeline(pRenderer, worldWarpPipeline);
+    // removePipeline(pRenderer, postprocessPipeline);
 }
 
 static bool _addSwapChain(IApp *pApp)
