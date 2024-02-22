@@ -1,3 +1,5 @@
+#include "basic_color_quad.frag.h.fsl"
+
 CBUFFER(imageTransform, UPDATE_FREQ_NONE, b0, binding = 0)
 {
     DATA(float2, offset, None);
@@ -8,12 +10,6 @@ CBUFFER(imageTransform, UPDATE_FREQ_NONE, b0, binding = 0)
 STRUCT(VSInput)
 {
 	DATA(float2, inVertex, POSITION);
-};
-
-STRUCT(VSOutput)
-{
-	DATA(float4, position, SV_Position);
-	DATA(float4, color,    COLOR);
 };
 
 VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )

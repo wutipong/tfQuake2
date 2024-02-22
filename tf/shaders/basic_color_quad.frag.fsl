@@ -1,7 +1,4 @@
-STRUCT(VSOutput)
-{
-    DATA(float4, color, COLOR);
-};
+#include "basic_color_quad.frag.h.fsl"
 
 float4 PS_MAIN( VSOutput In )
 {

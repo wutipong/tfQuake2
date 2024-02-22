@@ -1,3 +1,5 @@
+#include "basic.frag.h.fsl"
+
 CBUFFER(imageTransform, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float2, offset, None);
@@ -10,14 +12,6 @@ STRUCT(VSInput)
 {
 	DATA(float2, inVertex, POSITION);
     DATA(float2, inTexCoord, TEXCOORD0);
-};
-
-STRUCT(VSOutput)
-{
-	DATA(float4, position, SV_Position);
-    DATA(float2, texCoord, TEXCOORD0);
-	DATA(float4, color, COLOR);
-    DATA(float, aTreshold, NONE);
 };
 
 VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
