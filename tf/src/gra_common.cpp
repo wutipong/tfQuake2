@@ -61,12 +61,13 @@ Shader *postprocessShader;
 
 RootSignature *pRootSignature = NULL;
 
-static void addShaders();
-static void removeShaders();
-static void addRootSignatures();
-static void removeRootSignatures();
-static void addPipelines();
-static void removePipelines();
+static void _addShaders();
+static void _removeShaders();
+static void _addRootSignatures();
+static void _removeRootSignatures();
+static void _addPipelines();
+static void _removePipelines();
+static void _addSwapChain(IApp *pApp);
 
 bool GRA_init_graphics(IApp *app)
 {
@@ -128,27 +129,30 @@ bool GRA_exit_graphics()
     return true;
 }
 
-bool GRA_load(ReloadDesc *pReloadDesc)
+bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp)
 {
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
-        addShaders();
-        addRootSignatures();
+        _addShaders();
+        _addRootSignatures();
         // addDescriptorSets();
     }
-    /*
+    
     if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
     {
-        if (!addSwapChain())
+        _addSwapChain(pApp);
+        if (!pSwapChain)
             return false;
 
+        /*
         if (!addDepthBuffer())
             return false;
+        */
     }
-*/
+
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
-        addPipelines();
+        _addPipelines();
     }
     /*
         prepareDescriptorSets();
@@ -177,27 +181,26 @@ void GRA_unload(ReloadDesc *pReloadDesc)
 
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
-        removePipelines();
+        _removePipelines();
         // removeResource(pSphereVertexBuffer);
         // removeResource(pSphereIndexBuffer);
     }
-    /*
+    
         if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
         {
             removeSwapChain(pRenderer, pSwapChain);
-            removeRenderTarget(pRenderer, pDepthBuffer);
+            // removeRenderTarget(pRenderer, pDepthBuffer);
         }
-        */
 
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
         // removeDescriptorSets();
-        removeRootSignatures();
-        removeShaders();
+        _removeRootSignatures();
+        _removeShaders();
     }
 }
 
-void addShaders()
+void _addShaders()
 {
     ShaderLoadDesc desc = {};
     desc.mStages[0].pFileName = "basic.vert";
@@ -296,7 +299,7 @@ void addShaders()
     addShader(pRenderer, &desc, &postprocessShader);
 }
 
-void removeShaders()
+void _removeShaders()
 {
     removeShader(pRenderer, drawTexQuadShader);
     removeShader(pRenderer, drawColorQuadShader);
@@ -316,7 +319,7 @@ void removeShaders()
     removeShader(pRenderer, postprocessShader);
 }
 
-void addRootSignatures()
+void _addRootSignatures()
 {
     Shader *shaders[] = {
         drawTexQuadShader,  drawParticlesShader, drawModelShader,  drawSpriteShader, drawPolyShader,
@@ -334,12 +337,12 @@ void addRootSignatures()
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
 }
 
-static void removeRootSignatures()
+static void _removeRootSignatures()
 {
     removeRootSignature(pRenderer, pRootSignature);
 }
 
-static void addPipelines()
+static void _addPipelines()
 {
     RasterizerStateDesc rasterizerStateDesc = {};
     rasterizerStateDesc.mCullMode = CULL_MODE_NONE;
@@ -850,8 +853,9 @@ static void addPipelines()
     */
 }
 
-static void removePipelines()
+static void _removePipelines()
 {
+    /*
     removePipeline(pRenderer, drawTexQuadPipeline);
     removePipeline(pRenderer, drawColorQuadPipeline[0]);
     removePipeline(pRenderer, drawColorQuadPipeline[1]);
@@ -878,4 +882,22 @@ static void removePipelines()
     removePipeline(pRenderer, shadowsPipelineFan);
     removePipeline(pRenderer, worldWarpPipeline);
     removePipeline(pRenderer, postprocessPipeline);
+    */
+}
+
+static void _addSwapChain(IApp *pApp)
+{
+    SwapChainDesc swapChainDesc = {
+        .mWindowHandle = pApp->pWindow->handle,
+        .ppPresentQueues = &pGraphicsQueue,
+        .mPresentQueueCount = 1,
+        .mImageCount = getRecommendedSwapchainImageCount(pRenderer, &pApp->pWindow->handle),
+        .mWidth = (uint32_t)pApp->mSettings.mWidth,
+        .mHeight = (uint32_t)pApp->mSettings.mHeight,
+        .mColorFormat = getSupportedSwapchainFormat(pRenderer, &swapChainDesc, COLOR_SPACE_SDR_SRGB),
+        .mFlags = SWAP_CHAIN_CREATION_FLAG_ENABLE_FOVEATED_RENDERING_VR,
+        .mEnableVsync = pApp->mSettings.mVSyncEnabled,
+        .mColorSpace = COLOR_SPACE_SDR_SRGB,
+    };
+    addSwapChain(pRenderer, &swapChainDesc, &pSwapChain);
 }

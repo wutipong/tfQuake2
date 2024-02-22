@@ -63,7 +63,7 @@ void MainApp::Exit()
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
 {
-    GRA_load(pReloadDesc);
+    GRA_load(pReloadDesc, this);
     return true;
 }
 

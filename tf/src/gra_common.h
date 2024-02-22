@@ -7,6 +7,6 @@ bool GRA_init_graphics(IApp *app);
 bool GRA_exit_graphics();
 
 
-bool GRA_load(ReloadDesc *pReloadDesc);
+bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp);
 void GRA_unload(ReloadDesc *pReloadDesc);
 #endif
