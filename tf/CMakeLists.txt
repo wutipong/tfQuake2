@@ -175,7 +175,7 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 add_executable(tf-quake2-main
-    "src/sys_the-forge.cpp"
+    "src/sys_main.cpp"
     "src/sys_event.cpp"
     "src/sys_event.h"
     "src/gra_common.cpp"
