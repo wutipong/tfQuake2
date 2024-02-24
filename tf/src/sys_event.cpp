@@ -2,10 +2,12 @@
 
 extern "C"{
 #include "../../qcommon/qcommon.h"
-
 #include "../../client/keys.h"
-#include <ITime.h>
+
+uint32_t sys_msg_time;
 }
+
+#include <ITime.h>
 
 ActionMappingDesc gKeyboardMouseActionMappings[] = {
     // Keyboard
@@ -645,7 +647,7 @@ bool SYS_input_handler(InputActionContext *ctx)
 {
     LOGF(LogLevel::eDEBUG, "Action: %d, Value %i.", ctx->mActionId, ctx->mBool);
 
-    uint32_t sys_msg_time = getTimeSinceStart();
+    sys_msg_time = getTimeSinceStart();
     switch (ctx->mDeviceType)
     {
     case InputDeviceType::INPUT_DEVICE_KEYBOARD:

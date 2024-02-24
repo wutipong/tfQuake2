@@ -53,7 +53,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #endif
 
 #ifdef __cplusplus
-typedef uint8_t 		byte;
+typedef unsigned char	byte;
 typedef bool 			qboolean;
 
 #else

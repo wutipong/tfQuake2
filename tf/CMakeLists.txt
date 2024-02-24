@@ -175,11 +175,14 @@ if(COMMAND cmake_policy)
 endif(COMMAND cmake_policy)
 
 add_executable(tf-quake2-main
+    "src/sys_api.cpp"
     "src/sys_main.cpp"
     "src/sys_event.cpp"
     "src/sys_event.h"
     "src/gra_common.cpp"
     "src/gra_common.h"
+    "src/vid_common.cpp"
+    "src/in_common.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
@@ -220,14 +223,16 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    "${CMAKE_SOURCE_DIR}/win32/cd_win.c"
+    "${CMAKE_SOURCE_DIR}/null/cd_null.c"
+    "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
     "${CMAKE_SOURCE_DIR}/win32/conproc.c"
-    "${CMAKE_SOURCE_DIR}/win32/in_win.c"
+    # "${CMAKE_SOURCE_DIR}/win32/in_win.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
     "${CMAKE_SOURCE_DIR}/win32/q_shwin.c"
-    "${CMAKE_SOURCE_DIR}/win32/snd_win.c"
-    "${CMAKE_SOURCE_DIR}/win32/sys_win.c"
-    "${CMAKE_SOURCE_DIR}/win32/vid_dll.c"
+
+    # "${CMAKE_SOURCE_DIR}/win32/snd_win.c"
+    # "${CMAKE_SOURCE_DIR}/win32/sys_win.c"
+    # "${CMAKE_SOURCE_DIR}/win32/vid_dll.c"
     "${CMAKE_SOURCE_DIR}/win32/vid_menu.c"
     "${CMAKE_SOURCE_DIR}/client/anorms.h"
     "${CMAKE_SOURCE_DIR}/client/cdaudio.h"
@@ -248,8 +253,8 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/qcommon/qcommon.h"
     "${CMAKE_SOURCE_DIR}/qcommon/qfiles.h"
     "${CMAKE_SOURCE_DIR}/server/server.h"
-    "${CMAKE_SOURCE_DIR}/win32/conproc.h"
-    "${CMAKE_SOURCE_DIR}/win32/winquake.h"
+    # "${CMAKE_SOURCE_DIR}/win32/conproc.h"
+    # "${CMAKE_SOURCE_DIR}/win32/winquake.h"
 )
 
 target_compile_features(tf-quake2-main PRIVATE cxx_std_20)
