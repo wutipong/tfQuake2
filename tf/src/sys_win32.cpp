@@ -1,3 +1,5 @@
+#ifdef WIN32
+
 #include <ILog.h>
 #include <format>
 
@@ -5,6 +7,7 @@ extern "C"
 {
 #include "../../client/client.h"
 #include <wtypes.h>
+
     static HINSTANCE game_library;
 
     void *Sys_GetGameAPI(void *parms)
@@ -53,3 +56,5 @@ extern "C"
         game_library = NULL;
     }
 }
+
+#endif
