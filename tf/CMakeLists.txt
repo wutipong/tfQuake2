@@ -183,6 +183,7 @@ add_executable(tf-quake2-main
     "src/gra_common.h"
     "src/vid_common.cpp"
     "src/in_common.cpp"
+    "src/sys_export.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"

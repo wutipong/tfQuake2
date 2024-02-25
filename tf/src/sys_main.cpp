@@ -13,7 +13,6 @@ extern "C"
 #include "../../client/client.h"
 
     unsigned int sys_frame_time;
-    refexport_t re;
     viddef_t viddef;
 
     // Console variables that we need to access from this module
@@ -44,6 +43,8 @@ void refreshSettings()
 {
     refresh = true;
 }
+
+void refreshExport();
 
 class MainApp : public IApp
 {
@@ -77,7 +78,7 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
 
     GRA_init_graphics(this);
-
+    refreshExport();
     InputSystemDesc inputDesc = {
         .pRenderer = pRenderer,
         .pWindow = pWindow,
