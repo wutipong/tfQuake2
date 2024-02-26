@@ -239,6 +239,7 @@ add_executable(tf-quake2-main
     "src/in_common.cpp"
     "src/sys_export.cpp"
     "src/cd_soloud.cpp"
+    "src/snddma_soloud.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
@@ -279,7 +280,7 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
+    # "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
     "${CMAKE_SOURCE_DIR}/win32/conproc.c"
     # "${CMAKE_SOURCE_DIR}/win32/in_win.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
