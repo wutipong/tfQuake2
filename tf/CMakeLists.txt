@@ -174,6 +174,60 @@ if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
 
+add_library(soloud 
+    "soloud/src/audiosource/wav/dr_flac.h"
+    "soloud/src/audiosource/wav/dr_impl.cpp"
+    "soloud/src/audiosource/wav/dr_mp3.h"
+    "soloud/src/audiosource/wav/dr_wav.h"
+    "soloud/src/audiosource/wav/soloud_wav.cpp"
+    "soloud/src/audiosource/wav/soloud_wavstream.cpp"
+    "soloud/src/audiosource/wav/stb_vorbis.c"
+    "soloud/src/audiosource/wav/stb_vorbis.h"
+    "soloud/src/backend/alsa/soloud_alsa.cpp"
+    "soloud/src/backend/coreaudio/soloud_coreaudio.cpp"
+    "soloud/src/backend/jack/soloud_jack.cpp"
+    "soloud/src/backend/miniaudio/miniaudio.h"
+    "soloud/src/backend/miniaudio/soloud_miniaudio.cpp"
+    "soloud/src/backend/nosound/soloud_nosound.cpp"
+    "soloud/src/backend/null/soloud_null.cpp"
+    "soloud/src/backend/openal/soloud_openal_dll.c"
+    "soloud/src/backend/openal/soloud_openal.cpp"
+    "soloud/src/backend/opensles/soloud_opensles.cpp"
+    "soloud/src/backend/oss/soloud_oss.cpp"
+    "soloud/src/backend/portaudio/soloud_portaudio_dll.c"
+    "soloud/src/backend/portaudio/soloud_portaudio.cpp"
+    "soloud/src/backend/wasapi/soloud_wasapi.cpp"
+    "soloud/src/backend/winmm/soloud_winmm.cpp"
+    "soloud/src/backend/xaudio2/soloud_xaudio2.cpp"
+    "soloud/src/core/soloud_audiosource.cpp"
+    "soloud/src/core/soloud_bus.cpp"
+    "soloud/src/core/soloud_core_3d.cpp"
+    "soloud/src/core/soloud_core_basicops.cpp"
+    "soloud/src/core/soloud_core_faderops.cpp"
+    "soloud/src/core/soloud_core_filterops.cpp"
+    "soloud/src/core/soloud_core_getters.cpp"
+    "soloud/src/core/soloud_core_setters.cpp"
+    "soloud/src/core/soloud_core_voicegroup.cpp"
+    "soloud/src/core/soloud_core_voiceops.cpp"
+    "soloud/src/core/soloud_fader.cpp"
+    "soloud/src/core/soloud_fft_lut.cpp"
+    "soloud/src/core/soloud_fft.cpp"
+    "soloud/src/core/soloud_file.cpp"
+    "soloud/src/core/soloud_filter.cpp"
+    "soloud/src/core/soloud_misc.cpp"
+    "soloud/src/core/soloud_queue.cpp"
+    "soloud/src/core/soloud_thread.cpp"
+    "soloud/src/core/soloud.cpp"
+)
+
+target_include_directories(soloud PRIVATE
+    "soloud/include"
+)
+
+if(WIN32)
+    target_compile_definitions(soloud PRIVATE -DWITH_WINMM)
+endif()
+
 add_executable(tf-quake2-main
     "src/sys_win32.cpp"
     "src/sys_main.cpp"
