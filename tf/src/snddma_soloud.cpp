@@ -1,5 +1,5 @@
 #include <IMemory.h>
-#include <cstdint>
+#include <ILog.h>
 #include <soloud.h>
 #include <soloud_wav.h>
 #include <soloud_wavstream.h>
@@ -7,7 +7,7 @@
 extern SoLoud::Soloud gSoloud;
 static SoLoud::WavStream stream;
 static SoLoud::Bus streamBus;
-static uint32_t handle;
+static uint32_t handle = -1;
 
 static SoLoud::Queue queue;
 
@@ -23,6 +23,7 @@ extern "C"
 
     qboolean SNDDMA_Init(void)
     {
+        LOGF(LogLevel::eINFO, "DMA Audio Init");
         if (s_khz->value == 44)
             dma.speed = 44100;
         if (s_khz->value == 22)
@@ -31,8 +32,6 @@ extern "C"
             dma.speed = 11025;
 
         queue.setParams(dma.speed);
-
-        gSoloud.play(queue);
 
         int rambuffer = BUFFER_SIZE;
         dma.buffer = (byte *)tf_malloc(BUFFER_SIZE);
@@ -47,6 +46,7 @@ extern "C"
 
     int SNDDMA_GetDMAPos(void)
     {
+        LOGF(LogLevel::eINFO, "DMA Audio: Get Position. Queue count: %d", queue.getQueueCount());
         if (queue.getQueueCount() > 2)
         {
             return dma.samples;
@@ -57,17 +57,28 @@ extern "C"
 
     void SNDDMA_Shutdown(void)
     {
+        LOGF(LogLevel::eINFO, "DMA Audio: Shutdown");
         queue.stop();
+        tf_free(dma.buffer);
+
+        gSoloud.stop(handle);
     }
 
     void SNDDMA_BeginPainting(void)
     {
-        dma.speed = gSoloud.mSamplerate;
-        wav.loadMem(dma.buffer, dma.samples * dma.channels * dma.samplebits / 8, true, true);
+        LOGF(LogLevel::eINFO, "DMA Audio: Begin Painting");
     }
 
     void SNDDMA_Submit(void)
     {
-        queue.play(wav);
+        LOGF(LogLevel::eINFO, "DMA Audio: Submit");
+        wav.loadRawWave16((short *)dma.buffer, dma.samples, dma.speed, dma.channels);
+        
+        if(queue.getQueueCount() == 0) {
+            queue.play(wav);
+            handle = gSoloud.play(queue);
+        } else {
+            queue.play(wav);
+        }
     }
 }
