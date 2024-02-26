@@ -42,7 +42,7 @@ static std::string _errorMsg;
 static bool refresh = false;
 static bool isQuit = false;
 
-SoLoud::Soloud gSoloud;
+SoLoud::Soloud gSoloud {};
 
 void refreshSettings()
 {
@@ -72,6 +72,8 @@ const char *MainApp::GetName()
 
 bool MainApp::Init()
 {
+    gSoloud.init();
+    
     Qcommon_Init(IApp::argc, const_cast<char **>(IApp::argv));
     // FILE PATHS
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
@@ -81,8 +83,6 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_SCREENSHOTS, "Screenshots");
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SCRIPTS, "Scripts");
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
-
-    gSoloud.init();
 
     GRA_init_graphics(this);
     refreshExport();

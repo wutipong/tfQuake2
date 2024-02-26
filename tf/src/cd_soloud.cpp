@@ -6,8 +6,7 @@
 
 extern SoLoud::Soloud gSoloud;
 static SoLoud::WavStream stream;
-static SoLoud::Bus streamBus;
-static uint32_t handle;
+static uint32_t handle = -1;
 
 extern "C"
 {
@@ -15,13 +14,14 @@ extern "C"
 
     qboolean CDAudio_Play(int track, qboolean looping)
     {
-        streamBus.stop();
+        gSoloud.stop(handle);
 
         std::string path = std::format("{}/music/track{:02}.ogg", FS_Gamedir(), track);
         LOGF(LogLevel::eINFO, "Playing music file %s", path.c_str());
 
         stream.load(path.c_str());
-        handle = streamBus.play(stream);
+        handle = gSoloud.playBackground(stream);
+        gSoloud.setLooping(handle, looping);
 
         return false;
     }
@@ -29,6 +29,7 @@ extern "C"
     void CDAudio_Stop(void)
     {
         LOGF(LogLevel::eINFO, "Stop music");
+        if(handle == -1) return;
         gSoloud.setPause(handle, true);
     }
 
@@ -44,12 +45,13 @@ extern "C"
 
     int CDAudio_Init(void)
     {
-        gSoloud.play(streamBus);
+        LOGF(LogLevel::eINFO, "Init music");
+        
         return 0;
     }
 
     void CDAudio_Shutdown(void)
     {
-        streamBus.stop();
+        LOGF(LogLevel::eINFO, "Shutdown music");
     }
 }

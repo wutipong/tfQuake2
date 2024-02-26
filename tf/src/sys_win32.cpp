@@ -33,7 +33,7 @@ extern "C"
             game_library = LoadLibrary(name.c_str());
             if (game_library)
             {
-                LOGF(LogLevel::eINFO, "LoadLibrary (%s)", name);
+                LOGF(LogLevel::eINFO, "LoadLibrary (%s)", name.c_str());
                 break;
             }
         }

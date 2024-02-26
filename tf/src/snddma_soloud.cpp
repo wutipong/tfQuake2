@@ -1,3 +1,4 @@
+#include <IMemory.h>
 #include <cstdint>
 #include <soloud.h>
 #include <soloud_wav.h>
@@ -22,7 +23,24 @@ extern "C"
 
     qboolean SNDDMA_Init(void)
     {
-		gSoloud.play(queue);
+        if (s_khz->value == 44)
+            dma.speed = 44100;
+        if (s_khz->value == 22)
+            dma.speed = 22050;
+        else
+            dma.speed = 11025;
+
+        queue.setParams(dma.speed);
+
+        gSoloud.play(queue);
+
+        int rambuffer = BUFFER_SIZE;
+        dma.buffer = (byte *)tf_malloc(BUFFER_SIZE);
+        dma.channels = 2;
+        dma.samplebits = 16;
+        dma.samplepos = 0;
+        dma.samples = BUFFER_SIZE / (dma.channels * dma.samplebits / 8);
+        dma.submission_chunk = 16;
 
         return true;
     }
@@ -44,11 +62,12 @@ extern "C"
 
     void SNDDMA_BeginPainting(void)
     {
-		wav.loadMem(dma.buffer, dma.samples * dma.channels * dma.samplebits /8, true, true);
+        dma.speed = gSoloud.mSamplerate;
+        wav.loadMem(dma.buffer, dma.samples * dma.channels * dma.samplebits / 8, true, true);
     }
 
     void SNDDMA_Submit(void)
     {
-		queue.play(wav);
+        queue.play(wav);
     }
 }
