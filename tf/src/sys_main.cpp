@@ -28,6 +28,8 @@ extern "C"
     cvar_t *r_customheight;
     cvar_t *viewsize;
     cvar_t *in_joystick;
+
+    int Sys_Milliseconds (void);
 }
 
 #include "gra_common.h"
@@ -122,6 +124,8 @@ void MainApp::Update(float deltaTime)
 {
     updateInputSystem(deltaTime, mSettings.mWidth, mSettings.mHeight);
     sys_frame_time = getSystemTime();
+
+    Sys_Milliseconds();
 
     Qcommon_Frame(static_cast<int>(deltaTime * 1000));
     if (!_errorMsg.empty())
