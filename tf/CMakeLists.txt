@@ -238,6 +238,7 @@ add_executable(tf-quake2-main
     "src/vid_common.cpp"
     "src/in_common.cpp"
     "src/sys_export.cpp"
+    "src/cd_soloud.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
@@ -278,7 +279,6 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    "${CMAKE_SOURCE_DIR}/null/cd_null.c"
     "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
     "${CMAKE_SOURCE_DIR}/win32/conproc.c"
     # "${CMAKE_SOURCE_DIR}/win32/in_win.c"
@@ -327,6 +327,8 @@ target_include_directories(tf-quake2-main PRIVATE
     "The-Forge/Common_3/Utilities/Interfaces"
     "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/Nothings/"
     ${VULKAN_HEADERS_INCLUDE_DIRS}
+
+    "soloud/include"
 )
 
 if (WIN32)
@@ -350,6 +352,7 @@ endif ()
 target_link_libraries(tf-quake2-main PRIVATE  
     the-forge
     gainput
+    soloud
 )
 
 add_custom_target(CopyGpuCfg ALL

@@ -6,6 +6,7 @@
 #include <ILog.h>
 #include <ITime.h>
 #include <format>
+#include <soloud.h>
 #include <string>
 
 extern "C"
@@ -38,6 +39,8 @@ extern Queue *pGraphicsQueue;
 static std::string _errorMsg;
 static bool refresh = false;
 static bool isQuit = false;
+
+SoLoud::Soloud gSoloud;
 
 void refreshSettings()
 {
@@ -77,6 +80,8 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SCRIPTS, "Scripts");
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
 
+    gSoloud.init();
+
     GRA_init_graphics(this);
     refreshExport();
     InputSystemDesc inputDesc = {
@@ -98,6 +103,8 @@ void MainApp::Exit()
     exitInputSystem();
 
     GRA_exit_graphics();
+
+    gSoloud.deinit();
 }
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
