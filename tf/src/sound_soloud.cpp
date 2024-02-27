@@ -9,23 +9,41 @@
 #include <string>
 #include <vector>
 
-
 extern SoLoud::Soloud gSoloud;
 static SoLoud::Bus sfxBus;
 static int busHandle;
-static SoLoud::Wav rawSampleWav;
+
+static SoLoud::Wav rawWav;
+static int rawHandle = -1;
 
 template <class T> static std::vector<float> createWavData(T *src, size_t length)
+{
+    std::vector<float> output{};
+    output.resize(length);
+
+    constexpr auto max = static_cast<float>(std::numeric_limits<T>::max());
+    for (int i = 0; i < length; i++)
+    {
+        auto sample = static_cast<float>(src[i]);
+        output[i] = sample / max;
+    }
+
+    return output;
+}
+
+template <class T> static std::vector<float> createStereoWavData(T *src, size_t length)
 {
     std::vector<float> output{};
     output.resize(length * 2);
 
     const size_t half = length;
-
+    constexpr auto max = static_cast<float>(std::numeric_limits<T>::max());
     for (int i = 0; i < length * 2; i++)
     {
-        auto outIndex = i / 2 + (i % 2 == 0) ? 0 : half;
-        output[outIndex] = static_cast<float>(src[i]) / static_cast<float>(std::numeric_limits<T>::max());
+        auto outIndex = i / 2 + ((i % 2 == 0) ? 0 : half);
+        auto sample = static_cast<float>(src[i]);
+
+        output[outIndex] = sample / max;
     }
 
     return output;
@@ -70,15 +88,61 @@ extern "C"
 
         busHandle = gSoloud.play(sfxBus);
         auto h = sfxBus.play3d(wav, origin[0], origin[1], origin[2]);
-        
+
         gSoloud.setVolume(h, fvol);
     }
+
     void S_StartLocalSound(char *s)
     {
+        sfx_t *sfx;
+
+        sfx = S_RegisterSound(s);
+        if (!sfx)
+        {
+            LOGF(LogLevel::eERROR, "S_StartLocalSound: can't cache %s\n", s);
+            return;
+        }
+        S_StartSound(NULL, cl.playernum + 1, 0, sfx, 1, 1, 0);
     }
 
     void S_RawSamples(int samples, int rate, int width, int channels, byte *data)
     {
+        if (rawHandle != -1)
+        {
+            gSoloud.stop(rawHandle);
+            rawWav = SoLoud::Wav();
+        }
+
+        std::vector<float> raw;
+        if (width == 1)
+        {
+            if (channels == 1)
+            {
+                raw = createWavData(data, samples);
+            }
+            else if (channels == 2)
+            {
+                raw = createStereoWavData(data, samples);
+            }
+        }
+        else if (width == 2)
+        {
+            if (channels == 1)
+            {
+                raw = createWavData((short *)data, samples);
+            }
+            else if (channels == 2)
+            {
+                raw = createStereoWavData((short *)data, samples);
+            }
+        }
+        if (raw.empty())
+        {
+            return;
+        }
+        auto res = rawWav.loadRawWave(raw.data(), raw.size(), rate, channels, true);
+        rawHandle = sfxBus.play(rawWav);
+        busHandle = gSoloud.play(sfxBus);
     }
 
     void S_StopAllSounds(void)
