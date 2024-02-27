@@ -174,6 +174,58 @@ if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
 
+add_library(soloud 
+    "soloud/src/audiosource/wav/dr_flac.h"
+    "soloud/src/audiosource/wav/dr_impl.cpp"
+    "soloud/src/audiosource/wav/dr_mp3.h"
+    "soloud/src/audiosource/wav/dr_wav.h"
+    "soloud/src/audiosource/wav/soloud_wav.cpp"
+    "soloud/src/audiosource/wav/soloud_wavstream.cpp"
+    "soloud/src/audiosource/wav/stb_vorbis.c"
+    "soloud/src/audiosource/wav/stb_vorbis.h"
+    "soloud/src/backend/alsa/soloud_alsa.cpp"
+    "soloud/src/backend/coreaudio/soloud_coreaudio.cpp"
+    "soloud/src/backend/jack/soloud_jack.cpp"
+    "soloud/src/backend/nosound/soloud_nosound.cpp"
+    "soloud/src/backend/null/soloud_null.cpp"
+    "soloud/src/backend/openal/soloud_openal_dll.c"
+    "soloud/src/backend/openal/soloud_openal.cpp"
+    "soloud/src/backend/opensles/soloud_opensles.cpp"
+    "soloud/src/backend/oss/soloud_oss.cpp"
+    "soloud/src/backend/portaudio/soloud_portaudio_dll.c"
+    "soloud/src/backend/portaudio/soloud_portaudio.cpp"
+    "soloud/src/backend/wasapi/soloud_wasapi.cpp"
+    "soloud/src/backend/winmm/soloud_winmm.cpp"
+    "soloud/src/backend/xaudio2/soloud_xaudio2.cpp"
+    "soloud/src/core/soloud_audiosource.cpp"
+    "soloud/src/core/soloud_bus.cpp"
+    "soloud/src/core/soloud_core_3d.cpp"
+    "soloud/src/core/soloud_core_basicops.cpp"
+    "soloud/src/core/soloud_core_faderops.cpp"
+    "soloud/src/core/soloud_core_filterops.cpp"
+    "soloud/src/core/soloud_core_getters.cpp"
+    "soloud/src/core/soloud_core_setters.cpp"
+    "soloud/src/core/soloud_core_voicegroup.cpp"
+    "soloud/src/core/soloud_core_voiceops.cpp"
+    "soloud/src/core/soloud_fader.cpp"
+    "soloud/src/core/soloud_fft_lut.cpp"
+    "soloud/src/core/soloud_fft.cpp"
+    "soloud/src/core/soloud_file.cpp"
+    "soloud/src/core/soloud_filter.cpp"
+    "soloud/src/core/soloud_misc.cpp"
+    "soloud/src/core/soloud_queue.cpp"
+    "soloud/src/core/soloud_thread.cpp"
+    "soloud/src/core/soloud.cpp"
+)
+
+target_include_directories(soloud PRIVATE
+    "soloud/include"
+)
+
+if(WIN32)
+    target_compile_definitions(soloud PRIVATE -DWITH_WINMM)
+endif()
+
 add_executable(tf-quake2-main
     "src/sys_win32.cpp"
     "src/sys_main.cpp"
@@ -184,6 +236,9 @@ add_executable(tf-quake2-main
     "src/vid_common.cpp"
     "src/in_common.cpp"
     "src/sys_export.cpp"
+    "src/cd_soloud.cpp"
+    "src/snd_miniaudio_null.cpp"
+    "src/sound_soloud.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
@@ -201,10 +256,9 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/client/keys.c"
     "${CMAKE_SOURCE_DIR}/client/menu.c"
     "${CMAKE_SOURCE_DIR}/client/qmenu.c"
-    "${CMAKE_SOURCE_DIR}/client/snd_dma.c"
-    "${CMAKE_SOURCE_DIR}/client/snd_mem.c"
-    "${CMAKE_SOURCE_DIR}/client/snd_miniaudio.c"
-    "${CMAKE_SOURCE_DIR}/client/snd_mix.c"
+    # "${CMAKE_SOURCE_DIR}/client/snd_dma.c"
+    # "${CMAKE_SOURCE_DIR}/client/snd_mem.c"
+    # "${CMAKE_SOURCE_DIR}/client/snd_mix.c"
     "${CMAKE_SOURCE_DIR}/game/m_flash.c"
     "${CMAKE_SOURCE_DIR}/game/q_shared.c"
     "${CMAKE_SOURCE_DIR}/qcommon/cmd.c"
@@ -224,8 +278,7 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    "${CMAKE_SOURCE_DIR}/null/cd_null.c"
-    "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
+    # "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
     "${CMAKE_SOURCE_DIR}/win32/conproc.c"
     # "${CMAKE_SOURCE_DIR}/win32/in_win.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
@@ -241,12 +294,10 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/client/console.h"
     "${CMAKE_SOURCE_DIR}/client/input.h"
     "${CMAKE_SOURCE_DIR}/client/keys.h"
-    "${CMAKE_SOURCE_DIR}/client/miniaudio.h"
     "${CMAKE_SOURCE_DIR}/client/qmenu.h"
     "${CMAKE_SOURCE_DIR}/client/ref.h"
     "${CMAKE_SOURCE_DIR}/client/screen.h"
     "${CMAKE_SOURCE_DIR}/client/snd_loc.h"
-    "${CMAKE_SOURCE_DIR}/client/snd_miniaudio.h"
     "${CMAKE_SOURCE_DIR}/client/sound.h"
     "${CMAKE_SOURCE_DIR}/client/vid.h"
     "${CMAKE_SOURCE_DIR}/game/game.h"
@@ -273,6 +324,8 @@ target_include_directories(tf-quake2-main PRIVATE
     "The-Forge/Common_3/Utilities/Interfaces"
     "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/Nothings/"
     ${VULKAN_HEADERS_INCLUDE_DIRS}
+
+    "soloud/include"
 )
 
 if (WIN32)
@@ -296,6 +349,7 @@ endif ()
 target_link_libraries(tf-quake2-main PRIVATE  
     the-forge
     gainput
+    soloud
 )
 
 add_custom_target(CopyGpuCfg ALL

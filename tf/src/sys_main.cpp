@@ -6,6 +6,7 @@
 #include <ILog.h>
 #include <ITime.h>
 #include <format>
+#include <soloud.h>
 #include <string>
 
 extern "C"
@@ -41,6 +42,8 @@ static std::string _errorMsg;
 static bool refresh = false;
 static bool isQuit = false;
 
+SoLoud::Soloud gSoloud {};
+
 void refreshSettings()
 {
     refresh = true;
@@ -69,6 +72,8 @@ const char *MainApp::GetName()
 
 bool MainApp::Init()
 {
+    gSoloud.init();
+    
     Qcommon_Init(IApp::argc, const_cast<char **>(IApp::argv));
     // FILE PATHS
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
@@ -100,6 +105,8 @@ void MainApp::Exit()
     exitInputSystem();
 
     GRA_exit_graphics();
+
+    gSoloud.deinit();
 }
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
