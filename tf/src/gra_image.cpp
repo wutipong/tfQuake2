@@ -48,7 +48,7 @@ image_t* r_particletexture;
 
 cvar_t *vid_gamma;
 glstate_t gl_state;
-refimport_t ri;
+//refimport_t ri;
 int registration_sequence;
 
 // int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
@@ -237,7 +237,7 @@ int registration_sequence;
 
 // 	if (i == NUM_GL_MODES)
 // 	{
-// 		ri.Con_Printf (PRINT_ALL, "bad filter name\n");
+// 		Con_Printf (PRINT_ALL, "bad filter name\n");
 // 		return;
 // 	}
 
@@ -273,7 +273,7 @@ int registration_sequence;
 
 // 	if (i == NUM_GL_ALPHA_MODES)
 // 	{
-// 		ri.Con_Printf (PRINT_ALL, "bad alpha texture mode name\n");
+// 		Con_Printf (PRINT_ALL, "bad alpha texture mode name\n");
 // 		return;
 // 	}
 
@@ -297,7 +297,7 @@ int registration_sequence;
 
 // 	if (i == NUM_GL_SOLID_MODES)
 // 	{
-// 		ri.Con_Printf (PRINT_ALL, "bad solid texture mode name\n");
+// 		Con_Printf (PRINT_ALL, "bad solid texture mode name\n");
 // 		return;
 // 	}
 
@@ -320,7 +320,7 @@ int registration_sequence;
 // 		"PAL"
 // 	};
 
-// 	ri.Con_Printf (PRINT_ALL, "------------------\n");
+// 	Con_Printf (PRINT_ALL, "------------------\n");
 // 	texels = 0;
 
 // 	for (i=0, image=gltextures ; i<numgltextures ; i++, image++)
@@ -331,26 +331,26 @@ int registration_sequence;
 // 		switch (image->type)
 // 		{
 // 		case it_skin:
-// 			ri.Con_Printf (PRINT_ALL, "M");
+// 			Con_Printf (PRINT_ALL, "M");
 // 			break;
 // 		case it_sprite:
-// 			ri.Con_Printf (PRINT_ALL, "S");
+// 			Con_Printf (PRINT_ALL, "S");
 // 			break;
 // 		case it_wall:
-// 			ri.Con_Printf (PRINT_ALL, "W");
+// 			Con_Printf (PRINT_ALL, "W");
 // 			break;
 // 		case it_pic:
-// 			ri.Con_Printf (PRINT_ALL, "P");
+// 			Con_Printf (PRINT_ALL, "P");
 // 			break;
 // 		default:
-// 			ri.Con_Printf (PRINT_ALL, " ");
+// 			Con_Printf (PRINT_ALL, " ");
 // 			break;
 // 		}
 
-// 		ri.Con_Printf (PRINT_ALL,  " %3i %3i %s: %s\n",
+// 		Con_Printf (PRINT_ALL,  " %3i %3i %s: %s\n",
 // 			image->upload_width, image->upload_height, palstrings[image->paletted], image->name);
 // 	}
-// 	ri.Con_Printf (PRINT_ALL, "Total texel count (not counting mipmaps): %i\n", texels);
+// 	Con_Printf (PRINT_ALL, "Total texel count (not counting mipmaps): %i\n", texels);
 // }
 
 /*
@@ -452,7 +452,7 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
     //
     // load the file
     //
-    len = ri.FS_LoadFile(filename, (void **)&raw);
+    len = FS_LoadFile(filename, (void **)&raw);
     if (!raw)
     {
         LOGF(LogLevel::eDEBUG, "Bad pcx file %s", filename);
@@ -528,7 +528,7 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
         *pic = NULL;
     }
 
-    ri.FS_FreeFile(pcx);
+    FS_FreeFile(pcx);
 }
 
 /*
@@ -570,7 +570,7 @@ void LoadTGA(char *name, byte **pic, int *width, int *height)
     //
     // load the file
     //
-    length = ri.FS_LoadFile(name, (void **)&buffer);
+    length = FS_LoadFile(name, (void **)&buffer);
     if (!buffer)
     {
         LOGF(LogLevel::eDEBUG, "Bad tga file %s", name);
@@ -747,7 +747,7 @@ void LoadTGA(char *name, byte **pic, int *width, int *height)
         }
     }
 
-    ri.FS_FreeFile(buffer);
+    FS_FreeFile(buffer);
 }
 
 /*
@@ -1029,7 +1029,7 @@ qboolean uploaded_paletted;
 // 	upload_height = scaled_height;
 
 // 	if (scaled_width * scaled_height > sizeof(scaled)/4)
-// 		ri.Sys_Error (ERR_DROP, "GL_Upload32: too big");
+// 		Sys_Error (ERR_DROP, "GL_Upload32: too big");
 
 // 	// scan the texture for any non-255 alpha
 // 	c = width*height;
@@ -1049,7 +1049,7 @@ qboolean uploaded_paletted;
 // 	else if (samples == gl_alpha_format)
 // 	    comp = gl_tex_alpha_format;
 // 	else {
-// 	    ri.Con_Printf (PRINT_ALL,
+// 	    Con_Printf (PRINT_ALL,
 // 			   "Unknown number of texture components %i\n",
 // 			   samples);
 // 	    comp = samples;
@@ -1204,7 +1204,7 @@ static qboolean IsPowerOf2( int value )
 // 	s = width*height;
 
 // 	if (s > sizeof(trans)/4)
-// 		ri.Sys_Error (ERR_DROP, "GL_Upload8: too large");
+// 		Sys_Error (ERR_DROP, "GL_Upload8: too large");
 
 // 	if ( qglColorTableEXT &&
 // 		 gl_ext_palettedtexture->value &&
@@ -1361,7 +1361,7 @@ image_t *GL_LoadWal(char *name)
     int width, height, ofs;
     image_t *image;
 
-    ri.FS_LoadFile(name, (void **)&mt);
+    FS_LoadFile(name, (void **)&mt);
     if (!mt)
     {
         LOGF(LogLevel::eWARNING, "GL_FindImage: can't load %s\n", name);
@@ -1374,7 +1374,7 @@ image_t *GL_LoadWal(char *name)
 
     image = GL_LoadPic(name, (byte *)mt + ofs, width, height, it_wall, 8);
 
-    ri.FS_FreeFile((void *)mt);
+    FS_FreeFile((void *)mt);
 
     return image;
 }
@@ -1394,10 +1394,10 @@ image_t *GL_FindImage(char *name, imagetype_t type)
     int width, height;
 
     if (!name)
-        return NULL; //	ri.Sys_Error (ERR_DROP, "GL_FindImage: NULL name");
+        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: NULL name");
     len = (int)strlen(name);
     if (len < 5)
-        return NULL; //	ri.Sys_Error (ERR_DROP, "GL_FindImage: bad name: %s", name);
+        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: bad name: %s", name);
 
     // look for it
     for (i = 0, image = gltextures; i < numgltextures; i++, image++)
@@ -1418,7 +1418,7 @@ image_t *GL_FindImage(char *name, imagetype_t type)
     {
         LoadPCX(name, &pic, &palette, &width, &height);
         if (!pic)
-            return NULL; // ri.Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
+            return NULL; // Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
         image = GL_LoadPic(name, pic, width, height, type, 8);
     }
     else if (!strcmp(name + len - 4, ".wal"))
@@ -1429,11 +1429,11 @@ image_t *GL_FindImage(char *name, imagetype_t type)
     {
         LoadTGA(name, &pic, &width, &height);
         if (!pic)
-            return NULL; // ri.Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
+            return NULL; // Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
         image = GL_LoadPic(name, pic, width, height, type, 32);
     }
     else
-        return NULL; //	ri.Sys_Error (ERR_DROP, "GL_FindImage: bad extension on: %s", name);
+        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: bad extension on: %s", name);
 
     if (pic)
         free(pic);
@@ -1536,11 +1536,11 @@ void GL_InitImages(void)
     registration_sequence = 1;
 
     // init intensity conversions
-    intensity = ri.Cvar_Get(std::string("intensity").data(), std::string("2").data(), 0);
+    intensity = Cvar_Get(std::string("intensity").data(), std::string("2").data(), 0);
 
     if (intensity->value <= 1)
     {
-        ri.Cvar_Set(std::string("intensity").data(), std::string("1").data());
+        Cvar_Set(std::string("intensity").data(), std::string("1").data());
     }
 
     gl_state.inverse_intensity = 1 / intensity->value;
@@ -1549,9 +1549,9 @@ void GL_InitImages(void)
     /*
         if ( qglColorTableEXT )
         {
-          ri.FS_LoadFile( "pics/16to8.dat", (void **)&gl_state.d_16to8table );
+          FS_LoadFile( "pics/16to8.dat", (void **)&gl_state.d_16to8table );
             if ( !gl_state.d_16to8table )
-                ri.Sys_Error( ERR_FATAL, "Couldn't load pics/16to8.pcx");
+                Sys_Error( ERR_FATAL, "Couldn't load pics/16to8.pcx");
         }
 
         if ( gl_config.renderer & ( GL_RENDERER_VOODOO | GL_RENDERER_VOODOO2 ) )
