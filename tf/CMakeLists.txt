@@ -239,6 +239,8 @@ add_executable(tf-quake2-main
     "src/cd_soloud.cpp"
     "src/snd_miniaudio_null.cpp"
     "src/sound_soloud.cpp"
+    "src/gra_local.h"
+    "src/gra_image.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
