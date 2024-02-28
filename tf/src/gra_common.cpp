@@ -14,7 +14,7 @@ SwapChain *pSwapChain = NULL;
 RenderTarget *pDepthBuffer = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
 
-Sampler *pSampler = NULL;
+extern Sampler *pSampler = NULL;
 
 // render pipelines
 Pipeline *drawTexQuadPipeline;

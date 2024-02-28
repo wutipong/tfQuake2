@@ -20,408 +20,632 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "gra_local.h"
-#include <ILog.h>
-#include <string>
 
-image_t gltextures[MAX_GLTEXTURES];
-int numgltextures;
+#include <ILog.h>
+#include <IResourceLoader.h>
+#include <memory>
+
+static std::map<std::string, image_t> textures;
+
 int base_textureid; // gltextures[i] = base_textureid+i
+// texture for storing raw image data (cinematics, endscreens, etc.)
+// qvktexture_t vk_rawTexture = QVVKTEXTURE_INIT;
 
 static byte intensitytable[256];
 static unsigned char gammatable[256];
 
 cvar_t *intensity;
+extern cvar_t *vk_mip_nearfilter;
 
 unsigned d_8to24table[256];
 
-qboolean GL_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky);
-qboolean GL_Upload32(unsigned *data, int width, int height, qboolean mipmap);
+// uint32_t Vk_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky);
+// uint32_t Vk_Upload32(unsigned *data, int width, int height, qboolean mipmap);
 
-int gl_solid_format = 3;
-int gl_alpha_format = 4;
+// default global texture and lightmap samplers
+// qvksampler_t vk_current_sampler = S_MIPMAP_LINEAR;
+// qvksampler_t vk_current_lmap_sampler = S_MIPMAP_LINEAR;
 
-int gl_tex_solid_format = 3;
-int gl_tex_alpha_format = 4;
+extern Sampler *pSampler = NULL;
+static Sampler *pSamplerLightmap = NULL;
 
-image_t* r_notexture;
-image_t* r_particletexture;
+extern Renderer *pRenderer;
 
-cvar_t *vid_gamma;
-glstate_t gl_state;
-//refimport_t ri;
-int registration_sequence;
+void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigned char *data, uint32_t width,
+                       uint32_t height);
 
-// int		gl_filter_min = GL_LINEAR_MIPMAP_NEAREST;
-// int		gl_filter_max = GL_LINEAR;
-
-// void GL_SetTexturePalette( unsigned palette[256] )
+// internal helper
+// static VkImageAspectFlags getDepthStencilAspect(VkFormat depthFormat)
 // {
-// 	int i;
-// 	unsigned char temptable[768];
-
-// 	if ( qglColorTableEXT && gl_ext_palettedtexture->value )
-// 	{
-// 		for ( i = 0; i < 256; i++ )
-// 		{
-// 			temptable[i*3+0] = ( palette[i] >> 0 ) & 0xff;
-// 			temptable[i*3+1] = ( palette[i] >> 8 ) & 0xff;
-// 			temptable[i*3+2] = ( palette[i] >> 16 ) & 0xff;
-// 		}
-
-// 		qglColorTableEXT( GL_SHARED_TEXTURE_PALETTE_EXT,
-// 						   GL_RGB,
-// 						   256,
-// 						   GL_RGB,
-// 						   GL_UNSIGNED_BYTE,
-// 						   temptable );
-// 	}
+//     switch (depthFormat)
+//     {
+//     case VK_FORMAT_D32_SFLOAT_S8_UINT:
+//     case VK_FORMAT_D24_UNORM_S8_UINT:
+//     case VK_FORMAT_D16_UNORM_S8_UINT:
+//         return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
+//     default:
+//         return VK_IMAGE_ASPECT_DEPTH_BIT;
+//     }
 // }
 
-// void GL_EnableMultitexture( qboolean enable )
+// internal helper
+// static void transitionImageLayout(const VkCommandBuffer *cmdBuffer, const VkQueue *queue, const qvktexture_t
+// *texture,
+//                                   const VkImageLayout oldLayout, const VkImageLayout newLayout)
 // {
-// 	if ( !qglSelectTextureSGIS && !qglActiveTextureARB )
-// 		return;
+//     VkPipelineStageFlags srcStage = 0;
+//     VkPipelineStageFlags dstStage = 0;
 
-// 	if ( enable )
-// 	{
-// 		GL_SelectTexture( gl_texture1 );
-// 		qglEnable( GL_TEXTURE_2D );
-// 		GL_TexEnv( GL_REPLACE );
-// 	}
-// 	else
-// 	{
-// 		GL_SelectTexture( gl_texture1 );
-// 		qglDisable( GL_TEXTURE_2D );
-// 		GL_TexEnv( GL_REPLACE );
-// 	}
-// 	GL_SelectTexture( gl_texture0 );
-// 	GL_TexEnv( GL_REPLACE );
+//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//                                        .pNext = NULL,
+//                                        .oldLayout = oldLayout,
+//                                        .newLayout = newLayout,
+//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .image = texture->image,
+//                                        .subresourceRange.baseMipLevel = 0, // no mip mapping levels
+//                                        .subresourceRange.baseArrayLayer = 0,
+//                                        .subresourceRange.layerCount = 1,
+//                                        .subresourceRange.levelCount = texture->mipLevels};
+
+//     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+//     {
+//         imgBarrier.subresourceRange.aspectMask = getDepthStencilAspect(texture->format);
+//     }
+//     else
+//     {
+//         imgBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//     }
+
+//     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+//     {
+//         imgBarrier.srcAccessMask = 0;
+//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+//         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+//     }
+//     // transiton that may occur when updating existing image
+//     else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout ==
+//     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+//     {
+//         imgBarrier.srcAccessMask = 0;
+//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+//         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+//     }
+//     else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout ==
+//     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+//     {
+//         if (vk_device.transferQueue == vk_device.gfxQueue)
+//         {
+//             imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//             imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//             srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+//             dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+//         }
+//         else
+//         {
+//             if (vk_device.transferQueue == *queue)
+//             {
+//                 // if the image is exclusively shared, start queue ownership transfer process (release) - only for
+//                 // VK_SHARING_MODE_EXCLUSIVE
+//                 imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//                 imgBarrier.dstAccessMask = 0;
+//                 imgBarrier.srcQueueFamilyIndex = vk_device.transferFamilyIndex;
+//                 imgBarrier.dstQueueFamilyIndex = vk_device.gfxFamilyIndex;
+//                 srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+//                 dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+//             }
+//             else
+//             {
+//                 // continuing queue transfer (acquisition) - this will only happen for VK_SHARING_MODE_EXCLUSIVE
+//                 images if (texture->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
+//                 {
+//                     imgBarrier.srcAccessMask = 0;
+//                     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//                     imgBarrier.srcQueueFamilyIndex = vk_device.transferFamilyIndex;
+//                     imgBarrier.dstQueueFamilyIndex = vk_device.gfxFamilyIndex;
+//                     srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+//                     dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+//                 }
+//                 else
+//                 {
+//                     imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//                     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//                     srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+//                     dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+//                 }
+//             }
+//         }
+//     }
+//     else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+//     {
+//         imgBarrier.srcAccessMask = 0;
+//         imgBarrier.dstAccessMask =
+//             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+//         dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+//     }
+//     else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+//     {
+//         imgBarrier.srcAccessMask = 0;
+//         imgBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+//         dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+//     }
+//     else
+//     {
+//         assert(0 && !"Invalid image stage!");
+//     }
+
+//     vkCmdPipelineBarrier(*cmdBuffer, srcStage, dstStage, 0, 0, NULL, 0, NULL, 1, &imgBarrier);
 // }
 
-// void GL_SelectTexture( GLenum texture )
+// internal helper
+// static void generateMipmaps(const VkCommandBuffer *cmdBuffer, const qvktexture_t *texture, uint32_t width,
+//                             uint32_t height)
 // {
-// 	int tmu;
+//     int32_t mipWidth = width;
+//     int32_t mipHeight = height;
+//     VkFilter mipFilter = vk_mip_nearfilter->value > 0 ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
 
-// 	if ( !qglSelectTextureSGIS && !qglActiveTextureARB )
-// 		return;
+//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//                                        .pNext = NULL,
+//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .image = texture->image,
+//                                        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//                                        .subresourceRange.levelCount = 1,
+//                                        .subresourceRange.baseArrayLayer = 0,
+//                                        .subresourceRange.layerCount = 1};
 
-// 	if ( texture == gl_texture0 )
-// 	{
-// 		tmu = 0;
-// 	}
-// 	else
-// 	{
-// 		tmu = 1;
-// 	}
+//     // copy rescaled mip data between consecutive levels (each higher level is half the size of the previous level)
+//     for (uint32_t i = 1; i < texture->mipLevels; ++i)
+//     {
+//         imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//         imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+//         imgBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+//         imgBarrier.subresourceRange.baseMipLevel = i - 1;
 
-// 	if ( tmu == gl_state.currenttmu )
-// 	{
-// 		return;
-// 	}
+//         vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL,
+//         0,
+//                              NULL, 1, &imgBarrier);
 
-// 	gl_state.currenttmu = tmu;
+//         VkImageBlit blit = {
+//             .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//             .srcSubresource.mipLevel = i - 1,
+//             .srcSubresource.baseArrayLayer = 0,
+//             .srcSubresource.layerCount = 1,
+//             .srcOffsets[0] = {0, 0, 0},
+//             .srcOffsets[1] = {mipWidth, mipHeight, 1},
+//             .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//             .dstSubresource.mipLevel = i,
+//             .dstSubresource.baseArrayLayer = 0,
+//             .dstSubresource.layerCount = 1,
+//             .dstOffsets[0] = {0, 0, 0},
+//             .dstOffsets[1] = {mipWidth > 1 ? mipWidth >> 1 : 1, mipHeight > 1 ? mipHeight >> 1 : 1,
+//                               1} // each mip level is half the size of the previous level
+//         };
 
-// 	if ( qglSelectTextureSGIS )
-// 	{
-// 		qglSelectTextureSGIS( texture );
-// 	}
-// 	else if ( qglActiveTextureARB )
-// 	{
-// 		qglActiveTextureARB( texture );
-// 		qglClientActiveTextureARB( texture );
-// 	}
+//         // src image == dst image, because we're blitting between different mip levels of the same image
+//         vkCmdBlitImage(*cmdBuffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->image,
+//                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, mipFilter);
+
+//         imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//         imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//         imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+//         imgBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+//         vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+//                              NULL, 0, NULL, 1, &imgBarrier);
+
+//         // avoid zero-sized mip levels
+//         if (mipWidth > 1)
+//             mipWidth >>= 1;
+//         if (mipHeight > 1)
+//             mipHeight >>= 1;
+//     }
+
+//     imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//     imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+//     imgBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+//     imgBarrier.subresourceRange.baseMipLevel = texture->mipLevels - 1;
+
+//     vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
+//     NULL,
+//                          0, NULL, 1, &imgBarrier);
 // }
 
-// void GL_TexEnv( GLenum mode )
+// internal helper
+// static void createTextureImage(qvktexture_t *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
 // {
-// 	static int lastmodes[2] = { -1, -1 };
+//     int unifiedTransferAndGfx = vk_device.transferQueue == vk_device.gfxQueue ? 1 : 0;
+//     // assuming 32bit images
+//     uint32_t imageSize = width * height * 4;
 
-// 	if ( mode != lastmodes[gl_state.currenttmu] )
-// 	{
-// 		qglTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, mode );
-// 		lastmodes[gl_state.currenttmu] = mode;
-// 	}
+//     VkBuffer staging_buffer;
+//     VkCommandBuffer command_buffer;
+//     uint32_t staging_offset;
+//     void *imgData = QVk_GetStagingBuffer(imageSize, 4, &command_buffer, &staging_buffer, &staging_offset);
+//     memcpy(imgData, data, (size_t)imageSize);
+
+//     VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+//     // set extra image usage flag if we're dealing with mipmapped image - will need it for copying data between mip
+//     // levels
+//     if (dstTex->mipLevels > 1)
+//         imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+
+//     VK_VERIFY(QVk_CreateImage(width, height, dstTex->format, VK_IMAGE_TILING_OPTIMAL, imageUsage,
+//                               VMA_MEMORY_USAGE_GPU_ONLY, dstTex));
+
+//     transitionImageLayout(&command_buffer, &vk_device.transferQueue, dstTex, VK_IMAGE_LAYOUT_UNDEFINED,
+//                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+//     // copy buffer to image
+//     VkBufferImageCopy region = {.bufferOffset = staging_offset,
+//                                 .bufferRowLength = 0,
+//                                 .bufferImageHeight = 0,
+//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//                                 .imageSubresource.mipLevel = 0,
+//                                 .imageSubresource.baseArrayLayer = 0,
+//                                 .imageSubresource.layerCount = 1,
+//                                 .imageOffset = {0, 0, 0},
+//                                 .imageExtent = {width, height, 1}};
+
+//     vkCmdCopyBufferToImage(command_buffer, staging_buffer, dstTex->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+//                            &region);
+
+//     if (dstTex->mipLevels > 1)
+//     {
+//         // vkCmdBlitImage requires a queue with GRAPHICS_BIT present
+//         generateMipmaps(&command_buffer, dstTex, width, height);
+//     }
+//     else
+//     {
+//         // for non-unified transfer and graphics, this step begins queue ownership transfer to graphics queue (for
+//         // exclusive sharing only)
+//         if (unifiedTransferAndGfx || dstTex->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
+//             transitionImageLayout(&command_buffer, &vk_device.transferQueue, dstTex,
+//                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+//         if (!unifiedTransferAndGfx)
+//         {
+//             transitionImageLayout(&command_buffer, &vk_device.gfxQueue, dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+//                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+//         }
+//     }
 // }
 
-// void GL_Bind (int texnum)
+// VkResult QVk_CreateImageView(const VkImage *image, VkImageAspectFlags aspectFlags, VkImageView *imageView,
+//                              VkFormat format, uint32_t mipLevels)
 // {
-// 	extern	image_t	*draw_chars;
+//     VkImageViewCreateInfo ivCreateInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+//                                           .pNext = NULL,
+//                                           .flags = 0,
+//                                           .image = *image,
+//                                           .viewType = VK_IMAGE_VIEW_TYPE_2D,
+//                                           .format = format,
+//                                           .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
+//                                           .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
+//                                           .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
+//                                           .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
+//                                           .subresourceRange.aspectMask = aspectFlags,
+//                                           .subresourceRange.baseArrayLayer = 0,
+//                                           .subresourceRange.baseMipLevel = 0,
+//                                           .subresourceRange.layerCount = 1,
+//                                           .subresourceRange.levelCount = mipLevels};
 
-// 	if (gl_nobind->value && draw_chars)		// performance evaluation option
-// 		texnum = draw_chars->texnum;
-// 	if ( gl_state.currenttextures[gl_state.currenttmu] == texnum)
-// 		return;
-// 	gl_state.currenttextures[gl_state.currenttmu] = texnum;
-// 	qglBindTexture (GL_TEXTURE_2D, texnum);
+//     return vkCreateImageView(vk_device.logical, &ivCreateInfo, NULL, imageView);
 // }
 
-// void GL_MBind( GLenum target, int texnum )
+// VkResult QVk_CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
+//                          VkImageUsageFlags usage, VmaMemoryUsage memUsage, qvktexture_t *texture)
 // {
-// 	GL_SelectTexture( target );
-// 	if ( target == gl_texture0 )
-// 	{
-// 		if ( gl_state.currenttextures[0] == texnum )
-// 			return;
-// 	}
-// 	else
-// 	{
-// 		if ( gl_state.currenttextures[1] == texnum )
-// 			return;
-// 	}
-// 	GL_Bind( texnum );
+//     VkImageCreateInfo imageInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+//                                    .imageType = VK_IMAGE_TYPE_2D,
+//                                    .extent.width = width,
+//                                    .extent.height = height,
+//                                    .extent.depth = 1,
+//                                    .mipLevels = texture->mipLevels,
+//                                    .arrayLayers = 1,
+//                                    .format = format,
+//                                    .tiling = tiling,
+//                                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+//                                    .usage = usage,
+//                                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+//                                    .samples = texture->sampleCount,
+//                                    .flags = 0};
+
+//     uint32_t queueFamilies[] = {(uint32_t)vk_device.gfxFamilyIndex, (uint32_t)vk_device.transferFamilyIndex};
+//     if (vk_device.gfxFamilyIndex != vk_device.transferFamilyIndex)
+//     {
+//         imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
+//         imageInfo.queueFamilyIndexCount = 2;
+//         imageInfo.pQueueFamilyIndices = queueFamilies;
+//     }
+
+//     VmaAllocationCreateInfo vmallocInfo = {.flags = texture->vmaFlags, .usage = memUsage};
+
+//     texture->sharingMode = imageInfo.sharingMode;
+//     return vmaCreateImage(vk_malloc, &imageInfo, &vmallocInfo, &texture->image, &texture->allocation,
+//                           &texture->allocInfo);
 // }
 
-// typedef struct
+// void QVk_CreateDepthBuffer(VkSampleCountFlagBits sampleCount, qvktexture_t *depthBuffer)
 // {
-// 	char *name;
-// 	int	minimize, maximize;
-// } glmode_t;
+//     depthBuffer->format = QVk_FindDepthFormat();
+//     depthBuffer->sampleCount = sampleCount;
+//     // On 64-bit builds, Intel drivers throw a warning:
+//     // "Mapping an image with layout VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL can result in undefined
+//     behavior
+//     // if this memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we
+//     // don't want any validation warnings, so we create dedicated allocation for depth buffer. more details:
+//     // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false positive
+//     // which in other cases could be ignored:
+//     //
+//     https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
+//     depthBuffer->vmaFlags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-// glmode_t modes[] = {
-// 	{"GL_NEAREST", GL_NEAREST, GL_NEAREST},
-// 	{"GL_LINEAR", GL_LINEAR, GL_LINEAR},
-// 	{"GL_NEAREST_MIPMAP_NEAREST", GL_NEAREST_MIPMAP_NEAREST, GL_NEAREST},
-// 	{"GL_LINEAR_MIPMAP_NEAREST", GL_LINEAR_MIPMAP_NEAREST, GL_LINEAR},
-// 	{"GL_NEAREST_MIPMAP_LINEAR", GL_NEAREST_MIPMAP_LINEAR, GL_NEAREST},
-// 	{"GL_LINEAR_MIPMAP_LINEAR", GL_LINEAR_MIPMAP_LINEAR, GL_LINEAR}
-// };
-
-// #define NUM_GL_MODES (sizeof(modes) / sizeof (glmode_t))
-
-// typedef struct
-// {
-// 	char *name;
-// 	int mode;
-// } gltmode_t;
-
-// gltmode_t gl_alpha_modes[] = {
-// 	{"default", 4},
-// 	{"GL_RGBA", GL_RGBA},
-// 	{"GL_RGBA8", GL_RGBA8},
-// 	{"GL_RGB5_A1", GL_RGB5_A1},
-// 	{"GL_RGBA4", GL_RGBA4},
-// 	{"GL_RGBA2", GL_RGBA2},
-// };
-
-// #define NUM_GL_ALPHA_MODES (sizeof(gl_alpha_modes) / sizeof (gltmode_t))
-
-// gltmode_t gl_solid_modes[] = {
-// 	{"default", 3},
-// 	{"GL_RGB", GL_RGB},
-// 	{"GL_RGB8", GL_RGB8},
-// 	{"GL_RGB5", GL_RGB5},
-// 	{"GL_RGB4", GL_RGB4},
-// 	{"GL_R3_G3_B2", GL_R3_G3_B2},
-// #ifdef GL_RGB2_EXT
-// 	{"GL_RGB2", GL_RGB2_EXT},
-// #endif
-// };
-
-// #define NUM_GL_SOLID_MODES (sizeof(gl_solid_modes) / sizeof (gltmode_t))
-
-// /*
-// ===============
-// GL_TextureMode
-// ===============
-// */
-// void GL_TextureMode( char *string )
-// {
-// 	int		i;
-// 	image_t	*glt;
-
-// 	for (i=0 ; i< NUM_GL_MODES ; i++)
-// 	{
-// 		if ( !Q_stricmp( modes[i].name, string ) )
-// 			break;
-// 	}
-
-// 	if (i == NUM_GL_MODES)
-// 	{
-// 		Con_Printf (PRINT_ALL, "bad filter name\n");
-// 		return;
-// 	}
-
-// 	gl_filter_min = modes[i].minimize;
-// 	gl_filter_max = modes[i].maximize;
-
-// 	// change all the existing mipmap texture objects
-// 	for (i=0, glt=gltextures ; i<numgltextures ; i++, glt++)
-// 	{
-// 		if (glt->type != it_pic && glt->type != it_sky )
-// 		{
-// 			GL_Bind (glt->texnum);
-// 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-// 			qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-// 		}
-// 	}
+//     VK_VERIFY(QVk_CreateImage(vk_swapchain.extent.width, vk_swapchain.extent.height, depthBuffer->format,
+//                               VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+//                               VMA_MEMORY_USAGE_GPU_ONLY, depthBuffer));
+//     VK_VERIFY(QVk_CreateImageView(&depthBuffer->image, getDepthStencilAspect(depthBuffer->format),
+//                                   &depthBuffer->imageView, depthBuffer->format, depthBuffer->mipLevels));
 // }
 
-// /*
-// ===============
-// GL_TextureAlphaMode
-// ===============
-// */
-// void GL_TextureAlphaMode( char *string )
+// void QVk_CreateColorBuffer(VkSampleCountFlagBits sampleCount, qvktexture_t *colorBuffer, int extraFlags)
 // {
-// 	int		i;
+//     colorBuffer->format = vk_swapchain.format;
+//     colorBuffer->sampleCount = sampleCount;
+//     // On 64-bit builds, Intel drivers throw a warning:
+//     // "Mapping an image with layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL can result in undefined behavior if
+//     this
+//     // memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we don't
+//     want
+//     // any validation warnings, so we create dedicated allocation for color buffer. more details:
+//     // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false positive
+//     // which in other cases could be ignored:
+//     //
+//     https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
+//     colorBuffer->vmaFlags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
-// 	for (i=0 ; i< NUM_GL_ALPHA_MODES ; i++)
-// 	{
-// 		if ( !Q_stricmp( gl_alpha_modes[i].name, string ) )
-// 			break;
-// 	}
-
-// 	if (i == NUM_GL_ALPHA_MODES)
-// 	{
-// 		Con_Printf (PRINT_ALL, "bad alpha texture mode name\n");
-// 		return;
-// 	}
-
-// 	gl_tex_alpha_format = gl_alpha_modes[i].mode;
+//     VK_VERIFY(QVk_CreateImage(vk_swapchain.extent.width, vk_swapchain.extent.height, colorBuffer->format,
+//                               VK_IMAGE_TILING_OPTIMAL, extraFlags | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+//                               VMA_MEMORY_USAGE_GPU_ONLY, colorBuffer));
+//     VK_VERIFY(QVk_CreateImageView(&colorBuffer->image, VK_IMAGE_ASPECT_COLOR_BIT, &colorBuffer->imageView,
+//                                   colorBuffer->format, colorBuffer->mipLevels));
 // }
 
-// /*
-// ===============
-// GL_TextureSolidMode
-// ===============
-// */
-// void GL_TextureSolidMode( char *string )
+void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigned char *data, uint32_t width,
+                       uint32_t height)
+{
+    SyncToken token = {};
+    TextureDesc textureDesc = {
+        .pName = name.c_str(),
+        .mWidth = width,
+        .mHeight = height,
+        .mDepth = 1,
+        .mArraySize = 1,
+        .mMipLevels = 1,
+        .mSampleCount = SAMPLE_COUNT_1,
+        .mFormat = TinyImageFormat_R8G8B8A8_UNORM,
+        .mStartState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        .mDescriptors = DESCRIPTOR_TYPE_TEXTURE,
+    };
+
+    TextureLoadDesc loadDesc{};
+    loadDesc.pDesc = &textureDesc;
+    loadDesc.ppTexture = &texture;
+
+    addResource(&loadDesc, &token);
+    waitForToken(&token);
+
+    TextureUpdateDesc updateDesc{
+        .pTexture = texture,
+        .mBaseMipLevel = 0,
+        .mMipLevels = 1,
+        .mBaseArrayLayer = 0,
+        .mLayerCount = 1,
+        .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+    };
+
+    beginUpdateResource(&updateDesc);
+
+    TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+    for (uint32_t r = 0; r < subresource.mRowCount; ++r)
+    {
+        memcpy(subresource.pMappedData + r * subresource.mDstRowStride, data + r * subresource.mSrcRowStride,
+               subresource.mSrcRowStride);
+    }
+    endUpdateResource(&updateDesc);
+}
+
+// void QVk_UpdateTextureData(qvktexture_t *texture, const unsigned char *data, uint32_t offset_x, uint32_t offset_y,
+//                            uint32_t width, uint32_t height)
 // {
-// 	int		i;
+//     int unifiedTransferAndGfx = vk_device.transferQueue == vk_device.gfxQueue ? 1 : 0;
+//     // assuming 32bit images
+//     uint32_t imageSize = width * height * 4;
 
-// 	for (i=0 ; i< NUM_GL_SOLID_MODES ; i++)
-// 	{
-// 		if ( !Q_stricmp( gl_solid_modes[i].name, string ) )
-// 			break;
-// 	}
+//     VkBuffer staging_buffer;
+//     VkCommandBuffer command_buffer;
+//     uint32_t staging_offset;
+//     void *imgData = QVk_GetStagingBuffer(imageSize, 4, &command_buffer, &staging_buffer, &staging_offset);
+//     memcpy(imgData, data, (size_t)imageSize);
 
-// 	if (i == NUM_GL_SOLID_MODES)
-// 	{
-// 		Con_Printf (PRINT_ALL, "bad solid texture mode name\n");
-// 		return;
-// 	}
+//     transitionImageLayout(&command_buffer, &vk_device.transferQueue, texture,
+//     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+//                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+//     // copy buffer to image
+//     VkBufferImageCopy region = {.bufferOffset = staging_offset,
+//                                 .bufferRowLength = 0,
+//                                 .bufferImageHeight = 0,
+//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//                                 .imageSubresource.mipLevel = 0,
+//                                 .imageSubresource.baseArrayLayer = 0,
+//                                 .imageSubresource.layerCount = 1,
+//                                 .imageOffset = {offset_x, offset_y, 0},
+//                                 .imageExtent = {width, height, 1}};
 
-// 	gl_tex_solid_format = gl_solid_modes[i].mode;
+//     vkCmdCopyBufferToImage(command_buffer, staging_buffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
+//                            &region);
+
+//     if (texture->mipLevels > 1)
+//     {
+//         // vkCmdBlitImage requires a queue with GRAPHICS_BIT present
+//         generateMipmaps(&command_buffer, texture, width, height);
+//     }
+//     else
+//     {
+//         // for non-unified transfer and graphics, this step begins queue ownership transfer to graphics queue (for
+//         // exclusive sharing only)
+//         if (unifiedTransferAndGfx || texture->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
+//             transitionImageLayout(&command_buffer, &vk_device.transferQueue, texture,
+//                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+//         if (!unifiedTransferAndGfx)
+//         {
+//             transitionImageLayout(&command_buffer, &vk_device.gfxQueue, texture,
+//             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+//                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+//         }
+//     }
 // }
 
-// /*
-// ===============
-// GL_ImageList_f
-// ===============
-// */
-// void	GL_ImageList_f (void)
+// void QVk_ReleaseTexture(qvktexture_t *texture)
 // {
-// 	int		i;
-// 	image_t	*image;
-// 	int		texels;
-// 	const char *palstrings[2] =
-// 	{
-// 		"RGB",
-// 		"PAL"
-// 	};
+//     QVk_SubmitStagingBuffers();
+//     vkDeviceWaitIdle(vk_device.logical);
 
-// 	Con_Printf (PRINT_ALL, "------------------\n");
-// 	texels = 0;
+//     if (texture->image != VK_NULL_HANDLE)
+//         vmaDestroyImage(vk_malloc, texture->image, texture->allocation);
+//     if (texture->imageView != VK_NULL_HANDLE)
+//         vkDestroyImageView(vk_device.logical, texture->imageView, NULL);
+//     if (texture->descriptorSet != VK_NULL_HANDLE)
+//     {
+//         vkFreeDescriptorSets(vk_device.logical, vk_descriptorPool, 1, &texture->descriptorSet);
+//         vk_config.allocated_sampler_descriptor_set_count--;
+//     }
 
-// 	for (i=0, image=gltextures ; i<numgltextures ; i++, image++)
-// 	{
-// 		if (image->texnum <= 0)
-// 			continue;
-// 		texels += image->upload_width*image->upload_height;
-// 		switch (image->type)
-// 		{
-// 		case it_skin:
-// 			Con_Printf (PRINT_ALL, "M");
-// 			break;
-// 		case it_sprite:
-// 			Con_Printf (PRINT_ALL, "S");
-// 			break;
-// 		case it_wall:
-// 			Con_Printf (PRINT_ALL, "W");
-// 			break;
-// 		case it_pic:
-// 			Con_Printf (PRINT_ALL, "P");
-// 			break;
-// 		default:
-// 			Con_Printf (PRINT_ALL, " ");
-// 			break;
-// 		}
+//     texture->image = VK_NULL_HANDLE;
+//     texture->imageView = VK_NULL_HANDLE;
+//     texture->descriptorSet = VK_NULL_HANDLE;
+// }
 
-// 		Con_Printf (PRINT_ALL,  " %3i %3i %s: %s\n",
-// 			image->upload_width, image->upload_height, palstrings[image->paletted], image->name);
-// 	}
-// 	Con_Printf (PRINT_ALL, "Total texel count (not counting mipmaps): %i\n", texels);
+// void QVk_ReadPixels(uint8_t *dstBuffer, uint32_t width, uint32_t height)
+// {
+//     qvkbuffer_t buff;
+//     VkCommandBuffer cmdBuffer;
+//     extern int vk_activeBufferIdx;
+
+//     qvkbufferopts_t buffOpts = {
+//         .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+//         .reqMemFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+//         .prefMemFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+//         .vmaUsage = VMA_MEMORY_USAGE_CPU_ONLY,
+//         // When taking a screenshot on Intel, the Linux driver may throw a warning:
+//         // "Mapping an image with layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL can result in undefined behavior if
+//         // this memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we
+//         // don't want any validation warnings, so we create dedicated allocation for the image buffer. more details:
+//         // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false
+//         // positive which in other cases could be ignored:
+//         //
+//         https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
+//         .vmaFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT};
+
+//     VK_VERIFY(QVk_CreateBuffer(width * height * 4, &buff, buffOpts));
+//     cmdBuffer = QVk_CreateCommandBuffer(&vk_commandPool[vk_activeBufferIdx], VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+//     VK_VERIFY(QVk_BeginCommand(&cmdBuffer));
+
+//     // transition the current swapchain image to be a source of data transfer to our buffer
+//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+//                                        .pNext = NULL,
+//                                        .srcAccessMask =
+//                                            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+//                                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+//                                        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
+//                                        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+//                                        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+//                                        .image = vk_swapchain.images[vk_activeBufferIdx],
+//                                        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//                                        .subresourceRange.baseMipLevel = 0,
+//                                        .subresourceRange.baseArrayLayer = 0,
+//                                        .subresourceRange.layerCount = 1,
+//                                        .subresourceRange.levelCount = 1};
+
+//     vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+//     0,
+//                          NULL, 0, NULL, 1, &imgBarrier);
+
+//     VkBufferImageCopy region = {.bufferOffset = 0,
+//                                 .bufferRowLength = width,
+//                                 .bufferImageHeight = height,
+//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+//                                 .imageSubresource.mipLevel = 0,
+//                                 .imageSubresource.baseArrayLayer = 0,
+//                                 .imageSubresource.layerCount = 1,
+//                                 .imageOffset = {0, 0, 0},
+//                                 .imageExtent = {width, height, 1}};
+
+//     // copy the swapchain image
+//     vkCmdCopyImageToBuffer(cmdBuffer, vk_swapchain.images[vk_activeBufferIdx], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+//                            buff.buffer, 1, &region);
+//     VK_VERIFY(vkDeviceWaitIdle(vk_device.logical));
+//     QVk_SubmitCommand(&cmdBuffer, &vk_device.gfxQueue);
+
+//     // store image in destination buffer
+//     memcpy(dstBuffer, (uint8_t *)buff.allocInfo.pMappedData, width * height * 4);
+
+//     QVk_FreeBuffer(&buff);
 // }
 
 /*
-=============================================================================
-
-  scrap allocation
-
-  Allocate all the little status bar obejcts into a single texture
-  to crutch up inefficient hardware / drivers
-
-=============================================================================
+===============
+Vk_ImageList_f
+===============
 */
-
-#define MAX_SCRAPS 1
-#define BLOCK_WIDTH 256
-#define BLOCK_HEIGHT 256
-
-int scrap_allocated[MAX_SCRAPS][BLOCK_WIDTH];
-byte scrap_texels[MAX_SCRAPS][BLOCK_WIDTH * BLOCK_HEIGHT];
-qboolean scrap_dirty;
-
-// returns a texture number and the position inside it
-int Scrap_AllocBlock(int w, int h, int *x, int *y)
+void Vk_ImageList_f(void)
 {
-    int i, j;
-    int best, best2;
-    int texnum;
+    int texels = 0;
 
-    for (texnum = 0; texnum < MAX_SCRAPS; texnum++)
+    LOGF(LogLevel::eINFO, "------------------");
+
+    for (auto &texturePair : textures)
     {
-        best = BLOCK_HEIGHT;
-
-        for (i = 0; i < BLOCK_WIDTH - w; i++)
+        auto &[name, image] = texturePair;
+        if (image.texture == NULL)
         {
-            best2 = 0;
-
-            for (j = 0; j < w; j++)
-            {
-                if (scrap_allocated[texnum][i + j] >= best)
-                    break;
-                if (scrap_allocated[texnum][i + j] > best2)
-                    best2 = scrap_allocated[texnum][i + j];
-            }
-            if (j == w)
-            { // this is a valid spot
-                *x = i;
-                *y = best = best2;
-            }
+            continue;
         }
 
-        if (best + h > BLOCK_HEIGHT)
-            continue;
+        texels += image.upload_width * image.upload_height;
 
-        for (i = 0; i < w; i++)
-            scrap_allocated[texnum][*x + i] = best + h;
+        std::string typeStr;
+        switch (image.type)
+        {
+        case it_skin:
+            typeStr = "M";
+            break;
+        case it_sprite:
+            typeStr = "S";
+            break;
+        case it_wall:
+            typeStr = "W";
+            break;
+        case it_pic:
+            typeStr = "P";
+            break;
+        default:
+            typeStr = " ";
+            break;
+        }
 
-        return texnum;
+        LOGF(LogLevel::eINFO, " %3i %3i RGB: %s\n", image.upload_width, image.upload_height, name);
     }
-
-    return -1;
-    //	Sys_Error ("Scrap_AllocBlock: full");
-}
-
-int scrap_uploads;
-
-void Scrap_Upload(void)
-{
-    scrap_uploads++;
-    // GL_Bind(TEXNUM_SCRAPS);
-    // GL_Upload8 (scrap_texels[0], BLOCK_WIDTH, BLOCK_HEIGHT, false, false );
-    scrap_dirty = false;
+    LOGF(LogLevel::eINFO, "Total texel count (not counting mipmaps): %i\n", texels);
 }
 
 /*
@@ -437,7 +661,7 @@ PCX LOADING
 LoadPCX
 ==============
 */
-void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height)
+void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *height)
 {
     byte *raw;
     pcx_t *pcx;
@@ -452,7 +676,7 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
     //
     // load the file
     //
-    len = FS_LoadFile(filename, (void **)&raw);
+    len = FS_LoadFile(filename.data(), (void **)&raw);
     if (!raw)
     {
         LOGF(LogLevel::eDEBUG, "Bad pcx file %s", filename);
@@ -464,18 +688,6 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
     //
     pcx = (pcx_t *)raw;
 
-	//FIXME: the file in the structure should already be Little-endian, and all of the target platform are little endian.
-	/*
-    pcx->xmin = LittleShort(pcx->xmin);
-    pcx->ymin = LittleShort(pcx->ymin);
-    pcx->xmax = LittleShort(pcx->xmax);
-    pcx->ymax = LittleShort(pcx->ymax);
-    pcx->hres = LittleShort(pcx->hres);
-    pcx->vres = LittleShort(pcx->vres);
-    pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
-    pcx->palette_type = LittleShort(pcx->palette_type);
-	*/
-
     raw = &pcx->data;
 
     if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 || pcx->bits_per_pixel != 8 ||
@@ -485,7 +697,7 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
         return;
     }
 
-    out = (byte *)malloc((pcx->ymax + 1) * (pcx->xmax + 1));
+    out = (byte *)tf_malloc((pcx->ymax + 1) * (pcx->xmax + 1));
 
     *pic = out;
 
@@ -523,8 +735,8 @@ void LoadPCX(char *filename, byte **pic, byte **palette, int *width, int *height
 
     if (raw - (byte *)pcx > len)
     {
-        LOGF(LogLevel::eDEBUG, "PCX file %s was malformed", filename);
-        free(*pic);
+        LOGF(eDEBUG, "PCX file %s was malformed", filename);
+        tf_free(*pic);
         *pic = NULL;
     }
 
@@ -585,29 +797,32 @@ void LoadTGA(char *name, byte **pic, int *width, int *height)
 
     tmp[0] = buf_p[0];
     tmp[1] = buf_p[1];
-    targa_header.colormap_index = /*LittleShort*/(*((short *)tmp));
+    targa_header.colormap_index = LittleShort(*((short *)tmp));
     buf_p += 2;
     tmp[0] = buf_p[0];
     tmp[1] = buf_p[1];
-    targa_header.colormap_length = /* LittleShort */(*((short *)tmp));
+    targa_header.colormap_length = LittleShort(*((short *)tmp));
     buf_p += 2;
     targa_header.colormap_size = *buf_p++;
-    targa_header.x_origin = /* LittleShort */(*((short *)buf_p));
+    targa_header.x_origin = LittleShort(*((short *)buf_p));
     buf_p += 2;
-    targa_header.y_origin = /* LittleShort */(*((short *)buf_p));
+    targa_header.y_origin = LittleShort(*((short *)buf_p));
     buf_p += 2;
-    targa_header.width = /* LittleShort */(*((short *)buf_p));
+    targa_header.width = LittleShort(*((short *)buf_p));
     buf_p += 2;
-    targa_header.height = /* LittleShort */(*((short *)buf_p));
+    targa_header.height = LittleShort(*((short *)buf_p));
     buf_p += 2;
     targa_header.pixel_size = *buf_p++;
     targa_header.attributes = *buf_p++;
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10)
-        LOGF(LogLevel::eERROR, "LoadTGA: Only type 2 and 10 targa RGB images supported");
-
+    {
+        LOGF(LogLevel::eERROR, "LoadTGA: Only type 2 and 10 targa RGB images supported.");
+    }
     if (targa_header.colormap_type != 0 || (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
-        LOGF(LogLevel::eERROR, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)");
+    {
+        LOGF(LogLevel::eERROR, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
+    }
 
     columns = targa_header.width;
     rows = targa_header.height;
@@ -660,7 +875,7 @@ void LoadTGA(char *name, byte **pic, int *width, int *height)
     }
     else if (targa_header.image_type == 10)
     { // Runlength encoded RGB images
-        unsigned char red, green, blue, alphabyte, packetHeader, packetSize, j;
+        unsigned char red = 0, green = 0, blue = 0, alphabyte = 0, packetHeader, packetSize, j;
         for (row = rows - 1; row >= 0; row--)
         {
             pixbuf = targa_rgba + row * columns * 4;
@@ -839,512 +1054,74 @@ void R_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
 
 //=======================================================
 
-/*
-================
-GL_ResampleTexture
-================
-*/
-void GL_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight)
+byte *GRA_MapPalleteImage(byte *data, int width, int height)
 {
-    int i, j;
-    unsigned *inrow, *inrow2;
-    unsigned frac, fracstep;
-    unsigned p1[1024], p2[1024];
-    byte *pix1, *pix2, *pix3, *pix4;
+    int size = width * height;
+    uint32_t *output = reinterpret_cast<uint32_t *>(tf_malloc(size * sizeof(uint32_t)));
 
-    fracstep = inwidth * 0x10000 / outwidth;
+    for (int i = 0; i < size; i++)
+    {
+        auto p = data[i];
+        output[i] = d_8to24table[p];
 
-    frac = fracstep >> 2;
-    for (i = 0; i < outwidth; i++)
-    {
-        p1[i] = 4 * (frac >> 16);
-        frac += fracstep;
-    }
-    frac = 3 * (fracstep >> 2);
-    for (i = 0; i < outwidth; i++)
-    {
-        p2[i] = 4 * (frac >> 16);
-        frac += fracstep;
-    }
-
-    for (i = 0; i < outheight; i++, out += outwidth)
-    {
-        inrow = in + inwidth * (int)((i + 0.25) * inheight / outheight);
-        inrow2 = in + inwidth * (int)((i + 0.75) * inheight / outheight);
-        frac = fracstep >> 1;
-        for (j = 0; j < outwidth; j++)
-        {
-            pix1 = (byte *)inrow + p1[j];
-            pix2 = (byte *)inrow + p2[j];
-            pix3 = (byte *)inrow2 + p1[j];
-            pix4 = (byte *)inrow2 + p2[j];
-            ((byte *)(out + j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
-            ((byte *)(out + j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
-            ((byte *)(out + j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
-            ((byte *)(out + j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
+        if (p == 255)
+        { // transparent, so scan around for another color
+            // to avoid alpha fringes
+            // FIXME: do a full flood fill so mips work...
+            if (i > width && data[i - width] != 255)
+                p = data[i - width];
+            else if (i < size - width && data[i + width] != 255)
+                p = data[i + width];
+            else if (i > 0 && data[i - 1] != 255)
+                p = data[i - 1];
+            else if (i < size - 1 && data[i + 1] != 255)
+                p = data[i + 1];
+            else
+                p = 0;
+            // copy rgb components
+            ((byte *)&output[i])[0] = ((byte *)&d_8to24table[p])[0];
+            ((byte *)&output[i])[1] = ((byte *)&d_8to24table[p])[1];
+            ((byte *)&output[i])[2] = ((byte *)&d_8to24table[p])[2];
         }
     }
+
+    return reinterpret_cast<byte *>(output);
 }
 
 /*
 ================
-GL_LightScaleTexture
-
-Scale up the pixel values in a texture to increase the
-lighting range
-================
-*/
-void GL_LightScaleTexture(unsigned *in, int inwidth, int inheight, qboolean only_gamma)
-{
-    if (only_gamma)
-    {
-        int i, c;
-        byte *p;
-
-        p = (byte *)in;
-
-        c = inwidth * inheight;
-        for (i = 0; i < c; i++, p += 4)
-        {
-            p[0] = gammatable[p[0]];
-            p[1] = gammatable[p[1]];
-            p[2] = gammatable[p[2]];
-        }
-    }
-    else
-    {
-        int i, c;
-        byte *p;
-
-        p = (byte *)in;
-
-        c = inwidth * inheight;
-        for (i = 0; i < c; i++, p += 4)
-        {
-            p[0] = gammatable[intensitytable[p[0]]];
-            p[1] = gammatable[intensitytable[p[1]]];
-            p[2] = gammatable[intensitytable[p[2]]];
-        }
-    }
-}
-
-/*
-================
-GL_MipMap
-
-Operates in place, quartering the size of the texture
-================
-*/
-void GL_MipMap(byte *in, int width, int height)
-{
-    int i, j;
-    byte *out;
-
-    width <<= 2;
-    height >>= 1;
-    out = in;
-    for (i = 0; i < height; i++, in += width)
-    {
-        for (j = 0; j < width; j += 8, out += 4, in += 8)
-        {
-            out[0] = (in[0] + in[4] + in[width + 0] + in[width + 4]) >> 2;
-            out[1] = (in[1] + in[5] + in[width + 1] + in[width + 5]) >> 2;
-            out[2] = (in[2] + in[6] + in[width + 2] + in[width + 6]) >> 2;
-            out[3] = (in[3] + in[7] + in[width + 3] + in[width + 7]) >> 2;
-        }
-    }
-}
-
-/*
-===============
-GL_Upload32
-
-Returns has_alpha
-===============
-*/
-void GL_BuildPalettedTexture(unsigned char *paletted_texture, unsigned char *scaled, int scaled_width,
-                             int scaled_height)
-{
-    int i;
-
-    for (i = 0; i < scaled_width * scaled_height; i++)
-    {
-        unsigned int r, g, b, c;
-
-        r = (scaled[0] >> 3) & 31;
-        g = (scaled[1] >> 2) & 63;
-        b = (scaled[2] >> 3) & 31;
-
-        c = r | (g << 5) | (b << 11);
-
-        paletted_texture[i] = gl_state.d_16to8table[c];
-
-        scaled += 4;
-    }
-}
-
-int upload_width, upload_height;
-qboolean uploaded_paletted;
-
-// qboolean GL_Upload32 (unsigned *data, int width, int height,  qboolean mipmap)
-// {
-// 	int			samples;
-// 	unsigned	scaled[256*256];
-// 	unsigned char paletted_texture[256*256];
-// 	int			scaled_width, scaled_height;
-// 	int			i, c;
-// 	byte		*scan;
-// 	int comp;
-
-// 	uploaded_paletted = false;
-
-// 	for (scaled_width = 1 ; scaled_width < width ; scaled_width<<=1)
-// 		;
-// 	if (gl_round_down->value && scaled_width > width && mipmap)
-// 		scaled_width >>= 1;
-// 	for (scaled_height = 1 ; scaled_height < height ; scaled_height<<=1)
-// 		;
-// 	if (gl_round_down->value && scaled_height > height && mipmap)
-// 		scaled_height >>= 1;
-
-// 	// let people sample down the world textures for speed
-// 	if (mipmap)
-// 	{
-// 		scaled_width >>= (int)gl_picmip->value;
-// 		scaled_height >>= (int)gl_picmip->value;
-// 	}
-
-// 	// don't ever bother with >256 textures
-// 	if (scaled_width > 256)
-// 		scaled_width = 256;
-// 	if (scaled_height > 256)
-// 		scaled_height = 256;
-
-// 	if (scaled_width < 1)
-// 		scaled_width = 1;
-// 	if (scaled_height < 1)
-// 		scaled_height = 1;
-
-// 	upload_width = scaled_width;
-// 	upload_height = scaled_height;
-
-// 	if (scaled_width * scaled_height > sizeof(scaled)/4)
-// 		Sys_Error (ERR_DROP, "GL_Upload32: too big");
-
-// 	// scan the texture for any non-255 alpha
-// 	c = width*height;
-// 	scan = ((byte *)data) + 3;
-// 	samples = gl_solid_format;
-// 	for (i=0 ; i<c ; i++, scan += 4)
-// 	{
-// 		if ( *scan != 255 )
-// 		{
-// 			samples = gl_alpha_format;
-// 			break;
-// 		}
-// 	}
-
-// 	if (samples == gl_solid_format)
-// 	    comp = gl_tex_solid_format;
-// 	else if (samples == gl_alpha_format)
-// 	    comp = gl_tex_alpha_format;
-// 	else {
-// 	    Con_Printf (PRINT_ALL,
-// 			   "Unknown number of texture components %i\n",
-// 			   samples);
-// 	    comp = samples;
-// 	}
-
-// #if 0
-// 	if (mipmap)
-// 		gluBuild2DMipmaps (GL_TEXTURE_2D, samples, width, height, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-// 	else if (scaled_width == width && scaled_height == height)
-// 		qglTexImage2D (GL_TEXTURE_2D, 0, comp, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, trans);
-// 	else
-// 	{
-// 		gluScaleImage (GL_RGBA, width, height, GL_UNSIGNED_BYTE, trans,
-// 			scaled_width, scaled_height, GL_UNSIGNED_BYTE, scaled);
-// 		qglTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled);
-// 	}
-// #else
-
-// 	if (scaled_width == width && scaled_height == height)
-// 	{
-// 		if (!mipmap)
-// 		{
-// 			if ( qglColorTableEXT && gl_ext_palettedtexture->value && samples == gl_solid_format )
-// 			{
-// 				uploaded_paletted = true;
-// 				GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) data, scaled_width, scaled_height );
-// 				qglTexImage2D( GL_TEXTURE_2D,
-// 							  0,
-// 							  GL_COLOR_INDEX8_EXT,
-// 							  scaled_width,
-// 							  scaled_height,
-// 							  0,
-// 							  GL_COLOR_INDEX,
-// 							  GL_UNSIGNED_BYTE,
-// 							  paletted_texture );
-// 			}
-// 			else
-// 			{
-// 				qglTexImage2D (GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-// 			}
-// 			goto done;
-// 		}
-// 		memcpy (scaled, data, width*height*4);
-// 	}
-// 	else
-// 		GL_ResampleTexture (data, width, height, scaled, scaled_width, scaled_height);
-
-// 	GL_LightScaleTexture (scaled, scaled_width, scaled_height, !mipmap );
-
-// 	if ( qglColorTableEXT && gl_ext_palettedtexture->value && ( samples == gl_solid_format ) )
-// 	{
-// 		uploaded_paletted = true;
-// 		GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) scaled, scaled_width, scaled_height );
-// 		qglTexImage2D( GL_TEXTURE_2D,
-// 					  0,
-// 					  GL_COLOR_INDEX8_EXT,
-// 					  scaled_width,
-// 					  scaled_height,
-// 					  0,
-// 					  GL_COLOR_INDEX,
-// 					  GL_UNSIGNED_BYTE,
-// 					  paletted_texture );
-// 	}
-// 	else
-// 	{
-// 		qglTexImage2D( GL_TEXTURE_2D, 0, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, scaled );
-// 	}
-
-// 	if (mipmap)
-// 	{
-// 		int		miplevel;
-
-// 		miplevel = 0;
-// 		while (scaled_width > 1 || scaled_height > 1)
-// 		{
-// 			GL_MipMap ((byte *)scaled, scaled_width, scaled_height);
-// 			scaled_width >>= 1;
-// 			scaled_height >>= 1;
-// 			if (scaled_width < 1)
-// 				scaled_width = 1;
-// 			if (scaled_height < 1)
-// 				scaled_height = 1;
-// 			miplevel++;
-// 			if ( qglColorTableEXT && gl_ext_palettedtexture->value && samples == gl_solid_format )
-// 			{
-// 				uploaded_paletted = true;
-// 				GL_BuildPalettedTexture( paletted_texture, ( unsigned char * ) scaled, scaled_width, scaled_height );
-// 				qglTexImage2D( GL_TEXTURE_2D,
-// 							  miplevel,
-// 							  GL_COLOR_INDEX8_EXT,
-// 							  scaled_width,
-// 							  scaled_height,
-// 							  0,
-// 							  GL_COLOR_INDEX,
-// 							  GL_UNSIGNED_BYTE,
-// 							  paletted_texture );
-// 			}
-// 			else
-// 			{
-// 				qglTexImage2D (GL_TEXTURE_2D, miplevel, comp, scaled_width, scaled_height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-// scaled);
-// 			}
-// 		}
-// 	}
-// done: ;
-// #endif
-
-// 	if (mipmap)
-// 	{
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_min);
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-// 	}
-// 	else
-// 	{
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-// 	}
-
-// 	return (samples == gl_alpha_format);
-// }
-
-/*
-===============
-GL_Upload8
-
-Returns has_alpha
-===============
-*/
-/*
-static qboolean IsPowerOf2( int value )
-{
-    int i = 1;
-
-
-    while ( 1 )
-    {
-        if ( value == i )
-            return true;
-        if ( i > value )
-            return false;
-        i <<= 1;
-    }
-}
-*/
-
-// qboolean GL_Upload8 (byte *data, int width, int height,  qboolean mipmap, qboolean is_sky )
-// {
-// 	unsigned	trans[512*256];
-// 	int			i, s;
-// 	int			p;
-
-// 	s = width*height;
-
-// 	if (s > sizeof(trans)/4)
-// 		Sys_Error (ERR_DROP, "GL_Upload8: too large");
-
-// 	if ( qglColorTableEXT &&
-// 		 gl_ext_palettedtexture->value &&
-// 		 is_sky )
-// 	{
-// 		qglTexImage2D( GL_TEXTURE_2D,
-// 					  0,
-// 					  GL_COLOR_INDEX8_EXT,
-// 					  width,
-// 					  height,
-// 					  0,
-// 					  GL_COLOR_INDEX,
-// 					  GL_UNSIGNED_BYTE,
-// 					  data );
-
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, gl_filter_max);
-// 		qglTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, gl_filter_max);
-// 	}
-// 	else
-// 	{
-// 		for (i=0 ; i<s ; i++)
-// 		{
-// 			p = data[i];
-// 			trans[i] = d_8to24table[p];
-
-// 			if (p == 255)
-// 			{	// transparent, so scan around for another color
-// 				// to avoid alpha fringes
-// 				// FIXME: do a full flood fill so mips work...
-// 				if (i > width && data[i-width] != 255)
-// 					p = data[i-width];
-// 				else if (i < s-width && data[i+width] != 255)
-// 					p = data[i+width];
-// 				else if (i > 0 && data[i-1] != 255)
-// 					p = data[i-1];
-// 				else if (i < s-1 && data[i+1] != 255)
-// 					p = data[i+1];
-// 				else
-// 					p = 0;
-// 				// copy rgb components
-// 				((byte *)&trans[i])[0] = ((byte *)&d_8to24table[p])[0];
-// 				((byte *)&trans[i])[1] = ((byte *)&d_8to24table[p])[1];
-// 				((byte *)&trans[i])[2] = ((byte *)&d_8to24table[p])[2];
-// 			}
-// 		}
-
-// 		return GL_Upload32 (trans, width, height, mipmap);
-// 	}
-
-//     return true;
-// }
-
-/*
-================
-GL_LoadPic
+Vk_LoadPic
 
 This is also used as an entry point for the generated r_notexture
 ================
 */
-image_t *GL_LoadPic(char *name, byte *pic, int width, int height, imagetype_t type, int bits)
+image_t *GRA_LoadPic(const std::string& name, byte *pic, int width, int height, imagetype_t type, int bits)
 {
-    image_t *image;
-    int i;
+   	textures.at(name) = image_t{
+        .name = name,
+        .type = type,
+        .width = width,
+        .height = height,
+        .registration_sequence = registration_sequence,
+    };
 
-    // find a free image_t
-    for (i = 0, image = gltextures; i < numgltextures; i++, image++)
-    {
-        if (!image->texnum)
-            break;
-    }
-    if (i == numgltextures)
-    {
-        if (numgltextures == MAX_GLTEXTURES)
-        {
-            LOGF(LogLevel::eERROR, "MAX_GLTEXTURES");
-        }
-        numgltextures++;
-    }
-    image = &gltextures[i];
-
-    if (strlen(name) >= sizeof(image->name))
-    {
-        LOGF(LogLevel::eERROR, "Draw_LoadPic: \"%s\" is too long", name);
-    }
-    image->name = name;
-    image->registration_sequence = registration_sequence;
-
-    image->width = width;
-    image->height = height;
-    image->type = type;
+	auto *image = &textures.at(name);
 
     if (type == it_skin && bits == 8)
-        R_FloodFillSkin(pic, width, height);
-
-    // load little pics into the scrap
-    if (image->type == it_pic && bits == 8 && image->width < 64 && image->height < 64)
     {
-        int x, y;
-        int i, j, k;
-        int texnum;
+        R_FloodFillSkin(pic, width, height);
+    }
 
-        texnum = Scrap_AllocBlock(image->width, image->height, &x, &y);
-        if (texnum == -1)
-            goto nonscrap;
-        scrap_dirty = true;
-
-        // copy the texels into the scrap block
-        k = 0;
-        for (i = 0; i < image->height; i++)
-            for (j = 0; j < image->width; j++, k++)
-                scrap_texels[texnum][(y + i) * BLOCK_WIDTH + x + j] = pic[k];
-        image->texnum = TEXNUM_SCRAPS + texnum;
-        image->scrap = true;
-        image->has_alpha = true;
-        image->sl = (x + 0.01) / (float)BLOCK_WIDTH;
-        image->sh = (x + image->width - 0.01) / (float)BLOCK_WIDTH;
-        image->tl = (y + 0.01) / (float)BLOCK_WIDTH;
-        image->th = (y + image->height - 0.01) / (float)BLOCK_WIDTH;
+    if (bits == 8)
+    {
+        auto mappedData = GRA_MapPalleteImage(pic, width, height);
+        GRA_CreateTexture(image->texture, image->name, (unsigned char *)mappedData, image->upload_width,
+                          image->upload_height);
+        tf_free(mappedData);
     }
     else
     {
-    nonscrap:
-        image->scrap = false;
-        image->texnum = TEXNUM_IMAGES + (image - gltextures);
-        // GL_Bind(image->texnum);
-        /*
-		if (bits == 8)
-            image->has_alpha =
-                GL_Upload8(pic, width, height, (image->type != it_pic && image->type != it_sky), image->type == it_sky);
-        else
-            image->has_alpha =
-                GL_Upload32((unsigned *)pic, width, height, (image->type != it_pic && image->type != it_sky));
-		*/
-        image->upload_width = upload_width; // after power of 2 and scales
-        image->upload_height = upload_height;
-        image->paletted = uploaded_paletted;
-        image->sl = 0;
-        image->sh = 1;
-        image->tl = 0;
-        image->th = 1;
+        GRA_CreateTexture(image->texture, image->name, (unsigned char *)pic, image->upload_width, image->upload_height);
     }
 
     return image;
@@ -1352,10 +1129,10 @@ image_t *GL_LoadPic(char *name, byte *pic, int width, int height, imagetype_t ty
 
 /*
 ================
-GL_LoadWal
+Vk_LoadWal
 ================
 */
-image_t *GL_LoadWal(char *name)
+image_t *GRA_LoadWal(char *name)
 {
     miptex_t *mt;
     int width, height, ofs;
@@ -1364,15 +1141,15 @@ image_t *GL_LoadWal(char *name)
     FS_LoadFile(name, (void **)&mt);
     if (!mt)
     {
-        LOGF(LogLevel::eWARNING, "GL_FindImage: can't load %s\n", name);
+        LOGF(eERROR, "Vk_FindImage: can't load %s\n", name);
         return r_notexture;
     }
 
-    width = /* LittleLong */(mt->width);
-    height = /* LittleLong */(mt->height);
-    ofs = /* LittleLong */(mt->offsets[0]);
+    width = LittleLong(mt->width);
+    height = LittleLong(mt->height);
+    ofs = LittleLong(mt->offsets[0]);
 
-    image = GL_LoadPic(name, (byte *)mt + ofs, width, height, it_wall, 8);
+    image = Vk_LoadPic(name, (byte *)mt + ofs, width, height, it_wall, 8, NULL);
 
     FS_FreeFile((void *)mt);
 
@@ -1381,32 +1158,24 @@ image_t *GL_LoadWal(char *name)
 
 /*
 ===============
-GL_FindImage
+Vk_FindImage
 
 Finds or loads the given image
 ===============
 */
-image_t *GL_FindImage(char *name, imagetype_t type)
+image_t *Vk_FindImage(std::string name, imagetype_t type)
 {
     image_t *image;
     int i, len;
     byte *pic, *palette;
     int width, height;
 
-    if (!name)
-        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: NULL name");
-    len = (int)strlen(name);
-    if (len < 5)
-        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: bad name: %s", name);
-
-    // look for it
-    for (i = 0, image = gltextures; i < numgltextures; i++, image++)
+    if (textures.contains(name))
     {
-        if (image->name == name)
-        {
-            image->registration_sequence = registration_sequence;
-            return image;
-        }
+        auto &image = textures.at(name);
+        image.registration_sequence = registration_sequence;
+
+        return &image;
     }
 
     //
@@ -1414,31 +1183,43 @@ image_t *GL_FindImage(char *name, imagetype_t type)
     //
     pic = NULL;
     palette = NULL;
-    if (!strcmp(name + len - 4, ".pcx"))
+
+    auto ext = name.substr(name.length() - 4);
+    if (ext == ".pcx")
     {
-        LoadPCX(name, &pic, &palette, &width, &height);
+        LoadPCX(name.data(), &pic, &palette, &width, &height);
         if (!pic)
-            return NULL; // Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
-        image = GL_LoadPic(name, pic, width, height, type, 8);
+        {
+            return NULL; // ri.Sys_Error (ERR_DROP, "Vk_FindImage: can't load %s", name);
+        }
+        image = GRA_LoadPic(name, pic, width, height, type, 8);
     }
-    else if (!strcmp(name + len - 4, ".wal"))
+    else if (ext == ".wal")
     {
-        image = GL_LoadWal(name);
+        image = GRA_LoadWal(name.data());
     }
-    else if (!strcmp(name + len - 4, ".tga"))
+    else if (ext == ".tga")
     {
-        LoadTGA(name, &pic, &width, &height);
+        LoadTGA(name.data(), &pic, &width, &height);
         if (!pic)
-            return NULL; // Sys_Error (ERR_DROP, "GL_FindImage: can't load %s", name);
-        image = GL_LoadPic(name, pic, width, height, type, 32);
+        {
+            return NULL; // ri.Sys_Error (ERR_DROP, "Vk_FindImage: can't load %s", name);
+        }
+        image = GRA_LoadPic(name, pic, width, height, type, 32);
     }
     else
-        return NULL; //	Sys_Error (ERR_DROP, "GL_FindImage: bad extension on: %s", name);
+    {
+        return NULL; //	ri.Sys_Error (ERR_DROP, "Vk_FindImage: bad extension on: %s", name);
+    }
 
     if (pic)
+    {
         free(pic);
+    }
     if (palette)
+    {
         free(palette);
+    }
 
     return image;
 }
@@ -1450,18 +1231,18 @@ R_RegisterSkin
 */
 struct image_s *R_RegisterSkin(char *name)
 {
-    return GL_FindImage(name, it_skin);
+    return Vk_FindImage(name, it_skin, NULL);
 }
 
 /*
 ================
-GL_FreeUnusedImages
+Vk_FreeUnusedImages
 
 Any image that was not touched on this registration sequence
 will be freed.
 ================
 */
-void GL_FreeUnusedImages(void)
+void GRA_FreeUnusedImages(void)
 {
     int i;
     image_t *image;
@@ -1470,26 +1251,21 @@ void GL_FreeUnusedImages(void)
     r_notexture->registration_sequence = registration_sequence;
     r_particletexture->registration_sequence = registration_sequence;
 
-    for (i = 0, image = gltextures; i < numgltextures; i++, image++)
+    for (auto &pair : textures)
     {
-        if (image->registration_sequence == registration_sequence)
+        auto &[name, image] = pair;
+        if (image.registration_sequence == registration_sequence)
             continue; // used this sequence
-        if (!image->registration_sequence)
-            continue; // free image_t slot
-        if (image->type == it_pic)
+
+        if (image.type == it_pic)
             continue; // don't free pics
         // free it
-        // qglDeleteTextures (1, &image->texnum);
-        memset(image, 0, sizeof(*image));
+        removeResource(image.texture);
+        textures.erase(name);
     }
 }
 
-/*
-===============
-Draw_GetPalette
-===============
-*/
-int Draw_GetPalette(void)
+int Draw_LoadPalette(void)
 {
     int i;
     int r, g, b;
@@ -1499,12 +1275,10 @@ int Draw_GetPalette(void)
 
     // get the palette
 
-    LoadPCX(std::string("pics/colormap.pcx").data(), &pic, &pal, &width, &height);
+    LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
     if (!pal)
-    {
-        LOGF(LogLevel::eERROR, "Couldn't load pics/colormap.pcx");
-        // FIXME: throws?
-    }
+        Sys_Error(ERR_FATAL, "Couldn't load pics/colormap.pcx");
+
     for (i = 0; i < 256; i++)
     {
         r = pal[i * 3 + 0];
@@ -1512,10 +1286,10 @@ int Draw_GetPalette(void)
         b = pal[i * 3 + 2];
 
         v = (255 << 24) + (r << 0) + (g << 8) + (b << 16);
-        d_8to24table[i] = /* LittleLong */(v);
+        d_8to24table[i] = LittleLong(v);
     }
 
-    d_8to24table[255] &= /* LittleLong */(0xffffff); // 255 is transparent
+    d_8to24table[255] &= LittleLong(0xffffff); // 255 is transparent
 
     free(pic);
     free(pal);
@@ -1525,10 +1299,10 @@ int Draw_GetPalette(void)
 
 /*
 ===============
-GL_InitImages
+Vk_InitImages
 ===============
 */
-void GL_InitImages(void)
+void GRA_InitImages(void)
 {
     int i, j;
     float g = vid_gamma->value;
@@ -1543,22 +1317,10 @@ void GL_InitImages(void)
         Cvar_Set(std::string("intensity").data(), std::string("1").data());
     }
 
-    gl_state.inverse_intensity = 1 / intensity->value;
+    vk_state.inverse_intensity = 1 / intensity->value;
 
-    Draw_GetPalette();
-    /*
-        if ( qglColorTableEXT )
-        {
-          FS_LoadFile( "pics/16to8.dat", (void **)&gl_state.d_16to8table );
-            if ( !gl_state.d_16to8table )
-                Sys_Error( ERR_FATAL, "Couldn't load pics/16to8.pcx");
-        }
+    Draw_LoadPalette();
 
-        if ( gl_config.renderer & ( GL_RENDERER_VOODOO | GL_RENDERER_VOODOO2 ) )
-        {
-            g = 1.0F;
-        }
-    */
     for (i = 0; i < 256; i++)
     {
         if (g == 1)
@@ -1589,20 +1351,21 @@ void GL_InitImages(void)
 
 /*
 ===============
-GL_ShutdownImages
+Vk_ShutdownImages
 ===============
 */
-void GL_ShutdownImages(void)
+void GRA_ShutdownImages(void)
 {
-    int i;
-    image_t *image;
-
-    for (i = 0, image = gltextures; i < numgltextures; i++, image++)
+    for (auto &pair : textures)
     {
-        if (!image->registration_sequence)
-            continue; // free image_t slot
-        // free it
-        // qglDeleteTextures (1, &image->texnum);
-        memset(image, 0, sizeof(*image));
+        auto &[name, image] = pair;
+        removeResource(image.texture);
     }
+
+    // QVk_ReleaseTexture(&vk_rawTexture);
+
+    /*
+    for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
+        QVk_ReleaseTexture(&vk_state.lightmap_textures[i]);
+    */
 }
