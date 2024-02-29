@@ -49,13 +49,6 @@ extern "C"
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-typedef struct
-{
-    unsigned width, height; // coordinates from main game
-} viddef_t;
-
-extern viddef_t vid;
-
 /*
 
   skins will be outline flood filled and mip mapped

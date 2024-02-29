@@ -5,6 +5,9 @@ extern "C"
 }
 
 #include <ILog.h>
+#include "gra_local.h"
+
+struct image_s *R_RegisterSkin(char *name);
 
 void refreshExport()
 {
@@ -20,8 +23,8 @@ void refreshExport()
         return NULL;
     };
     re.RegisterSkin = [](char *name) -> image_s * {
-        LOGF(LogLevel::eDEBUG, "re.RegisterSkin()");
-        return NULL;
+        LOGF(LogLevel::eDEBUG, "re.RegisterSkin(%s)", name);
+        return R_RegisterSkin(name);
     };
     re.RegisterPic = [](char *name) -> image_s * {
         LOGF(LogLevel::eDEBUG, "re.RegisterPic()");
