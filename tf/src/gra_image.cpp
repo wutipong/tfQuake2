@@ -679,7 +679,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
     len = FS_LoadFile(filename.data(), (void **)&raw);
     if (!raw)
     {
-        LOGF(LogLevel::eDEBUG, "Bad pcx file %s", filename);
+        LOGF(LogLevel::eDEBUG, "Bad pcx file %s", filename.c_str());
         return;
     }
 
