@@ -8,7 +8,7 @@ extern "C"
 #include "gra_local.h"
 
 struct image_s *R_RegisterSkin(char *name);
-
+/* 
 void refreshExport()
 {
     re.api_version = API_VERSION;
@@ -49,3 +49,4 @@ void refreshExport()
     re.EndWorldRenderpass = [](void) { LOGF(LogLevel::eDEBUG, "re.EndWorldRenderPass"); };
     re.AppActivate = [](qboolean activate) { LOGF(LogLevel::eDEBUG, "re.AppActivate"); };
 }
+*/

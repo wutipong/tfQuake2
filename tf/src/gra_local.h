@@ -76,12 +76,9 @@ typedef struct image_s
     std::string name;
     imagetype_t type;
     int width, height;               // source image
-    int upload_width, upload_height; // after power of two and picmip
     int registration_sequence;       // 0 = free
     struct msurface_s *texturechain; // for sort-by-texture world drawing
     Texture *texture;                // Vulkan texture handle
-    float sl, tl, sh, th;            // 0,0 - 1,1 unless part of the scrap
-    qboolean scrap;
 
 } image_t;
 
@@ -202,7 +199,7 @@ extern int registration_sequence;
 // extern qvksampler_t vk_current_sampler;
 // extern qvksampler_t vk_current_lmap_sampler;
 
-qboolean R_Init(void *hinstance, void *hWnd);
+qboolean R_Init(void);
 void R_Shutdown(void);
 
 void R_RenderView(refdef_t *fd);

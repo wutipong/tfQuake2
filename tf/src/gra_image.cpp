@@ -621,7 +621,7 @@ void Vk_ImageList_f(void)
             continue;
         }
 
-        texels += image.upload_width * image.upload_height;
+        texels += image.width * image.height;
 
         std::string typeStr;
         switch (image.type)
@@ -643,7 +643,7 @@ void Vk_ImageList_f(void)
             break;
         }
 
-        LOGF(LogLevel::eINFO, " %3i %3i RGB: %s\n", image.upload_width, image.upload_height, name);
+        LOGF(LogLevel::eINFO, " %3i %3i RGB: %s\n", image.width, image.height, name);
     }
     LOGF(LogLevel::eINFO, "Total texel count (not counting mipmaps): %i\n", texels);
 }
@@ -833,7 +833,7 @@ void LoadTGA(char *name, byte **pic, int *width, int *height)
     if (height)
         *height = rows;
 
-    targa_rgba = (byte *)malloc(numPixels * 4);
+    targa_rgba = (byte *)tf_malloc(numPixels * 4);
     *pic = targa_rgba;
 
     if (targa_header.id_length != 0)
@@ -1095,9 +1095,9 @@ Vk_LoadPic
 This is also used as an entry point for the generated r_notexture
 ================
 */
-image_t *GRA_LoadPic(const std::string& name, byte *pic, int width, int height, imagetype_t type, int bits)
+image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits)
 {
-   	textures.at(name) = image_t{
+    image_t image = {
         .name = name,
         .type = type,
         .width = width,
@@ -1105,7 +1105,10 @@ image_t *GRA_LoadPic(const std::string& name, byte *pic, int width, int height, 
         .registration_sequence = registration_sequence,
     };
 
-	auto *image = &textures.at(name);
+    if (pic == NULL)
+    {
+        return NULL;
+    }
 
     if (type == it_skin && bits == 8)
     {
@@ -1115,16 +1118,23 @@ image_t *GRA_LoadPic(const std::string& name, byte *pic, int width, int height, 
     if (bits == 8)
     {
         auto mappedData = GRA_MapPalleteImage(pic, width, height);
-        GRA_CreateTexture(image->texture, image->name, (unsigned char *)mappedData, image->upload_width,
-                          image->upload_height);
+
+        if (mappedData == NULL)
+        {
+            return NULL;
+        }
+
+        GRA_CreateTexture(image.texture, image.name, (unsigned char *)mappedData, image.width, image.height);
         tf_free(mappedData);
     }
     else
     {
-        GRA_CreateTexture(image->texture, image->name, (unsigned char *)pic, image->upload_width, image->upload_height);
+        GRA_CreateTexture(image.texture, image.name, (unsigned char *)pic, image.width, image.height);
     }
 
-    return image;
+    textures.emplace(name, image);
+
+    return &textures.at(name);
 }
 
 /*
@@ -1168,7 +1178,7 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
     int i, len;
     byte *pic, *palette;
     int width, height;
-    image_t* image;
+    image_t *image;
 
     if (textures.contains(name))
     {
@@ -1214,11 +1224,11 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
 
     if (pic)
     {
-        free(pic);
+        tf_free(pic);
     }
     if (palette)
     {
-        free(palette);
+        tf_free(palette);
     }
 
     return image;
@@ -1277,7 +1287,9 @@ int Draw_LoadPalette(void)
 
     LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
     if (!pal)
-        Sys_Error(ERR_FATAL, "Couldn't load pics/colormap.pcx");
+    {
+        LOGF(eERROR, "Couldn't load pics/colormap.pcx");
+    }
 
     for (i = 0; i < 256; i++)
     {

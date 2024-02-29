@@ -17,11 +17,9 @@ extern "C"
     viddef_t viddef;
 
     // Console variables that we need to access from this module
-    cvar_t *vid_gamma;
     cvar_t *vid_ref;  // Name of Refresh DLL loaded
     cvar_t *vid_xpos; // X coordinate of window position
     cvar_t *vid_ypos; // Y coordinate of window position
-    cvar_t *vid_fullscreen;
     cvar_t *vid_refresh;
     cvar_t *vid_hudscale;
     cvar_t *r_customwidth;
@@ -29,7 +27,7 @@ extern "C"
     cvar_t *viewsize;
     cvar_t *in_joystick;
 
-    int Sys_Milliseconds (void);
+    int Sys_Milliseconds(void);
 }
 
 #include "gra_common.h"
@@ -42,7 +40,8 @@ static std::string _errorMsg;
 static bool refresh = false;
 static bool isQuit = false;
 
-SoLoud::Soloud gSoloud {};
+SoLoud::Soloud gSoloud{};
+viddef_t vid;
 
 void refreshSettings()
 {
@@ -61,8 +60,6 @@ class MainApp : public IApp
     void Draw() override;
     void Update(float deltaTime) override;
     const char *GetName() override;
-
-    static void Sys_Error(char *error, ...);
 };
 
 const char *MainApp::GetName()
@@ -73,7 +70,7 @@ const char *MainApp::GetName()
 bool MainApp::Init()
 {
     gSoloud.init();
-    
+
     Qcommon_Init(IApp::argc, const_cast<char **>(IApp::argv));
     // FILE PATHS
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SHADER_BINARIES, "CompiledShaders");
@@ -124,6 +121,8 @@ void MainApp::Update(float deltaTime)
 {
     updateInputSystem(deltaTime, mSettings.mWidth, mSettings.mHeight);
     sys_frame_time = getSystemTime();
+    vid.width = mSettings.mWidth;
+    vid.height = mSettings.mHeight;
 
     Sys_Milliseconds();
 
@@ -152,12 +151,13 @@ extern "C"
 {
     void Sys_Error(char *error, ...)
     {
-        va_list args;
-        va_start(args, error);
-        _errorMsg = std::sprintf(error, args);
-        va_end(args);
-
-        return;
+        va_list argptr;
+        
+        va_start(argptr, error);
+        LOGF(eERROR, argptr);
+        va_end(argptr);
+        
+        isQuit = true;
     }
 
     char *Sys_GetClipboardData(void)

@@ -21,9 +21,15 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 // draw.c
 
+#include "../../client/vid.h"
 #include "gra_local.h"
+#include <format>
 
 image_t *draw_chars;
+
+bool vk_frameStarted;
+
+extern viddef_t vid;
 
 /*
 ===============
@@ -33,8 +39,8 @@ Draw_InitLocal
 void Draw_InitLocal(void)
 {
     // load console characters (don't bilerp characters)
-    qvksampler_t samplerType = S_NEAREST;
-    draw_chars = GRA_FindImage("pics/conchars.pcx", it_pic, &samplerType);
+    // qvksampler_t samplerType = S_NEAREST;
+    draw_chars = GRA_FindImage("pics/conchars.pcx", it_pic);
 }
 
 /*
@@ -52,18 +58,23 @@ void Draw_Char(int x, int y, int num)
     float frow, fcol, size;
 
     if (!vk_frameStarted)
+    {
         return;
+    }
 
     num &= 255;
 
     if ((num & 127) == 32)
+    {
         return; // space
+    }
 
-    cvar_t *scale = ri.Cvar_Get("hudscale", "1", 0);
+    cvar_t *scale = Cvar_Get(std::string("hudscale").data(), std::string("1").data(), 0);
 
     if (y <= -8 * scale->value)
+    {
         return; // totally off screen
-
+    }
     row = num >> 4;
     col = num & 15;
 
@@ -79,7 +90,7 @@ void Draw_Char(int x, int y, int num)
                             frow,
                             size,
                             size};
-    QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &draw_chars->vk_texture);
+    // QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &draw_chars->vk_texture);
 }
 
 /*
@@ -90,15 +101,15 @@ Draw_FindPic
 image_t *Draw_FindPic(char *name)
 {
     image_t *vk;
-    char fullname[MAX_QPATH];
 
     if (name[0] != '/' && name[0] != '\\')
     {
-        Com_sprintf(fullname, sizeof(fullname), "pics/%s.pcx", name);
-        vk = GRA_FindImage(fullname, it_pic, NULL);
+        vk = GRA_FindImage(std::format("pics/{}.pcx", name), it_pic);
     }
     else
-        vk = GRA_FindImage(name + 1, it_pic, NULL);
+    {
+        vk = GRA_FindImage(name + 1, it_pic);
+    }
 
     return vk;
 }
@@ -119,7 +130,7 @@ void Draw_GetPicSize(int *w, int *h, char *pic)
         return;
     }
 
-    cvar_t *scale = ri.Cvar_Get("hudscale", "1", 0);
+    cvar_t *scale = Cvar_Get(std::string("hudscale").data(), std::string("1").data(), 0);
 
     *w = vk->width * scale->value;
     *h = vk->height * scale->value;
@@ -140,14 +151,14 @@ void Draw_StretchPic(int x, int y, int w, int h, char *pic)
     vk = Draw_FindPic(pic);
     if (!vk)
     {
-        ri.Con_Printf(PRINT_ALL, "Can't find pic: %s\n", pic);
+        LOGF(eERROR, "Can't find pic: %s", pic);
         return;
     }
 
     float imgTransform[] = {
-        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, vk->sl, vk->tl,
-        vk->sh - vk->sl,      vk->th - vk->tl};
-    QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &vk->vk_texture);
+        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0, 1, 0, 0,
+    };
+    // QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &vk->vk_texture);
 }
 
 /*
@@ -158,12 +169,12 @@ Draw_Pic
 void Draw_Pic(int x, int y, char *pic)
 {
     image_t *vk;
-    cvar_t *scale = ri.Cvar_Get("hudscale", "1", 0);
+    cvar_t *scale = Cvar_Get(std::string("hudscale").data(), std::string("1").data(), 0);
 
     vk = Draw_FindPic(pic);
     if (!vk)
     {
-        ri.Con_Printf(PRINT_ALL, "Can't find pic: %s\n", pic);
+        LOGF(eERROR, "Can't find pic: %s\n", pic);
         return;
     }
 
@@ -185,13 +196,13 @@ void Draw_TileClear(int x, int y, int w, int h, char *pic)
     image = Draw_FindPic(pic);
     if (!image)
     {
-        ri.Con_Printf(PRINT_ALL, "Can't find pic: %s\n", pic);
+        LOGF(eERROR, "Can't find pic: %s\n", pic);
         return;
     }
 
     float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
-                            (float)x / 64.0,      (float)y / 64.0,       (float)w / 64.0,      (float)h / 64.0};
-    QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &image->vk_texture);
+                            (float)x / 64.0f,     (float)y / 64.0f,      (float)w / 64.0f,     (float)h / 64.0f};
+    //  QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &image->vk_texture);
 }
 
 /*
@@ -212,13 +223,15 @@ void Draw_Fill(int x, int y, int w, int h, int c)
         return;
 
     if ((unsigned)c > 255)
-        ri.Sys_Error(ERR_FATAL, "Draw_Fill: bad color");
+    {
+        LOGF(eERROR, "Draw_Fill: bad color");
+    }
 
     color.c = d_8to24table[c];
 
     float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
                             color.v[0] / 255.f,   color.v[1] / 255.f,    color.v[2] / 255.f,   1.f};
-    QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
+    // QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
 }
 
 //=============================================================================
@@ -231,12 +244,15 @@ Draw_FadeScreen
 */
 void Draw_FadeScreen(void)
 {
-    float imgTransform[] = {0.f, 0.f, vid.width, vid.height, 0.f, 0.f, 0.f, .8f};
+    float imgTransform[] = {0.f, 0.f, static_cast<float>(vid.width), static_cast<float>(vid.height), 0.f, 0.f,
+                            0.f, .8f};
 
     if (!vk_frameStarted)
+    {
         return;
+    }
 
-    QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
+    // QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
 }
 
 //====================================================================
@@ -247,7 +263,7 @@ Draw_StretchRaw
 =============
 */
 extern unsigned r_rawpalette[256];
-extern qvktexture_t vk_rawTexture;
+extern Texture *rawTexture;
 
 void Draw_StretchRaw(int x, int y, int w, int h, int cols, int rows, byte *data)
 {
@@ -260,7 +276,9 @@ void Draw_StretchRaw(int x, int y, int w, int h, int cols, int rows, byte *data)
     float t;
 
     if (!vk_frameStarted)
+    {
         return;
+    }
 
     if (rows <= 256)
     {
@@ -292,23 +310,23 @@ void Draw_StretchRaw(int x, int y, int w, int h, int cols, int rows, byte *data)
         }
     }
 
-    if (vk_rawTexture.image != VK_NULL_HANDLE)
-    {
-        QVk_UpdateTextureData(&vk_rawTexture, (unsigned char *)&image32, 0, 0, 256, 256);
-    }
-    else
-    {
-        QVVKTEXTURE_CLEAR(vk_rawTexture);
-        QVk_CreateTexture(&vk_rawTexture, (unsigned char *)&image32, 256, 256, vk_current_sampler);
-        QVk_DebugSetObjectName((uint64_t)vk_rawTexture.image, VK_OBJECT_TYPE_IMAGE, "Image: raw texture");
-        QVk_DebugSetObjectName((uint64_t)vk_rawTexture.imageView, VK_OBJECT_TYPE_IMAGE_VIEW, "Image View: raw texture");
-        QVk_DebugSetObjectName((uint64_t)vk_rawTexture.descriptorSet, VK_OBJECT_TYPE_DESCRIPTOR_SET,
-                               "Descriptor Set: raw texture");
-        QVk_DebugSetObjectName((uint64_t)vk_rawTexture.allocInfo.deviceMemory, VK_OBJECT_TYPE_DEVICE_MEMORY,
-                               "Memory: raw texture");
-    }
+    // if (vk_rawTexture.image != VK_NULL_HANDLE)
+    // {
+    //     QVk_UpdateTextureData(&vk_rawTexture, (unsigned char *)&image32, 0, 0, 256, 256);
+    // }
+    // else
+    // {
+    //     QVVKTEXTURE_CLEAR(vk_rawTexture);
+    //     QVk_CreateTexture(&vk_rawTexture, (unsigned char *)&image32, 256, 256, vk_current_sampler);
+    //     QVk_DebugSetObjectName((uint64_t)vk_rawTexture.image, VK_OBJECT_TYPE_IMAGE, "Image: raw texture");
+    //     QVk_DebugSetObjectName((uint64_t)vk_rawTexture.imageView, VK_OBJECT_TYPE_IMAGE_VIEW, "Image View: raw
+    //     texture"); QVk_DebugSetObjectName((uint64_t)vk_rawTexture.descriptorSet, VK_OBJECT_TYPE_DESCRIPTOR_SET,
+    //                            "Descriptor Set: raw texture");
+    //     QVk_DebugSetObjectName((uint64_t)vk_rawTexture.allocInfo.deviceMemory, VK_OBJECT_TYPE_DEVICE_MEMORY,
+    //                            "Memory: raw texture");
+    // }
 
-    float imgTransform[] = {
-        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0.f, 0.f, 1.f, t};
-    QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &vk_rawTexture);
+    // float imgTransform[] = {
+    //     (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0.f, 0.f, 1.f, t};
+    // QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &vk_rawTexture);
 }
