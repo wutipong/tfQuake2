@@ -34,7 +34,7 @@ void Draw_InitLocal(void)
 {
     // load console characters (don't bilerp characters)
     qvksampler_t samplerType = S_NEAREST;
-    draw_chars = Vk_FindImage("pics/conchars.pcx", it_pic, &samplerType);
+    draw_chars = GRA_FindImage("pics/conchars.pcx", it_pic, &samplerType);
 }
 
 /*
@@ -95,10 +95,10 @@ image_t *Draw_FindPic(char *name)
     if (name[0] != '/' && name[0] != '\\')
     {
         Com_sprintf(fullname, sizeof(fullname), "pics/%s.pcx", name);
-        vk = Vk_FindImage(fullname, it_pic, NULL);
+        vk = GRA_FindImage(fullname, it_pic, NULL);
     }
     else
-        vk = Vk_FindImage(name + 1, it_pic, NULL);
+        vk = GRA_FindImage(name + 1, it_pic, NULL);
 
     return vk;
 }

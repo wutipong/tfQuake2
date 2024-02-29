@@ -21,12 +21,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifndef __GRA_LOCAL_H__
 #define __GRA_LOCAL_H__
 
+#include <IGraphics.h>
 #include <Math/MathTypes.h>
+#include <map>
 #include <math.h>
 #include <stdio.h>
-#include <map>
 #include <string>
-#include <IGraphics.h>
 
 extern "C"
 {
@@ -114,13 +114,13 @@ typedef enum
 
 //====================================================
 
-extern std::map<image_t, std::string> textures;
+extern std::map<std::string, image_t> textures;
 extern int numvktextures;
 
 extern image_t *r_notexture;
 extern image_t *r_particletexture;
 extern entity_t *currententity;
-extern model_t *currentmodel;
+// extern model_t *currentmodel;
 extern int r_visframecount;
 extern int r_framecount;
 extern cplane_t frustum[4];
@@ -140,53 +140,56 @@ extern vec3_t r_origin;
 extern refdef_t r_newrefdef;
 extern int r_viewcluster, r_viewcluster2, r_oldviewcluster, r_oldviewcluster2;
 
-extern cvar_t *r_norefresh;
-extern cvar_t *r_lefthand;
-extern cvar_t *r_drawentities;
-extern cvar_t *r_drawworld;
-extern cvar_t *r_speeds;
-extern cvar_t *r_fullbright;
-extern cvar_t *r_novis;
-extern cvar_t *r_nocull;
-extern cvar_t *r_lerpmodels;
+extern "C"
+{
+    extern cvar_t *r_norefresh;
+    extern cvar_t *r_lefthand;
+    extern cvar_t *r_drawentities;
+    extern cvar_t *r_drawworld;
+    extern cvar_t *r_speeds;
+    extern cvar_t *r_fullbright;
+    extern cvar_t *r_novis;
+    extern cvar_t *r_nocull;
+    extern cvar_t *r_lerpmodels;
 
-extern cvar_t *r_lightlevel; // FIXME: This is a HACK to get the client's light level
+    extern cvar_t *r_lightlevel; // FIXME: This is a HACK to get the client's light level
 
-extern cvar_t *vk_validation;
-extern cvar_t *vk_mode;
-extern cvar_t *vk_log;
-extern cvar_t *vk_picmip;
-extern cvar_t *vk_skymip;
-extern cvar_t *vk_round_down;
-extern cvar_t *vk_flashblend;
-extern cvar_t *vk_finish;
-extern cvar_t *vk_clear;
-extern cvar_t *vk_lockpvs;
-extern cvar_t *vk_polyblend;
-extern cvar_t *vk_modulate;
-extern cvar_t *vk_shadows;
-extern cvar_t *vk_particle_size;
-extern cvar_t *vk_particle_att_a;
-extern cvar_t *vk_particle_att_b;
-extern cvar_t *vk_particle_att_c;
-extern cvar_t *vk_particle_min_size;
-extern cvar_t *vk_particle_max_size;
-extern cvar_t *vk_point_particles;
-extern cvar_t *vk_dynamic;
-extern cvar_t *vk_showtris;
-extern cvar_t *vk_lightmap;
-extern cvar_t *vk_texturemode;
-extern cvar_t *vk_lmaptexturemode;
-extern cvar_t *vk_aniso;
-extern cvar_t *vk_sampleshading;
-extern cvar_t *vk_vsync;
-extern cvar_t *vk_device_idx;
-extern cvar_t *vk_fullscreen_exclusive;
+    extern cvar_t *vk_validation;
+    extern cvar_t *vk_mode;
+    extern cvar_t *vk_log;
+    extern cvar_t *vk_picmip;
+    extern cvar_t *vk_skymip;
+    extern cvar_t *vk_round_down;
+    extern cvar_t *vk_flashblend;
+    extern cvar_t *vk_finish;
+    extern cvar_t *vk_clear;
+    extern cvar_t *vk_lockpvs;
+    extern cvar_t *vk_polyblend;
+    extern cvar_t *vk_modulate;
+    extern cvar_t *vk_shadows;
+    extern cvar_t *vk_particle_size;
+    extern cvar_t *vk_particle_att_a;
+    extern cvar_t *vk_particle_att_b;
+    extern cvar_t *vk_particle_att_c;
+    extern cvar_t *vk_particle_min_size;
+    extern cvar_t *vk_particle_max_size;
+    extern cvar_t *vk_point_particles;
+    extern cvar_t *vk_dynamic;
+    extern cvar_t *vk_showtris;
+    extern cvar_t *vk_lightmap;
+    extern cvar_t *vk_texturemode;
+    extern cvar_t *vk_lmaptexturemode;
+    extern cvar_t *vk_aniso;
+    extern cvar_t *vk_sampleshading;
+    extern cvar_t *vk_vsync;
+    extern cvar_t *vk_device_idx;
+    extern cvar_t *vk_fullscreen_exclusive;
 
-extern cvar_t *vid_fullscreen;
-extern cvar_t *vid_gamma;
+    extern cvar_t *vid_fullscreen;
+    extern cvar_t *vid_gamma;
 
-extern cvar_t *intensity;
+    extern cvar_t *intensity;
+}
 
 extern int c_visible_lightmaps;
 extern int c_visible_textures;
@@ -198,13 +201,13 @@ void R_PushDlights(void);
 
 //====================================================================
 
-extern model_t *r_worldmodel;
+// extern model_t *r_worldmodel;
 
 extern unsigned d_8to24table[256];
 
 extern int registration_sequence;
-extern qvksampler_t vk_current_sampler;
-extern qvksampler_t vk_current_lmap_sampler;
+// extern qvksampler_t vk_current_sampler;
+// extern qvksampler_t vk_current_lmap_sampler;
 
 qboolean R_Init(void *hinstance, void *hWnd);
 void R_Shutdown(void);
@@ -218,19 +221,19 @@ void R_DrawBeam(entity_t *e);
 void R_DrawWorld(void);
 void R_RenderDlights(void);
 void R_DrawAlphaSurfaces(void);
-void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha);
+// void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha);
 void R_InitParticleTexture(void);
 void Draw_InitLocal(void);
-void Vk_SubdivideSurface(msurface_t *fa);
+// void Vk_SubdivideSurface(msurface_t *fa);
 qboolean R_CullBox(vec3_t mins, vec3_t maxs);
 void R_RotateForEntity(entity_t *e, float *mvMatrix);
 void R_MarkLeaves(void);
 
-void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float *color);
-void R_AddSkySurface(msurface_t *fa);
+// void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float *color);
+// void R_AddSkySurface(msurface_t *fa);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
-void R_MarkLights(dlight_t *light, int bit, mnode_t *node);
+// void R_MarkLights(dlight_t *light, int bit, mnode_t *node);
 
 void COM_StripExtension(char *in, char *out);
 
@@ -255,10 +258,8 @@ struct image_s *R_RegisterSkin(char *name);
 
 void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *height);
 
-image_t *Vk_LoadPic(char *name, byte *pic, int width, int height, imagetype_t type, int bits,
-                    qvksampler_t *samplerType);
-image_t *Vk_FindImage(std::string name, imagetype_t type, qvksampler_t *samplerType);
-void Vk_TextureMode(char *string);
+image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits);
+image_t *GRA_FindImage(std::string name, imagetype_t type);
 void Vk_LmapTextureMode(char *string);
 void Vk_ImageList_f(void);
 
@@ -319,7 +320,7 @@ typedef struct
 
     unsigned char *d_16to8table;
 
-    qvktexture_t lightmap_textures[MAX_LIGHTMAPS * 2];
+    Texture *lightmap_textures[MAX_LIGHTMAPS * 2];
 
     int currenttextures[2];
     int currenttmu;

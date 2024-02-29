@@ -25,7 +25,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <IResourceLoader.h>
 #include <memory>
 
-static std::map<std::string, image_t> textures;
+std::map<std::string, image_t> textures;
 
 int base_textureid; // gltextures[i] = base_textureid+i
 // texture for storing raw image data (cinematics, endscreens, etc.)
@@ -46,7 +46,7 @@ unsigned d_8to24table[256];
 // qvksampler_t vk_current_sampler = S_MIPMAP_LINEAR;
 // qvksampler_t vk_current_lmap_sampler = S_MIPMAP_LINEAR;
 
-extern Sampler *pSampler = NULL;
+Sampler *pSamplerImage = NULL;
 static Sampler *pSamplerLightmap = NULL;
 
 extern Renderer *pRenderer;
@@ -1141,7 +1141,7 @@ image_t *GRA_LoadWal(char *name)
     FS_LoadFile(name, (void **)&mt);
     if (!mt)
     {
-        LOGF(eERROR, "Vk_FindImage: can't load %s\n", name);
+        LOGF(eERROR, "GRA_FindImage: can't load %s\n", name);
         return r_notexture;
     }
 
@@ -1149,7 +1149,7 @@ image_t *GRA_LoadWal(char *name)
     height = LittleLong(mt->height);
     ofs = LittleLong(mt->offsets[0]);
 
-    image = Vk_LoadPic(name, (byte *)mt + ofs, width, height, it_wall, 8, NULL);
+    image = GRA_LoadPic(name, (byte *)mt + ofs, width, height, it_wall, 8);
 
     FS_FreeFile((void *)mt);
 
@@ -1158,24 +1158,24 @@ image_t *GRA_LoadWal(char *name)
 
 /*
 ===============
-Vk_FindImage
+GRA_FindImage
 
 Finds or loads the given image
 ===============
 */
-image_t *Vk_FindImage(std::string name, imagetype_t type)
+image_t *GRA_FindImage(std::string name, imagetype_t type)
 {
-    image_t *image;
     int i, len;
     byte *pic, *palette;
     int width, height;
+    image_t* image;
 
     if (textures.contains(name))
     {
-        auto &image = textures.at(name);
-        image.registration_sequence = registration_sequence;
+        image = &textures.at(name);
+        image->registration_sequence = registration_sequence;
 
-        return &image;
+        return image;
     }
 
     //
@@ -1190,7 +1190,7 @@ image_t *Vk_FindImage(std::string name, imagetype_t type)
         LoadPCX(name.data(), &pic, &palette, &width, &height);
         if (!pic)
         {
-            return NULL; // ri.Sys_Error (ERR_DROP, "Vk_FindImage: can't load %s", name);
+            return NULL; // ri.Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
         }
         image = GRA_LoadPic(name, pic, width, height, type, 8);
     }
@@ -1203,13 +1203,13 @@ image_t *Vk_FindImage(std::string name, imagetype_t type)
         LoadTGA(name.data(), &pic, &width, &height);
         if (!pic)
         {
-            return NULL; // ri.Sys_Error (ERR_DROP, "Vk_FindImage: can't load %s", name);
+            return NULL; // ri.Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
         }
         image = GRA_LoadPic(name, pic, width, height, type, 32);
     }
     else
     {
-        return NULL; //	ri.Sys_Error (ERR_DROP, "Vk_FindImage: bad extension on: %s", name);
+        return NULL; //	ri.Sys_Error (ERR_DROP, "GRA_FindImage: bad extension on: %s", name);
     }
 
     if (pic)
@@ -1231,7 +1231,7 @@ R_RegisterSkin
 */
 struct image_s *R_RegisterSkin(char *name)
 {
-    return Vk_FindImage(name, it_skin, NULL);
+    return GRA_FindImage(name, it_skin);
 }
 
 /*
