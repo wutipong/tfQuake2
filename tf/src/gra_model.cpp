@@ -176,15 +176,16 @@ Mod_ForName
 Loads in a model for the given name
 ==================
 */
-model_t *Mod_ForName(char *name, qboolean crash)
+model_t *Mod_ForName(std::string name, qboolean crash)
 {
     model_t *mod;
     unsigned *buf;
     int i;
 
-    if (!name[0])
+    if (name.empty())
     {
         LOGF(eERROR, "Mod_ForName: NULL name");
+        return NULL;
     }
 
     //
@@ -192,10 +193,11 @@ model_t *Mod_ForName(char *name, qboolean crash)
     //
     if (name[0] == '*')
     {
-        i = atoi(name + 1);
+        int i = std::stoi(name.substr(1));
         if (i < 1 || !r_worldmodel || i >= r_worldmodel->numsubmodels)
         {
             LOGF(eERROR, "bad inline model number");
+            return NULL;
         }
         return &mod_inline[i];
     }
@@ -206,9 +208,13 @@ model_t *Mod_ForName(char *name, qboolean crash)
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
         if (!mod->name[0])
+        {
             continue;
-        if (!strcmp(mod->name, name))
+        }
+        if (name == mod->name)
+        {
             return mod;
+        }
     }
 
     //
@@ -227,19 +233,21 @@ model_t *Mod_ForName(char *name, qboolean crash)
         }
         mod_numknown++;
     }
-    strcpy(mod->name, name);
+    mod->name = name;
 
     //
     // load the file
     //
-    modfilelen = FS_LoadFile(mod->name, (void **)&buf);
+    modfilelen = FS_LoadFile(mod->name.data(), (void **)&buf);
     if (!buf)
     {
         if (crash)
         {
-            LOGF(eERROR, "Mod_NumForName: %s not found", mod->name);
+            LOGF(eERROR, "Mod_NumForName: %s not found", mod->name.c_str());
         }
-        memset(mod->name, 0, sizeof(mod->name));
+
+        mod->name.clear();
+
         return NULL;
     }
 
@@ -1153,7 +1161,7 @@ void R_BeginRegistration(char *model)
     // explicitly free the old map if different
     // this guarantees that mod_known[0] is the world map
     flushmap = Cvar_Get(std::string("flushmap").data(), std::string("0").data(), 0);
-    if (strcmp(mod_known[0].name, fullname.data()) || flushmap->value)
+    if (fullname != mod_known[0].name || flushmap->value)
     {
         Mod_Free(&mod_known[0]);
     }
@@ -1168,7 +1176,7 @@ R_RegisterModel
 
 @@@@@@@@@@@@@@@@@@@@@
 */
-struct model_s *R_RegisterModel(char *name)
+struct model_s *R_RegisterModel(char* name)
 {
     model_t *mod;
     int i;

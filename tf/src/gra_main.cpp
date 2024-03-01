@@ -1395,11 +1395,8 @@ void refreshExport()
 {
     re.api_version = API_VERSION;
 
-    re.BeginRegistration = [](char *map) { LOGF(LogLevel::eDEBUG, "re.BeginRegistration()"); };
-    re.RegisterModel = [](char *name) -> model_s * {
-        LOGF(LogLevel::eDEBUG, "re.RegisterModel()");
-        return NULL;
-    };
+    re.BeginRegistration = R_BeginRegistration;
+    re.RegisterModel = R_RegisterModel;
     re.RegisterSkin = R_RegisterSkin;
     re.RegisterPic = Draw_FindPic;
     re.SetSky = [](char *name, float rotate, vec3_t axis) { LOGF(LogLevel::eDEBUG, "re.SetSky"); };

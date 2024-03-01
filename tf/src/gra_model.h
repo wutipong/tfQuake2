@@ -24,6 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_local.h"
 #include <Math/MathTypes.h>
+#include <string>
+
 /*
 
 d*_t structures are on-disk representations
@@ -179,7 +181,8 @@ typedef enum {mod_bad, mod_brush, mod_sprite, mod_alias } modtype_t;
 
 typedef struct model_s
 {
-	char		name[MAX_QPATH];
+	// char		name[MAX_QPATH];
+	std::string name;
 
 	int			registration_sequence;
 
@@ -251,7 +254,7 @@ typedef struct model_s
 //============================================================================
 
 void	Mod_Init (void);
-model_t *Mod_ForName (char *name, qboolean crash);
+model_t *Mod_ForName (std::string name, qboolean crash);
 mleaf_t *Mod_PointInLeaf (float *p, model_t *model);
 byte	*Mod_ClusterPVS (int cluster, model_t *model);
 
