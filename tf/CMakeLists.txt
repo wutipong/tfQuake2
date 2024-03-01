@@ -125,7 +125,6 @@ add_library(the-forge
     "The-Forge/Common_3/Utilities/Math/Algorithms.c"
     "The-Forge/Common_3/Utilities/Math/StbDs.c"
     "The-Forge/Common_3/Utilities/MemoryTracking/MemoryTracking.c"
-    "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/basis_universal/transcoder/basisu_transcoder.cpp"
     "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/bstrlib/bstrlib.c"
     "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/lz4/lz4.c"
     "The-Forge/Common_3/Utilities/ThirdParty/OpenSource/lz4/lz4.h"
