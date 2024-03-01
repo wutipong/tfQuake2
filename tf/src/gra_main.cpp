@@ -1,7 +1,5 @@
 #include "gra_local.h"
 
-int registration_sequence;
-
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2018-2019 Krzysztof Kondrak
@@ -29,12 +27,14 @@ extern "C"
 #include "../../client/client.h"
 }
 
+#include "gra_model.h"
+
 extern viddef_t vid;
 
 refimport_t ri;
-refexport_t	re;
+refexport_t re;
 
-// model_t		*r_worldmodel;
+model_t *r_worldmodel;
 
 vkconfig_t vk_config;
 vkstate_t vk_state;
@@ -43,7 +43,7 @@ image_t *r_notexture;       // use for bad textures
 image_t *r_particletexture; // little dot for particles
 
 entity_t *currententity;
-// model_t		*currentmodel;
+model_t *currentmodel;
 
 cplane_t frustum[4];
 

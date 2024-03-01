@@ -110,7 +110,6 @@ extern int numvktextures;
 extern image_t *r_notexture;
 extern image_t *r_particletexture;
 extern entity_t *currententity;
-// extern model_t *currentmodel;
 extern int r_visframecount;
 extern int r_framecount;
 extern cplane_t frustum[4];
@@ -190,8 +189,6 @@ void R_LightPoint(vec3_t p, vec3_t color);
 void R_PushDlights(void);
 
 //====================================================================
-
-// extern model_t *r_worldmodel;
 
 extern unsigned d_8to24table[256];
 
