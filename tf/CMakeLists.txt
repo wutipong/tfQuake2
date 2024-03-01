@@ -233,6 +233,7 @@ add_executable(tf-quake2-main
     "src/gra_image.cpp"
     "src/gra_local.h"
     "src/gra_main.cpp"
+    "src/gra_mesh.cpp"
     "src/in_common.cpp"
     "src/snd_miniaudio_null.cpp"
     "src/sound_soloud.cpp"
