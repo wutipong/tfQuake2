@@ -1246,6 +1246,8 @@ R_RegisterSkin
 */
 struct image_s *R_RegisterSkin(char *name)
 {
+	LOGF(eINFO, "Register skin: %s.", name);
+	
     return GRA_FindImage(name, it_skin);
 }
 
