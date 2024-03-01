@@ -239,7 +239,6 @@ add_executable(tf-quake2-main
     "src/sound_soloud.cpp"
     "src/sys_event.cpp"
     "src/sys_event.h"
-    "src/sys_export.cpp"
     "src/sys_main.cpp"
     "src/sys_win32.cpp"
     "src/vid_common.cpp"

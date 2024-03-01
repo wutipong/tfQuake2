@@ -98,6 +98,7 @@ bool MainApp::Init()
 
 void MainApp::Exit()
 {
+    Com_Quit();
     Qcommon_Shutdown();
     exitInputSystem();
 

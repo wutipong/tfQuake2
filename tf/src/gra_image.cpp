@@ -705,7 +705,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
 
     if (palette)
     {
-        *palette = (byte *)malloc(768);
+        *palette = (byte *)tf_malloc(768);
         memcpy(*palette, (byte *)pcx + len - 768, 768);
     }
 
@@ -1097,6 +1097,11 @@ This is also used as an entry point for the generated r_notexture
 */
 image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits)
 {
+    if (textures.contains(name))
+    {
+        return &textures.at(name);
+    }
+
     image_t image = {
         .name = name,
         .type = type,

@@ -47,7 +47,7 @@ extern "C"
 
     void VID_Shutdown(void)
     {
-        if (reflib_active)
+        //if (reflib_active)
         {
             re.Shutdown();
             // VID_FreeReflib ();

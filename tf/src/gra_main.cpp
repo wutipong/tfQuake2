@@ -32,6 +32,7 @@ extern "C"
 extern viddef_t vid;
 
 refimport_t ri;
+refexport_t	re;
 
 // model_t		*r_worldmodel;
 
@@ -1077,7 +1078,7 @@ qboolean R_Init(void *hinstance, void *hWnd)
     // // print device information during startup
     // Vk_Strings_f();
 
-    // Vk_InitImages();
+    GRA_InitImages();
     // Mod_Init();
     // R_InitParticleTexture();
     // Draw_InitLocal();
@@ -1101,7 +1102,7 @@ void R_Shutdown(void)
     // vkDeviceWaitIdle(vk_device.logical);
 
     // Mod_FreeAll();
-    // Vk_ShutdownImages();
+    GRA_ShutdownImages();
 
     // // Shutdown Vulkan subsystem
     // QVk_Shutdown();
