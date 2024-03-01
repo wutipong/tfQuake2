@@ -94,9 +94,7 @@ extern "C"
 
     void S_StartLocalSound(char *s)
     {
-        sfx_t *sfx;
-
-        sfx = S_RegisterSound(s);
+        sfx_t *sfx = S_FindName(s, true);
         if (!sfx)
         {
             LOGF(LogLevel::eERROR, "S_StartLocalSound: can't cache %s\n", s);
