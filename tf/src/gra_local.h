@@ -251,7 +251,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
 image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits);
 image_t *GRA_FindImage(std::string name, imagetype_t type);
 void Vk_LmapTextureMode(char *string);
-void Vk_ImageList_f(void);
+void GRA_ImageList_f(void);
 
 void GRA_InitImages(void);
 void GRA_ShutdownImages(void);

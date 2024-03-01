@@ -27,9 +27,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 std::map<std::string, image_t> textures;
 
-int base_textureid; // gltextures[i] = base_textureid+i
 // texture for storing raw image data (cinematics, endscreens, etc.)
-// qvktexture_t vk_rawTexture = QVVKTEXTURE_INIT;
+Texture *rawTexture;
 
 static byte intensitytable[256];
 static unsigned char gammatable[256];
@@ -39,383 +38,10 @@ extern cvar_t *vk_mip_nearfilter;
 
 unsigned d_8to24table[256];
 
-// uint32_t Vk_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky);
-// uint32_t Vk_Upload32(unsigned *data, int width, int height, qboolean mipmap);
-
-// default global texture and lightmap samplers
-// qvksampler_t vk_current_sampler = S_MIPMAP_LINEAR;
-// qvksampler_t vk_current_lmap_sampler = S_MIPMAP_LINEAR;
-
 Sampler *pSamplerImage = NULL;
 static Sampler *pSamplerLightmap = NULL;
 
 extern Renderer *pRenderer;
-
-void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigned char *data, uint32_t width,
-                       uint32_t height);
-
-// internal helper
-// static VkImageAspectFlags getDepthStencilAspect(VkFormat depthFormat)
-// {
-//     switch (depthFormat)
-//     {
-//     case VK_FORMAT_D32_SFLOAT_S8_UINT:
-//     case VK_FORMAT_D24_UNORM_S8_UINT:
-//     case VK_FORMAT_D16_UNORM_S8_UINT:
-//         return VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT;
-//     default:
-//         return VK_IMAGE_ASPECT_DEPTH_BIT;
-//     }
-// }
-
-// internal helper
-// static void transitionImageLayout(const VkCommandBuffer *cmdBuffer, const VkQueue *queue, const qvktexture_t
-// *texture,
-//                                   const VkImageLayout oldLayout, const VkImageLayout newLayout)
-// {
-//     VkPipelineStageFlags srcStage = 0;
-//     VkPipelineStageFlags dstStage = 0;
-
-//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-//                                        .pNext = NULL,
-//                                        .oldLayout = oldLayout,
-//                                        .newLayout = newLayout,
-//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .image = texture->image,
-//                                        .subresourceRange.baseMipLevel = 0, // no mip mapping levels
-//                                        .subresourceRange.baseArrayLayer = 0,
-//                                        .subresourceRange.layerCount = 1,
-//                                        .subresourceRange.levelCount = texture->mipLevels};
-
-//     if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-//     {
-//         imgBarrier.subresourceRange.aspectMask = getDepthStencilAspect(texture->format);
-//     }
-//     else
-//     {
-//         imgBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-//     }
-
-//     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-//     {
-//         imgBarrier.srcAccessMask = 0;
-//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-//     }
-//     // transiton that may occur when updating existing image
-//     else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout ==
-//     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-//     {
-//         imgBarrier.srcAccessMask = 0;
-//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//         dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-//     }
-//     else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout ==
-//     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-//     {
-//         if (vk_device.transferQueue == vk_device.gfxQueue)
-//         {
-//             imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//             imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//             srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-//             dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-//         }
-//         else
-//         {
-//             if (vk_device.transferQueue == *queue)
-//             {
-//                 // if the image is exclusively shared, start queue ownership transfer process (release) - only for
-//                 // VK_SHARING_MODE_EXCLUSIVE
-//                 imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//                 imgBarrier.dstAccessMask = 0;
-//                 imgBarrier.srcQueueFamilyIndex = vk_device.transferFamilyIndex;
-//                 imgBarrier.dstQueueFamilyIndex = vk_device.gfxFamilyIndex;
-//                 srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-//                 dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-//             }
-//             else
-//             {
-//                 // continuing queue transfer (acquisition) - this will only happen for VK_SHARING_MODE_EXCLUSIVE
-//                 images if (texture->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
-//                 {
-//                     imgBarrier.srcAccessMask = 0;
-//                     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//                     imgBarrier.srcQueueFamilyIndex = vk_device.transferFamilyIndex;
-//                     imgBarrier.dstQueueFamilyIndex = vk_device.gfxFamilyIndex;
-//                     srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//                     dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-//                 }
-//                 else
-//                 {
-//                     imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//                     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//                     srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-//                     dstStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-//                 }
-//             }
-//         }
-//     }
-//     else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-//     {
-//         imgBarrier.srcAccessMask = 0;
-//         imgBarrier.dstAccessMask =
-//             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//         dstStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-//     }
-//     else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-//     {
-//         imgBarrier.srcAccessMask = 0;
-//         imgBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-//         srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-//         dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-//     }
-//     else
-//     {
-//         assert(0 && !"Invalid image stage!");
-//     }
-
-//     vkCmdPipelineBarrier(*cmdBuffer, srcStage, dstStage, 0, 0, NULL, 0, NULL, 1, &imgBarrier);
-// }
-
-// internal helper
-// static void generateMipmaps(const VkCommandBuffer *cmdBuffer, const qvktexture_t *texture, uint32_t width,
-//                             uint32_t height)
-// {
-//     int32_t mipWidth = width;
-//     int32_t mipHeight = height;
-//     VkFilter mipFilter = vk_mip_nearfilter->value > 0 ? VK_FILTER_NEAREST : VK_FILTER_LINEAR;
-
-//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-//                                        .pNext = NULL,
-//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .image = texture->image,
-//                                        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//                                        .subresourceRange.levelCount = 1,
-//                                        .subresourceRange.baseArrayLayer = 0,
-//                                        .subresourceRange.layerCount = 1};
-
-//     // copy rescaled mip data between consecutive levels (each higher level is half the size of the previous level)
-//     for (uint32_t i = 1; i < texture->mipLevels; ++i)
-//     {
-//         imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//         imgBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-//         imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-//         imgBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-//         imgBarrier.subresourceRange.baseMipLevel = i - 1;
-
-//         vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL,
-//         0,
-//                              NULL, 1, &imgBarrier);
-
-//         VkImageBlit blit = {
-//             .srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//             .srcSubresource.mipLevel = i - 1,
-//             .srcSubresource.baseArrayLayer = 0,
-//             .srcSubresource.layerCount = 1,
-//             .srcOffsets[0] = {0, 0, 0},
-//             .srcOffsets[1] = {mipWidth, mipHeight, 1},
-//             .dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//             .dstSubresource.mipLevel = i,
-//             .dstSubresource.baseArrayLayer = 0,
-//             .dstSubresource.layerCount = 1,
-//             .dstOffsets[0] = {0, 0, 0},
-//             .dstOffsets[1] = {mipWidth > 1 ? mipWidth >> 1 : 1, mipHeight > 1 ? mipHeight >> 1 : 1,
-//                               1} // each mip level is half the size of the previous level
-//         };
-
-//         // src image == dst image, because we're blitting between different mip levels of the same image
-//         vkCmdBlitImage(*cmdBuffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, texture->image,
-//                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, mipFilter);
-
-//         imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-//         imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//         imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-//         imgBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-//         vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-//                              NULL, 0, NULL, 1, &imgBarrier);
-
-//         // avoid zero-sized mip levels
-//         if (mipWidth > 1)
-//             mipWidth >>= 1;
-//         if (mipHeight > 1)
-//             mipHeight >>= 1;
-//     }
-
-//     imgBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-//     imgBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-//     imgBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-//     imgBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-//     imgBarrier.subresourceRange.baseMipLevel = texture->mipLevels - 1;
-
-//     vkCmdPipelineBarrier(*cmdBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-//     NULL,
-//                          0, NULL, 1, &imgBarrier);
-// }
-
-// internal helper
-// static void createTextureImage(qvktexture_t *dstTex, const unsigned char *data, uint32_t width, uint32_t height)
-// {
-//     int unifiedTransferAndGfx = vk_device.transferQueue == vk_device.gfxQueue ? 1 : 0;
-//     // assuming 32bit images
-//     uint32_t imageSize = width * height * 4;
-
-//     VkBuffer staging_buffer;
-//     VkCommandBuffer command_buffer;
-//     uint32_t staging_offset;
-//     void *imgData = QVk_GetStagingBuffer(imageSize, 4, &command_buffer, &staging_buffer, &staging_offset);
-//     memcpy(imgData, data, (size_t)imageSize);
-
-//     VkImageUsageFlags imageUsage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-//     // set extra image usage flag if we're dealing with mipmapped image - will need it for copying data between mip
-//     // levels
-//     if (dstTex->mipLevels > 1)
-//         imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-
-//     VK_VERIFY(QVk_CreateImage(width, height, dstTex->format, VK_IMAGE_TILING_OPTIMAL, imageUsage,
-//                               VMA_MEMORY_USAGE_GPU_ONLY, dstTex));
-
-//     transitionImageLayout(&command_buffer, &vk_device.transferQueue, dstTex, VK_IMAGE_LAYOUT_UNDEFINED,
-//                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-//     // copy buffer to image
-//     VkBufferImageCopy region = {.bufferOffset = staging_offset,
-//                                 .bufferRowLength = 0,
-//                                 .bufferImageHeight = 0,
-//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//                                 .imageSubresource.mipLevel = 0,
-//                                 .imageSubresource.baseArrayLayer = 0,
-//                                 .imageSubresource.layerCount = 1,
-//                                 .imageOffset = {0, 0, 0},
-//                                 .imageExtent = {width, height, 1}};
-
-//     vkCmdCopyBufferToImage(command_buffer, staging_buffer, dstTex->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-//                            &region);
-
-//     if (dstTex->mipLevels > 1)
-//     {
-//         // vkCmdBlitImage requires a queue with GRAPHICS_BIT present
-//         generateMipmaps(&command_buffer, dstTex, width, height);
-//     }
-//     else
-//     {
-//         // for non-unified transfer and graphics, this step begins queue ownership transfer to graphics queue (for
-//         // exclusive sharing only)
-//         if (unifiedTransferAndGfx || dstTex->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
-//             transitionImageLayout(&command_buffer, &vk_device.transferQueue, dstTex,
-//                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-//         if (!unifiedTransferAndGfx)
-//         {
-//             transitionImageLayout(&command_buffer, &vk_device.gfxQueue, dstTex, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-//                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-//         }
-//     }
-// }
-
-// VkResult QVk_CreateImageView(const VkImage *image, VkImageAspectFlags aspectFlags, VkImageView *imageView,
-//                              VkFormat format, uint32_t mipLevels)
-// {
-//     VkImageViewCreateInfo ivCreateInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-//                                           .pNext = NULL,
-//                                           .flags = 0,
-//                                           .image = *image,
-//                                           .viewType = VK_IMAGE_VIEW_TYPE_2D,
-//                                           .format = format,
-//                                           .components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-//                                           .components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-//                                           .components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-//                                           .components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-//                                           .subresourceRange.aspectMask = aspectFlags,
-//                                           .subresourceRange.baseArrayLayer = 0,
-//                                           .subresourceRange.baseMipLevel = 0,
-//                                           .subresourceRange.layerCount = 1,
-//                                           .subresourceRange.levelCount = mipLevels};
-
-//     return vkCreateImageView(vk_device.logical, &ivCreateInfo, NULL, imageView);
-// }
-
-// VkResult QVk_CreateImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling,
-//                          VkImageUsageFlags usage, VmaMemoryUsage memUsage, qvktexture_t *texture)
-// {
-//     VkImageCreateInfo imageInfo = {.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-//                                    .imageType = VK_IMAGE_TYPE_2D,
-//                                    .extent.width = width,
-//                                    .extent.height = height,
-//                                    .extent.depth = 1,
-//                                    .mipLevels = texture->mipLevels,
-//                                    .arrayLayers = 1,
-//                                    .format = format,
-//                                    .tiling = tiling,
-//                                    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-//                                    .usage = usage,
-//                                    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-//                                    .samples = texture->sampleCount,
-//                                    .flags = 0};
-
-//     uint32_t queueFamilies[] = {(uint32_t)vk_device.gfxFamilyIndex, (uint32_t)vk_device.transferFamilyIndex};
-//     if (vk_device.gfxFamilyIndex != vk_device.transferFamilyIndex)
-//     {
-//         imageInfo.sharingMode = VK_SHARING_MODE_CONCURRENT;
-//         imageInfo.queueFamilyIndexCount = 2;
-//         imageInfo.pQueueFamilyIndices = queueFamilies;
-//     }
-
-//     VmaAllocationCreateInfo vmallocInfo = {.flags = texture->vmaFlags, .usage = memUsage};
-
-//     texture->sharingMode = imageInfo.sharingMode;
-//     return vmaCreateImage(vk_malloc, &imageInfo, &vmallocInfo, &texture->image, &texture->allocation,
-//                           &texture->allocInfo);
-// }
-
-// void QVk_CreateDepthBuffer(VkSampleCountFlagBits sampleCount, qvktexture_t *depthBuffer)
-// {
-//     depthBuffer->format = QVk_FindDepthFormat();
-//     depthBuffer->sampleCount = sampleCount;
-//     // On 64-bit builds, Intel drivers throw a warning:
-//     // "Mapping an image with layout VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL can result in undefined
-//     behavior
-//     // if this memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we
-//     // don't want any validation warnings, so we create dedicated allocation for depth buffer. more details:
-//     // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false positive
-//     // which in other cases could be ignored:
-//     //
-//     https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
-//     depthBuffer->vmaFlags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-//     VK_VERIFY(QVk_CreateImage(vk_swapchain.extent.width, vk_swapchain.extent.height, depthBuffer->format,
-//                               VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-//                               VMA_MEMORY_USAGE_GPU_ONLY, depthBuffer));
-//     VK_VERIFY(QVk_CreateImageView(&depthBuffer->image, getDepthStencilAspect(depthBuffer->format),
-//                                   &depthBuffer->imageView, depthBuffer->format, depthBuffer->mipLevels));
-// }
-
-// void QVk_CreateColorBuffer(VkSampleCountFlagBits sampleCount, qvktexture_t *colorBuffer, int extraFlags)
-// {
-//     colorBuffer->format = vk_swapchain.format;
-//     colorBuffer->sampleCount = sampleCount;
-//     // On 64-bit builds, Intel drivers throw a warning:
-//     // "Mapping an image with layout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL can result in undefined behavior if
-//     this
-//     // memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we don't
-//     want
-//     // any validation warnings, so we create dedicated allocation for color buffer. more details:
-//     // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false positive
-//     // which in other cases could be ignored:
-//     //
-//     https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
-//     colorBuffer->vmaFlags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
-
-//     VK_VERIFY(QVk_CreateImage(vk_swapchain.extent.width, vk_swapchain.extent.height, colorBuffer->format,
-//                               VK_IMAGE_TILING_OPTIMAL, extraFlags | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-//                               VMA_MEMORY_USAGE_GPU_ONLY, colorBuffer));
-//     VK_VERIFY(QVk_CreateImageView(&colorBuffer->image, VK_IMAGE_ASPECT_COLOR_BIT, &colorBuffer->imageView,
-//                                   colorBuffer->format, colorBuffer->mipLevels));
-// }
 
 void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigned char *data, uint32_t width,
                        uint32_t height)
@@ -461,153 +87,7 @@ void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigne
     endUpdateResource(&updateDesc);
 }
 
-// void QVk_UpdateTextureData(qvktexture_t *texture, const unsigned char *data, uint32_t offset_x, uint32_t offset_y,
-//                            uint32_t width, uint32_t height)
-// {
-//     int unifiedTransferAndGfx = vk_device.transferQueue == vk_device.gfxQueue ? 1 : 0;
-//     // assuming 32bit images
-//     uint32_t imageSize = width * height * 4;
-
-//     VkBuffer staging_buffer;
-//     VkCommandBuffer command_buffer;
-//     uint32_t staging_offset;
-//     void *imgData = QVk_GetStagingBuffer(imageSize, 4, &command_buffer, &staging_buffer, &staging_offset);
-//     memcpy(imgData, data, (size_t)imageSize);
-
-//     transitionImageLayout(&command_buffer, &vk_device.transferQueue, texture,
-//     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-//                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-//     // copy buffer to image
-//     VkBufferImageCopy region = {.bufferOffset = staging_offset,
-//                                 .bufferRowLength = 0,
-//                                 .bufferImageHeight = 0,
-//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//                                 .imageSubresource.mipLevel = 0,
-//                                 .imageSubresource.baseArrayLayer = 0,
-//                                 .imageSubresource.layerCount = 1,
-//                                 .imageOffset = {offset_x, offset_y, 0},
-//                                 .imageExtent = {width, height, 1}};
-
-//     vkCmdCopyBufferToImage(command_buffer, staging_buffer, texture->image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-//                            &region);
-
-//     if (texture->mipLevels > 1)
-//     {
-//         // vkCmdBlitImage requires a queue with GRAPHICS_BIT present
-//         generateMipmaps(&command_buffer, texture, width, height);
-//     }
-//     else
-//     {
-//         // for non-unified transfer and graphics, this step begins queue ownership transfer to graphics queue (for
-//         // exclusive sharing only)
-//         if (unifiedTransferAndGfx || texture->sharingMode == VK_SHARING_MODE_EXCLUSIVE)
-//             transitionImageLayout(&command_buffer, &vk_device.transferQueue, texture,
-//                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-//         if (!unifiedTransferAndGfx)
-//         {
-//             transitionImageLayout(&command_buffer, &vk_device.gfxQueue, texture,
-//             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-//                                   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-//         }
-//     }
-// }
-
-// void QVk_ReleaseTexture(qvktexture_t *texture)
-// {
-//     QVk_SubmitStagingBuffers();
-//     vkDeviceWaitIdle(vk_device.logical);
-
-//     if (texture->image != VK_NULL_HANDLE)
-//         vmaDestroyImage(vk_malloc, texture->image, texture->allocation);
-//     if (texture->imageView != VK_NULL_HANDLE)
-//         vkDestroyImageView(vk_device.logical, texture->imageView, NULL);
-//     if (texture->descriptorSet != VK_NULL_HANDLE)
-//     {
-//         vkFreeDescriptorSets(vk_device.logical, vk_descriptorPool, 1, &texture->descriptorSet);
-//         vk_config.allocated_sampler_descriptor_set_count--;
-//     }
-
-//     texture->image = VK_NULL_HANDLE;
-//     texture->imageView = VK_NULL_HANDLE;
-//     texture->descriptorSet = VK_NULL_HANDLE;
-// }
-
-// void QVk_ReadPixels(uint8_t *dstBuffer, uint32_t width, uint32_t height)
-// {
-//     qvkbuffer_t buff;
-//     VkCommandBuffer cmdBuffer;
-//     extern int vk_activeBufferIdx;
-
-//     qvkbufferopts_t buffOpts = {
-//         .usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-//         .reqMemFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-//         .prefMemFlags = VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
-//         .vmaUsage = VMA_MEMORY_USAGE_CPU_ONLY,
-//         // When taking a screenshot on Intel, the Linux driver may throw a warning:
-//         // "Mapping an image with layout VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL can result in undefined behavior if
-//         // this memory is used by the device. Only GENERAL or PREINITIALIZED should be used." Minor annoyance but we
-//         // don't want any validation warnings, so we create dedicated allocation for the image buffer. more details:
-//         // https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/34 Note that this is a false
-//         // positive which in other cases could be ignored:
-//         //
-//         https://gpuopen-librariesandsdks.github.io/VulkanMemoryAllocator/html/general_considerations.html#general_considerations_validation_layer_warnings
-//         .vmaFlags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT};
-
-//     VK_VERIFY(QVk_CreateBuffer(width * height * 4, &buff, buffOpts));
-//     cmdBuffer = QVk_CreateCommandBuffer(&vk_commandPool[vk_activeBufferIdx], VK_COMMAND_BUFFER_LEVEL_PRIMARY);
-//     VK_VERIFY(QVk_BeginCommand(&cmdBuffer));
-
-//     // transition the current swapchain image to be a source of data transfer to our buffer
-//     VkImageMemoryBarrier imgBarrier = {.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-//                                        .pNext = NULL,
-//                                        .srcAccessMask =
-//                                            VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
-//                                            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-//                                        .dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT,
-//                                        .oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-//                                        .newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-//                                        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-//                                        .image = vk_swapchain.images[vk_activeBufferIdx],
-//                                        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//                                        .subresourceRange.baseMipLevel = 0,
-//                                        .subresourceRange.baseArrayLayer = 0,
-//                                        .subresourceRange.layerCount = 1,
-//                                        .subresourceRange.levelCount = 1};
-
-//     vkCmdPipelineBarrier(cmdBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-//     0,
-//                          NULL, 0, NULL, 1, &imgBarrier);
-
-//     VkBufferImageCopy region = {.bufferOffset = 0,
-//                                 .bufferRowLength = width,
-//                                 .bufferImageHeight = height,
-//                                 .imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-//                                 .imageSubresource.mipLevel = 0,
-//                                 .imageSubresource.baseArrayLayer = 0,
-//                                 .imageSubresource.layerCount = 1,
-//                                 .imageOffset = {0, 0, 0},
-//                                 .imageExtent = {width, height, 1}};
-
-//     // copy the swapchain image
-//     vkCmdCopyImageToBuffer(cmdBuffer, vk_swapchain.images[vk_activeBufferIdx], VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-//                            buff.buffer, 1, &region);
-//     VK_VERIFY(vkDeviceWaitIdle(vk_device.logical));
-//     QVk_SubmitCommand(&cmdBuffer, &vk_device.gfxQueue);
-
-//     // store image in destination buffer
-//     memcpy(dstBuffer, (uint8_t *)buff.allocInfo.pMappedData, width * height * 4);
-
-//     QVk_FreeBuffer(&buff);
-// }
-
-/*
-===============
-Vk_ImageList_f
-===============
-*/
-void Vk_ImageList_f(void)
+void GRA_ImageList_f(void)
 {
     int texels = 0;
 
@@ -647,14 +127,6 @@ void Vk_ImageList_f(void)
     }
     LOGF(LogLevel::eINFO, "Total texel count (not counting mipmaps): %i\n", texels);
 }
-
-/*
-=================================================================
-
-PCX LOADING
-
-=================================================================
-*/
 
 /*
 ==============
@@ -760,12 +232,7 @@ typedef struct _TargaHeader
     unsigned char pixel_size, attributes;
 } TargaHeader;
 
-/*
-=============
-LoadTGA
-=============
-*/
-void LoadTGA(char *name, byte **pic, int *width, int *height)
+static void LoadTGA(char *name, byte **pic, int *width, int *height)
 {
     int columns, rows, numPixels;
     byte *pixbuf;
@@ -1052,8 +519,6 @@ void R_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
     }
 }
 
-//=======================================================
-
 byte *GRA_MapPalleteImage(byte *data, int width, int height)
 {
     int size = width * height;
@@ -1088,13 +553,6 @@ byte *GRA_MapPalleteImage(byte *data, int width, int height)
     return reinterpret_cast<byte *>(output);
 }
 
-/*
-================
-Vk_LoadPic
-
-This is also used as an entry point for the generated r_notexture
-================
-*/
 image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits)
 {
     if (textures.contains(name))
@@ -1142,11 +600,6 @@ image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, 
     return &textures.at(name);
 }
 
-/*
-================
-Vk_LoadWal
-================
-*/
 image_t *GRA_LoadWal(char *name)
 {
     miptex_t *mt;
@@ -1171,13 +624,6 @@ image_t *GRA_LoadWal(char *name)
     return image;
 }
 
-/*
-===============
-GRA_FindImage
-
-Finds or loads the given image
-===============
-*/
 image_t *GRA_FindImage(std::string name, imagetype_t type)
 {
     int i, len;
@@ -1239,26 +685,13 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
     return image;
 }
 
-/*
-===============
-R_RegisterSkin
-===============
-*/
 struct image_s *R_RegisterSkin(char *name)
 {
-	LOGF(eINFO, "Register skin: %s.", name);
-	
+    LOGF(eINFO, "Register skin: %s.", name);
+
     return GRA_FindImage(name, it_skin);
 }
 
-/*
-================
-Vk_FreeUnusedImages
-
-Any image that was not touched on this registration sequence
-will be freed.
-================
-*/
 void GRA_FreeUnusedImages(void)
 {
     int i;
@@ -1316,11 +749,6 @@ int Draw_LoadPalette(void)
     return 0;
 }
 
-/*
-===============
-Vk_InitImages
-===============
-*/
 void GRA_InitImages(void)
 {
     int i, j;
@@ -1368,11 +796,6 @@ void GRA_InitImages(void)
     }
 }
 
-/*
-===============
-Vk_ShutdownImages
-===============
-*/
 void GRA_ShutdownImages(void)
 {
     for (auto &pair : textures)
@@ -1381,7 +804,8 @@ void GRA_ShutdownImages(void)
         removeResource(image.texture);
     }
 
-    // QVk_ReleaseTexture(&vk_rawTexture);
+    // TODO: add this back when we implment rawTexture functionalities.
+    // removeResource(rawTexture);
 
     /*
     for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
