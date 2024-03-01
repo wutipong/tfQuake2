@@ -344,7 +344,9 @@ void Mod_LoadVertexes(lump_t *l)
 
     in = (dvertex_t *)(mod_base + l->fileofs);
     if (l->filelen % sizeof(*in))
+    {
         LOGF(eERROR, "MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
+    }
     count = l->filelen / sizeof(*in);
     out = (mvertex_t *)Hunk_Alloc(count * sizeof(*out));
 
@@ -359,22 +361,15 @@ void Mod_LoadVertexes(lump_t *l)
     }
 }
 
-/*
-=================
-RadiusFromBounds
-=================
-*/
-float RadiusFromBounds(vec3_t mins, vec3_t maxs)
+float RadiusFromBounds(vec3 mins, vec3 maxs)
 {
-    int i;
-    vec3_t corner;
+    vec3 corner{
+        fabs(mins.getX()) > fabs(maxs.getX()) ? fabs(mins.getX()) : fabs(maxs.getX()),
+        fabs(mins.getY()) > fabs(maxs.getY()) ? fabs(mins.getY()) : fabs(maxs.getY()),
+        fabs(mins.getZ()) > fabs(maxs.getZ()) ? fabs(mins.getZ()) : fabs(maxs.getZ()),
+    };
 
-    for (i = 0; i < 3; i++)
-    {
-        corner[i] = fabs(mins[i]) > fabs(maxs[i]) ? fabs(mins[i]) : fabs(maxs[i]);
-    }
-
-    return VectorLength(corner);
+    return length(corner);
 }
 
 /*
@@ -405,8 +400,8 @@ void Mod_LoadSubmodels(lump_t *l)
             out->maxs[j] = LittleFloat(in->maxs[j]) + 1;
             out->origin[j] = LittleFloat(in->origin[j]);
         }
-        // FIXME: radiousFromBounds
-        // out->radius = RadiusFromBounds(out->mins, out->maxs);
+
+        out->radius = RadiusFromBounds(out->mins, out->maxs);
         out->headnode = LittleLong(in->headnode);
         out->firstface = LittleLong(in->firstface);
         out->numfaces = LittleLong(in->numfaces);
@@ -851,7 +846,7 @@ void Mod_LoadPlanes(lump_t *l)
         LOGF(eERROR, "MOD_LoadBmodel: funny lump size in %s", loadmodel->name);
     }
     count = l->filelen / sizeof(*in);
-    out = (cplane_t*) Hunk_Alloc(count * 2 * sizeof(*out));
+    out = (cplane_t *)Hunk_Alloc(count * 2 * sizeof(*out));
 
     loadmodel->planes = out;
     loadmodel->numplanes = count;
@@ -981,7 +976,7 @@ void Mod_LoadAliasModel(model_t *mod, void *buffer)
         LOGF(eERROR, "%s has wrong version number (%i should be %i)", mod->name, version, ALIAS_VERSION);
     }
 
-    pheader = (dmdl_t*) Hunk_Alloc(LittleLong(pinmodel->ofs_end));
+    pheader = (dmdl_t *)Hunk_Alloc(LittleLong(pinmodel->ofs_end));
 
     // byte swap the header fields and sanity check
     for (i = 0; i < sizeof(dmdl_t) / 4; i++)
