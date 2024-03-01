@@ -1247,7 +1247,7 @@ Mod_Free
 void Mod_Free(model_t *mod)
 {
     Hunk_Free(mod->extradata);
-    memset(mod, 0, sizeof(*mod));
+    *mod = {};
 }
 
 /*
