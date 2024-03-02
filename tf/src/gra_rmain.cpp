@@ -1,5 +1,3 @@
-#include "gra_local.h"
-
 /*
 Copyright (C) 1997-2001 Id Software, Inc.
 Copyright (C) 2018-2019 Krzysztof Kondrak
@@ -21,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // vk_rmain.c
+#include "gra_local.h"
 
 extern "C"
 {
@@ -28,6 +27,8 @@ extern "C"
 }
 
 #include "gra_model.h"
+
+#include "common.h"
 
 extern viddef_t vid;
 
@@ -912,7 +913,7 @@ void R_RenderFrame(refdef_t *fd)
 
 void R_Register(void)
 {
-    // 	r_lefthand = ri.Cvar_Get("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
+    r_lefthand = Cvar_Get("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
     // 	r_norefresh = ri.Cvar_Get("r_norefresh", "0", 0);
     // 	r_fullbright = ri.Cvar_Get("r_fullbright", "0", 0);
     // 	r_drawentities = ri.Cvar_Get("r_drawentities", "1", 0);
