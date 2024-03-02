@@ -151,7 +151,7 @@ void Mod_Modellist_f(void)
     LOGF(eINFO, "Loaded models:");
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name[0])
+        if (!mod->name.empty())
             continue;
         LOGF(eINFO, "%8i : %s", mod->extradatasize, mod->name);
         total += mod->extradatasize;
@@ -207,7 +207,7 @@ model_t *Mod_ForName(std::string name, qboolean crash)
     //
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name[0])
+        if (!mod->name.empty())
         {
             continue;
         }
@@ -222,7 +222,7 @@ model_t *Mod_ForName(std::string name, qboolean crash)
     //
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name[0])
+        if (!mod->name.empty())
             break; // free spot
     }
     if (i == mod_numknown)
@@ -1156,6 +1156,8 @@ void R_BeginRegistration(char *model)
     registration_sequence++;
     r_oldviewcluster = -1; // force markleafs
 
+    LOGF(eINFO, "Map: %s", model);
+
     auto fullname = std::format("maps/{}.bsp", model);
 
     // explicitly free the old map if different
@@ -1176,12 +1178,14 @@ R_RegisterModel
 
 @@@@@@@@@@@@@@@@@@@@@
 */
-struct model_s *R_RegisterModel(char* name)
+struct model_s *R_RegisterModel(char *name)
 {
     model_t *mod;
     int i;
     dsprite_t *sprout;
     dmdl_t *pheader;
+
+    LOGF(eINFO, "Register Model: %s", name);
 
     mod = Mod_ForName(name, false);
     if (mod)
@@ -1193,13 +1197,17 @@ struct model_s *R_RegisterModel(char* name)
         {
             sprout = (dsprite_t *)mod->extradata;
             for (i = 0; i < sprout->numframes; i++)
+            {
                 mod->skins[i] = GRA_FindImage(sprout->frames[i].name, it_sprite);
+            }
         }
         else if (mod->type == mod_alias)
         {
             pheader = (dmdl_t *)mod->extradata;
             for (i = 0; i < pheader->num_skins; i++)
+            {
                 mod->skins[i] = GRA_FindImage((char *)pheader + pheader->ofs_skins + i * MAX_SKINNAME, it_skin);
+            }
             // PGM
             mod->numframes = pheader->num_frames;
             // PGM
@@ -1226,7 +1234,7 @@ void R_EndRegistration(void)
 
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name[0])
+        if (!mod->name.empty())
             continue;
         if (mod->registration_sequence != registration_sequence)
         { // don't need this model
