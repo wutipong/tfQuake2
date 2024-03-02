@@ -804,11 +804,10 @@ void GRA_ShutdownImages(void)
         removeResource(image.texture);
     }
 
-    // TODO: add this back when we implment rawTexture functionalities.
-    // removeResource(rawTexture);
+    removeResource(rawTexture);
 
-    /*
-    for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
-        QVk_ReleaseTexture(&vk_state.lightmap_textures[i]);
-    */
+    for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
+    {
+        removeResource(vk_state.lightmap_textures[i]);
+    }
 }
