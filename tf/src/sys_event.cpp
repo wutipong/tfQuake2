@@ -643,7 +643,7 @@ ActionMappingDesc gKeyboardMouseActionMappings[] = {
     },
 };
 
-bool SYS_input_handler(InputActionContext *ctx)
+bool SYS_InputHandler(InputActionContext *ctx)
 {
     LOGF(LogLevel::eDEBUG, "Action: %d, Value %i.", ctx->mActionId, ctx->mBool);
 
@@ -672,7 +672,7 @@ void SYS_RegisterInput()
     {
         InputActionDesc actionDesc = {
             .mActionId = m.mActionId,
-            .pFunction = SYS_input_handler,
+            .pFunction = SYS_InputHandler,
         };
         addInputAction(&actionDesc);
     }
