@@ -40,6 +40,7 @@ add_library(the-forge
     "The-Forge/Common_3/Application/Profiler/GpuProfiler.cpp"
     "The-Forge/Common_3/Application/Profiler/ProfilerBase.cpp"
     "The-Forge/Common_3/Application/RemoteControl.cpp"
+    "The-Forge/Common_3/Application/Screenshot.cpp"
     "The-Forge/Common_3/Application/ThirdParty/OpenSource/imgui/imgui_demo.cpp"
     "The-Forge/Common_3/Application/ThirdParty/OpenSource/imgui/imgui_draw.cpp"
     "The-Forge/Common_3/Application/ThirdParty/OpenSource/imgui/imgui_tables.cpp"
@@ -393,4 +394,14 @@ endfunction()
 compile_shaders(
     TARGET Shader
     SHADER_LIST "${CMAKE_CURRENT_SOURCE_DIR}/shaders/ShaderList.fsl"
+)
+
+compile_shaders(
+    TARGET GuiShader
+    SHADER_LIST "${CMAKE_CURRENT_SOURCE_DIR}/The-Forge/Common_3/Application/UI/Shaders/FSL/UI_ShaderList.fsl"
+)
+
+compile_shaders(
+    TARGET FontShader
+    SHADER_LIST "${CMAKE_CURRENT_SOURCE_DIR}/The-Forge/Common_3/Application/Fonts/Shaders/FSL/Fonts_ShaderList.fsl"
 )

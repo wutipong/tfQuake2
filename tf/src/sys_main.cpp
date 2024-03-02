@@ -121,6 +121,7 @@ void MainApp::Unload(ReloadDesc *pReloadDesc)
 void MainApp::Update(float deltaTime)
 {
     updateInputSystem(deltaTime, mSettings.mWidth, mSettings.mHeight);
+    
     sys_frame_time = getSystemTime();
     vid.width = mSettings.mWidth;
     vid.height = mSettings.mHeight;

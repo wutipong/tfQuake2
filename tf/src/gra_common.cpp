@@ -1,10 +1,11 @@
 #include "gra_common.h"
 
+#include <IFont.h>
 #include <IGraphics.h>
 #include <IProfiler.h>
-#include <RingBuffer.h>
+#include <IScreenshot.h>
 #include <IUI.h>
-#include <IFont.h>
+#include <RingBuffer.h>
 
 const uint32_t gDataBufferCount = 2;
 
@@ -117,6 +118,23 @@ bool GRA_InitGraphics(IApp *app)
     };
     addSampler(pRenderer, &samplerDesc, &pSampler);
 
+    FontSystemDesc fontRenderDesc = {};
+    fontRenderDesc.pRenderer = pRenderer;
+    if (!initFontSystem(&fontRenderDesc))
+        return false; // report?
+
+    // Initialize Forge User Interface Rendering
+    UserInterfaceDesc uiRenderDesc = {};
+    uiRenderDesc.pRenderer = pRenderer;
+    initUserInterface(&uiRenderDesc);
+
+    // Initialize micro profiler and its UI.
+    ProfilerDesc profiler = {};
+    profiler.pRenderer = pRenderer;
+    profiler.mWidthUI = app->mSettings.mWidth;
+    profiler.mHeightUI = app->mSettings.mHeight;
+    initProfiler(&profiler);
+
     gGpuProfileToken = addGpuProfiler(pRenderer, pGraphicsQueue, "Graphics");
 
     return true;
@@ -124,6 +142,10 @@ bool GRA_InitGraphics(IApp *app)
 
 bool GRA_ExitGraphics()
 {
+    exitProfiler();
+    exitUserInterface();
+    exitFontSystem();
+
     removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
@@ -167,30 +189,33 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
     {
         _addPipelines();
     }
-    /*
-        prepareDescriptorSets();
 
-        UserInterfaceLoadDesc uiLoad = {};
-        uiLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
-        uiLoad.mHeight = mSettings.mHeight;
-        uiLoad.mWidth = mSettings.mWidth;
-        uiLoad.mLoadType = pReloadDesc->mType;
-        loadUserInterface(&uiLoad);
+    //    prepareDescriptorSets();
 
-        FontSystemLoadDesc fontLoad = {};
-        fontLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
-        fontLoad.mHeight = mSettings.mHeight;
-        fontLoad.mWidth = mSettings.mWidth;
-        fontLoad.mLoadType = pReloadDesc->mType;
-        loadFontSystem(&fontLoad);
+    UserInterfaceLoadDesc uiLoad = {};
+    uiLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
+    uiLoad.mHeight = pApp->mSettings.mHeight;
+    uiLoad.mWidth = pApp->mSettings.mWidth;
+    uiLoad.mLoadType = pReloadDesc->mType;
+    loadUserInterface(&uiLoad);
 
-        initScreenshotInterface(pRenderer, pGraphicsQueue);
-        */
+    FontSystemLoadDesc fontLoad = {};
+    fontLoad.mColorFormat = pSwapChain->ppRenderTargets[0]->mFormat;
+    fontLoad.mHeight = pApp->mSettings.mHeight;
+    fontLoad.mWidth = pApp->mSettings.mWidth;
+    fontLoad.mLoadType = pReloadDesc->mType;
+    loadFontSystem(&fontLoad);
+
+    initScreenshotInterface(pRenderer, pGraphicsQueue);
+
     return true;
 }
 void GRA_Unload(ReloadDesc *pReloadDesc)
 {
     waitQueueIdle(pGraphicsQueue);
+
+    unloadFontSystem(pReloadDesc->mType);
+    unloadUserInterface(pReloadDesc->mType);
 
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
@@ -211,6 +236,8 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
         _removeRootSignatures();
         _removeShaders();
     }
+
+    exitScreenshotInterface();
 }
 
 void _addShaders()
