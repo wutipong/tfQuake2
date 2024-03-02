@@ -20,15 +20,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 
 #include "gra_local.h"
-
-#include <ILog.h>
 #include <IResourceLoader.h>
-#include <memory>
 
-std::map<std::string, image_t> textures;
-
+image_t vktextures[MAX_VKTEXTURES];
+int numvktextures;
+int base_textureid; // gltextures[i] = base_textureid+i
 // texture for storing raw image data (cinematics, endscreens, etc.)
-Texture *rawTexture;
+Texture *rawTexture = NULL;
 
 static byte intensitytable[256];
 static unsigned char gammatable[256];
@@ -38,10 +36,8 @@ extern cvar_t *vk_mip_nearfilter;
 
 unsigned d_8to24table[256];
 
-Sampler *pSamplerImage = NULL;
-static Sampler *pSamplerLightmap = NULL;
-
-extern Renderer *pRenderer;
+uint32_t GRA_Upload8(byte *data, int width, int height, qboolean mipmap, qboolean is_sky);
+uint32_t GRA_Upload32(unsigned *data, int width, int height, qboolean mipmap);
 
 void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigned char *data, uint32_t width,
                        uint32_t height)
@@ -87,46 +83,56 @@ void GRA_CreateTexture(Texture *&texture, const std::string &name, const unsigne
     endUpdateResource(&updateDesc);
 }
 
+/*
+===============
+Vk_ImageList_f
+===============
+*/
 void GRA_ImageList_f(void)
 {
-    int texels = 0;
+    int i;
+    image_t *image;
+    int texels;
 
-    LOGF(LogLevel::eINFO, "------------------");
+    LOGF(eINFO, "------------------\n");
+    texels = 0;
 
-    for (auto &texturePair : textures)
+    for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-        auto &[name, image] = texturePair;
-        if (image.texture == NULL)
-        {
+        if (image->texture == VK_NULL_HANDLE)
             continue;
-        }
-
-        texels += image.width * image.height;
-
-        std::string typeStr;
-        switch (image.type)
+        texels += image->width * image->height;
+        switch (image->type)
         {
         case it_skin:
-            typeStr = "M";
+            LOGF(eINFO, "M");
             break;
         case it_sprite:
-            typeStr = "S";
+            LOGF(eINFO, "S");
             break;
         case it_wall:
-            typeStr = "W";
+            LOGF(eINFO, "W");
             break;
         case it_pic:
-            typeStr = "P";
+            LOGF(eINFO, "P");
             break;
         default:
-            typeStr = " ";
+            LOGF(eINFO, " ");
             break;
         }
 
-        LOGF(LogLevel::eINFO, " %3i %3i RGB: %s\n", image.width, image.height, name);
+        LOGF(eINFO, " %3i %3i RGB: %s\n", image->width, image->height, image->name);
     }
-    LOGF(LogLevel::eINFO, "Total texel count (not counting mipmaps): %i\n", texels);
+    LOGF(eINFO, "Total texel count (not counting mipmaps): %i\n", texels);
 }
+
+/*
+=================================================================
+
+PCX LOADING
+
+=================================================================
+*/
 
 /*
 ==============
@@ -151,7 +157,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
     len = FS_LoadFile(filename.data(), (void **)&raw);
     if (!raw)
     {
-        LOGF(LogLevel::eDEBUG, "Bad pcx file %s", filename.c_str());
+        LOGF(eDEBUG, "Bad pcx file %s\n", filename);
         return;
     }
 
@@ -160,16 +166,25 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
     //
     pcx = (pcx_t *)raw;
 
+    pcx->xmin = LittleShort(pcx->xmin);
+    pcx->ymin = LittleShort(pcx->ymin);
+    pcx->xmax = LittleShort(pcx->xmax);
+    pcx->ymax = LittleShort(pcx->ymax);
+    pcx->hres = LittleShort(pcx->hres);
+    pcx->vres = LittleShort(pcx->vres);
+    pcx->bytes_per_line = LittleShort(pcx->bytes_per_line);
+    pcx->palette_type = LittleShort(pcx->palette_type);
+
     raw = &pcx->data;
 
     if (pcx->manufacturer != 0x0a || pcx->version != 5 || pcx->encoding != 1 || pcx->bits_per_pixel != 8 ||
         pcx->xmax >= 640 || pcx->ymax >= 480)
     {
-        LOGF(LogLevel::eDEBUG, "Bad pcx file %s\n", filename);
+        LOGF(eINFO, "Bad pcx file %s\n", filename);
         return;
     }
 
-    out = (byte *)tf_malloc((pcx->ymax + 1) * (pcx->xmax + 1));
+    out = (byte *)malloc((pcx->ymax + 1) * (pcx->xmax + 1));
 
     *pic = out;
 
@@ -177,7 +192,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
 
     if (palette)
     {
-        *palette = (byte *)tf_malloc(768);
+        *palette = (byte *)malloc(768);
         memcpy(*palette, (byte *)pcx + len - 768, 768);
     }
 
@@ -208,7 +223,7 @@ void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *
     if (raw - (byte *)pcx > len)
     {
         LOGF(eDEBUG, "PCX file %s was malformed", filename);
-        tf_free(*pic);
+        free(*pic);
         *pic = NULL;
     }
 
@@ -232,7 +247,12 @@ typedef struct _TargaHeader
     unsigned char pixel_size, attributes;
 } TargaHeader;
 
-static void LoadTGA(char *name, byte **pic, int *width, int *height)
+/*
+=============
+LoadTGA
+=============
+*/
+void LoadTGA(char *name, byte **pic, int *width, int *height)
 {
     int columns, rows, numPixels;
     byte *pixbuf;
@@ -252,7 +272,7 @@ static void LoadTGA(char *name, byte **pic, int *width, int *height)
     length = FS_LoadFile(name, (void **)&buffer);
     if (!buffer)
     {
-        LOGF(LogLevel::eDEBUG, "Bad tga file %s", name);
+        LOGF(eDEBUG, "Bad tga file %s\n", name);
         return;
     }
 
@@ -283,13 +303,10 @@ static void LoadTGA(char *name, byte **pic, int *width, int *height)
     targa_header.attributes = *buf_p++;
 
     if (targa_header.image_type != 2 && targa_header.image_type != 10)
-    {
-        LOGF(LogLevel::eERROR, "LoadTGA: Only type 2 and 10 targa RGB images supported.");
-    }
+        LOGF(eERROR, "LoadTGA: Only type 2 and 10 targa RGB images supported\n");
+
     if (targa_header.colormap_type != 0 || (targa_header.pixel_size != 32 && targa_header.pixel_size != 24))
-    {
-        LOGF(LogLevel::eERROR, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
-    }
+        LOGF(eERROR, "LoadTGA: Only 32 or 24 bit images supported (no colormaps)\n");
 
     columns = targa_header.width;
     rows = targa_header.height;
@@ -300,7 +317,7 @@ static void LoadTGA(char *name, byte **pic, int *width, int *height)
     if (height)
         *height = rows;
 
-    targa_rgba = (byte *)tf_malloc(numPixels * 4);
+    targa_rgba = (byte *)malloc(numPixels * 4);
     *pic = targa_rgba;
 
     if (targa_header.id_length != 0)
@@ -519,6 +536,97 @@ void R_FloodFillSkin(byte *skin, int skinwidth, int skinheight)
     }
 }
 
+//=======================================================
+
+/*
+================
+GRA_ResampleTexture
+================
+*/
+void GRA_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight)
+{
+    int i, j;
+    unsigned *inrow, *inrow2;
+    unsigned frac, fracstep;
+    unsigned p1[1024], p2[1024];
+    byte *pix1, *pix2, *pix3, *pix4;
+
+    fracstep = inwidth * 0x10000 / outwidth;
+
+    frac = fracstep >> 2;
+    for (i = 0; i < outwidth; i++)
+    {
+        p1[i] = 4 * (frac >> 16);
+        frac += fracstep;
+    }
+    frac = 3 * (fracstep >> 2);
+    for (i = 0; i < outwidth; i++)
+    {
+        p2[i] = 4 * (frac >> 16);
+        frac += fracstep;
+    }
+
+    for (i = 0; i < outheight; i++, out += outwidth)
+    {
+        inrow = in + inwidth * (int)((i + 0.25) * inheight / outheight);
+        inrow2 = in + inwidth * (int)((i + 0.75) * inheight / outheight);
+
+        for (j = 0; j < outwidth; j++)
+        {
+            pix1 = (byte *)inrow + p1[j];
+            pix2 = (byte *)inrow + p2[j];
+            pix3 = (byte *)inrow2 + p1[j];
+            pix4 = (byte *)inrow2 + p2[j];
+            ((byte *)(out + j))[0] = (pix1[0] + pix2[0] + pix3[0] + pix4[0]) >> 2;
+            ((byte *)(out + j))[1] = (pix1[1] + pix2[1] + pix3[1] + pix4[1]) >> 2;
+            ((byte *)(out + j))[2] = (pix1[2] + pix2[2] + pix3[2] + pix4[2]) >> 2;
+            ((byte *)(out + j))[3] = (pix1[3] + pix2[3] + pix3[3] + pix4[3]) >> 2;
+        }
+    }
+}
+
+/*
+================
+GRA_LightScaleTexture
+
+Scale up the pixel values in a texture to increase the
+lighting range
+================
+*/
+void GRA_LightScaleTexture(unsigned *in, int inwidth, int inheight, qboolean only_gamma)
+{
+    if (only_gamma)
+    {
+        int i, c;
+        byte *p;
+
+        p = (byte *)in;
+
+        c = inwidth * inheight;
+        for (i = 0; i < c; i++, p += 4)
+        {
+            p[0] = gammatable[p[0]];
+            p[1] = gammatable[p[1]];
+            p[2] = gammatable[p[2]];
+        }
+    }
+    else
+    {
+        int i, c;
+        byte *p;
+
+        p = (byte *)in;
+
+        c = inwidth * inheight;
+        for (i = 0; i < c; i++, p += 4)
+        {
+            p[0] = gammatable[intensitytable[p[0]]];
+            p[1] = gammatable[intensitytable[p[1]]];
+            p[2] = gammatable[intensitytable[p[2]]];
+        }
+    }
+}
+
 byte *GRA_MapPalleteImage(byte *data, int width, int height)
 {
     int size = width * height;
@@ -553,30 +661,39 @@ byte *GRA_MapPalleteImage(byte *data, int width, int height)
     return reinterpret_cast<byte *>(output);
 }
 
+/*
+================
+GRA_LoadPic
+
+This is also used as an entry point for the generated r_notexture
+================
+*/
 image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits)
 {
-    if (textures.contains(name))
-    {
-        return &textures.at(name);
-    }
+    image_t *image;
+    int i;
 
-    image_t image = {
-        .name = name,
-        .type = type,
-        .width = width,
-        .height = height,
-        .registration_sequence = registration_sequence,
-    };
-
-    if (pic == NULL)
+    // find a free image_t
+    for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-        return NULL;
+        if (image->texture == NULL)
+            break;
     }
+    if (i == numvktextures)
+    {
+        if (numvktextures == MAX_VKTEXTURES)
+            LOGF(eERROR, "MAX_VKTEXTURES");
+        numvktextures++;
+    }
+    image = &vktextures[i];
+    image->name = name;
+    image->registration_sequence = registration_sequence;
+    image->width = width;
+    image->height = height;
+    image->type = type;
 
     if (type == it_skin && bits == 8)
-    {
         R_FloodFillSkin(pic, width, height);
-    }
 
     if (bits == 8)
     {
@@ -586,30 +703,31 @@ image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, 
         {
             return NULL;
         }
-
-        GRA_CreateTexture(image.texture, image.name, (unsigned char *)mappedData, image.width, image.height);
+        GRA_CreateTexture(image->texture, image->name, mappedData, width, height);
         tf_free(mappedData);
     }
     else
     {
-        GRA_CreateTexture(image.texture, image.name, (unsigned char *)pic, image.width, image.height);
+        GRA_CreateTexture(image->texture, image->name, pic, width, height);
     }
-
-    textures.emplace(name, image);
-
-    return &textures.at(name);
+    return image;
 }
 
-image_t *GRA_LoadWal(char *name)
+/*
+================
+GRA_LoadWal
+================
+*/
+image_t *GRA_LoadWal(std::string name)
 {
     miptex_t *mt;
     int width, height, ofs;
     image_t *image;
 
-    FS_LoadFile(name, (void **)&mt);
+    FS_LoadFile(name.data(), (void **)&mt);
     if (!mt)
     {
-        LOGF(eERROR, "GRA_FindImage: can't load %s\n", name);
+        LOGF(eINFO, "GRA_FindImage: can't load %s\n", name);
         return r_notexture;
     }
 
@@ -624,19 +742,31 @@ image_t *GRA_LoadWal(char *name)
     return image;
 }
 
+/*
+===============
+GRA_FindImage
+
+Finds or loads the given image
+===============
+*/
 image_t *GRA_FindImage(std::string name, imagetype_t type)
 {
+    image_t *image;
     int i, len;
     byte *pic, *palette;
     int width, height;
-    image_t *image;
 
-    if (textures.contains(name))
+    if (name.empty())
+        return NULL; //	Sys_Error (ERR_DROP, "GRA_FindImage: NULL name");
+
+    // look for it
+    for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-        image = &textures.at(name);
-        image->registration_sequence = registration_sequence;
-
-        return image;
+        if (image->name == name)
+        {
+            image->registration_sequence = registration_sequence;
+            return image;
+        }
     }
 
     //
@@ -644,54 +774,55 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
     //
     pic = NULL;
     palette = NULL;
+    std::string ext = name.substr(name.size() - 4);
 
-    auto ext = name.substr(name.length() - 4);
     if (ext == ".pcx")
     {
-        LoadPCX(name.data(), &pic, &palette, &width, &height);
+        LoadPCX(name, &pic, &palette, &width, &height);
         if (!pic)
-        {
-            return NULL; // ri.Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
-        }
+            return NULL; // Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
         image = GRA_LoadPic(name, pic, width, height, type, 8);
     }
     else if (ext == ".wal")
     {
-        image = GRA_LoadWal(name.data());
+        image = GRA_LoadWal(name);
     }
     else if (ext == ".tga")
     {
         LoadTGA(name.data(), &pic, &width, &height);
         if (!pic)
-        {
-            return NULL; // ri.Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
-        }
+            return NULL; // Sys_Error (ERR_DROP, "GRA_FindImage: can't load %s", name);
         image = GRA_LoadPic(name, pic, width, height, type, 32);
     }
     else
-    {
-        return NULL; //	ri.Sys_Error (ERR_DROP, "GRA_FindImage: bad extension on: %s", name);
-    }
+        return NULL; //	Sys_Error (ERR_DROP, "GRA_FindImage: bad extension on: %s", name);
 
     if (pic)
-    {
-        tf_free(pic);
-    }
+        free(pic);
     if (palette)
-    {
-        tf_free(palette);
-    }
+        free(palette);
 
     return image;
 }
 
+/*
+===============
+R_RegisterSkin
+===============
+*/
 struct image_s *R_RegisterSkin(char *name)
 {
-    LOGF(eINFO, "Register skin: %s.", name);
-
     return GRA_FindImage(name, it_skin);
 }
 
+/*
+================
+GRA_FreeUnusedImages
+
+Any image that was not touched on this registration sequence
+will be freed.
+================
+*/
 void GRA_FreeUnusedImages(void)
 {
     int i;
@@ -701,21 +832,26 @@ void GRA_FreeUnusedImages(void)
     r_notexture->registration_sequence = registration_sequence;
     r_particletexture->registration_sequence = registration_sequence;
 
-    for (auto &pair : textures)
+    for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-        auto &[name, image] = pair;
-        if (image.registration_sequence == registration_sequence)
+        if (image->registration_sequence == registration_sequence)
             continue; // used this sequence
-
-        if (image.type == it_pic)
+        if (!image->registration_sequence)
+            continue; // free image_t slot
+        if (image->type == it_pic)
             continue; // don't free pics
         // free it
-        removeResource(image.texture);
-        textures.erase(name);
+        removeResource(image->texture);
+        *image = {};
     }
 }
 
-int Draw_LoadPalette(void)
+/*
+===============
+Draw_GetPalette
+===============
+*/
+int Draw_GetPalette(void)
 {
     int i;
     int r, g, b;
@@ -727,9 +863,7 @@ int Draw_LoadPalette(void)
 
     LoadPCX("pics/colormap.pcx", &pic, &pal, &width, &height);
     if (!pal)
-    {
-        LOGF(eERROR, "Couldn't load pics/colormap.pcx");
-    }
+        Sys_Error(ERR_FATAL, "Couldn't load pics/colormap.pcx");
 
     for (i = 0; i < 256; i++)
     {
@@ -749,6 +883,11 @@ int Draw_LoadPalette(void)
     return 0;
 }
 
+/*
+===============
+GRA_InitImages
+===============
+*/
 void GRA_InitImages(void)
 {
     int i, j;
@@ -760,13 +899,11 @@ void GRA_InitImages(void)
     intensity = Cvar_Get(std::string("intensity").data(), std::string("2").data(), 0);
 
     if (intensity->value <= 1)
-    {
         Cvar_Set(std::string("intensity").data(), std::string("1").data());
-    }
 
     vk_state.inverse_intensity = 1 / intensity->value;
 
-    Draw_LoadPalette();
+    Draw_GetPalette();
 
     for (i = 0; i < 256; i++)
     {
@@ -796,18 +933,27 @@ void GRA_InitImages(void)
     }
 }
 
+/*
+===============
+GRA_ShutdownImages
+===============
+*/
 void GRA_ShutdownImages(void)
 {
-    for (auto &pair : textures)
+    int i;
+    image_t *image;
+
+    for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-        auto &[name, image] = pair;
-        removeResource(image.texture);
+        if (!image->registration_sequence)
+            continue; // free image_t slot
+
+        removeResource(image->texture);
+        *image = {};
     }
 
     removeResource(rawTexture);
 
-    for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
-    {
+    for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
         removeResource(vk_state.lightmap_textures[i]);
-    }
 }

@@ -492,7 +492,7 @@ void Mod_LoadTexinfo(lump_t *l)
         out->image = GRA_FindImage(name, it_wall);
         if (!out->image)
         {
-            LOGF(eWARNING, "Couldn't load %s\n", name);
+            LOGF(eWARNING, "Couldn't load %s\n", name.c_str());
             out->image = r_notexture;
         }
     }
