@@ -230,6 +230,7 @@ add_executable(tf-quake2-main
     "src/gra_common.cpp"
     "src/gra_common.h"
     "src/gra_draw.cpp"
+    "src/gra_light.cpp"
     "src/gra_image.cpp"
     "src/gra_local.h"
     "src/gra_main.cpp"

@@ -30,8 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 =============================================================
 */
 
-static constexpr int NUMVERTEXNORMALS = 162;
-
 float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 #include "anorms.h"
 };
@@ -257,48 +255,48 @@ void Vk_DrawAliasFrameLerp (dmdl_t *paliashdr, float backlerp, image_t *skin, fl
 		drawInfo[pipelineIdx][pipeCounters[pipelineIdx]].firstVertex = vertCounts[pipelineIdx];
 	}
 
-	uint32_t uboOffset;
-	VkDescriptorSet uboDescriptorSet;
-	uint8_t *uboData = QVk_GetUniformBuffer(sizeof(meshUbo), &uboOffset, &uboDescriptorSet);
-	memcpy(meshUbo.model, modelMatrix, sizeof(float) * 16);
-	memcpy(uboData, &meshUbo, sizeof(meshUbo));
+	// uint32_t uboOffset;
+	// VkDescriptorSet uboDescriptorSet;
+	// uint8_t *uboData = QVk_GetUniformBuffer(sizeof(meshUbo), &uboOffset, &uboDescriptorSet);
+	// memcpy(meshUbo.model, modelMatrix, sizeof(float) * 16);
+	// memcpy(uboData, &meshUbo, sizeof(meshUbo));
 
-	// player configuration screen model is using the UI renderpass
-	int pidx = r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RP_UI : RP_WORLD;
-	// non-depth write alias models don't occur with RF_WEAPONMODEL set, so no need for additional left-handed pipelines
-	qvkpipeline_t pipelines[2][4] = { { vk_drawModelPipelineStrip[pidx], vk_drawModelPipelineFan[pidx], vk_drawLefthandModelPipelineStrip, vk_drawLefthandModelPipelineFan },
-									  { vk_drawNoDepthModelPipelineStrip, vk_drawNoDepthModelPipelineFan, vk_drawLefthandModelPipelineStrip, vk_drawLefthandModelPipelineFan } };
-	for (int p = 0; p < 2; p++)
-	{
-		VkDeviceSize vaoSize = sizeof(modelvert) * vertCounts[p];
-		VkBuffer vbo;
-		VkDeviceSize vboOffset;
-		uint8_t *vertData = QVk_GetVertexBuffer(vaoSize, &vbo, &vboOffset);
-		memcpy(vertData, vertList[p], vaoSize);
+	// // player configuration screen model is using the UI renderpass
+	// int pidx = r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RP_UI : RP_WORLD;
+	// // non-depth write alias models don't occur with RF_WEAPONMODEL set, so no need for additional left-handed pipelines
+	// qvkpipeline_t pipelines[2][4] = { { vk_drawModelPipelineStrip[pidx], vk_drawModelPipelineFan[pidx], vk_drawLefthandModelPipelineStrip, vk_drawLefthandModelPipelineFan },
+	// 								  { vk_drawNoDepthModelPipelineStrip, vk_drawNoDepthModelPipelineFan, vk_drawLefthandModelPipelineStrip, vk_drawLefthandModelPipelineFan } };
+	// for (int p = 0; p < 2; p++)
+	// {
+	// 	VkDeviceSize vaoSize = sizeof(modelvert) * vertCounts[p];
+	// 	VkBuffer vbo;
+	// 	VkDeviceSize vboOffset;
+	// 	uint8_t *vertData = QVk_GetVertexBuffer(vaoSize, &vbo, &vboOffset);
+	// 	memcpy(vertData, vertList[p], vaoSize);
 
-		QVk_BindPipeline(&pipelines[translucentIdx][p + leftHandOffset]);
-		VkDescriptorSet descriptorSets[] = { skin->vk_texture.descriptorSet, uboDescriptorSet };
-		vkCmdPushConstants(vk_activeCmdbuffer, pipelines[translucentIdx][p + leftHandOffset].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(r_viewproj_matrix), r_viewproj_matrix);
-		vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines[translucentIdx][p + leftHandOffset].layout, 0, 2, descriptorSets, 1, &uboOffset);
-		vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
+	// 	QVk_BindPipeline(&pipelines[translucentIdx][p + leftHandOffset]);
+	// 	VkDescriptorSet descriptorSets[] = { skin->vk_texture.descriptorSet, uboDescriptorSet };
+	// 	vkCmdPushConstants(vk_activeCmdbuffer, pipelines[translucentIdx][p + leftHandOffset].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(r_viewproj_matrix), r_viewproj_matrix);
+	// 	vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines[translucentIdx][p + leftHandOffset].layout, 0, 2, descriptorSets, 1, &uboOffset);
+	// 	vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
 
-		if (p == TRIANGLE_STRIP)
-		{
-			for (i = 0; i < pipeCounters[p]; i++)
-			{
-				vkCmdDraw(vk_activeCmdbuffer, drawInfo[p][i].vertexCount, 1, drawInfo[p][i].firstVertex, 0);
-			}
-		}
-		else
-		{
-			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(maxTriangleFanIdxCnt), 0, VK_INDEX_TYPE_UINT16);
+	// 	if (p == TRIANGLE_STRIP)
+	// 	{
+	// 		for (i = 0; i < pipeCounters[p]; i++)
+	// 		{
+	// 			vkCmdDraw(vk_activeCmdbuffer, drawInfo[p][i].vertexCount, 1, drawInfo[p][i].firstVertex, 0);
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(maxTriangleFanIdxCnt), 0, VK_INDEX_TYPE_UINT16);
 
-			for (i = 0; i < pipeCounters[p]; i++)
-			{
-				vkCmdDrawIndexed(vk_activeCmdbuffer, (drawInfo[p][i].vertexCount - 2) * 3, 1, 0, drawInfo[p][i].firstVertex, 0);
-			}
-		}
-	}
+	// 		for (i = 0; i < pipeCounters[p]; i++)
+	// 		{
+	// 			vkCmdDrawIndexed(vk_activeCmdbuffer, (drawInfo[p][i].vertexCount - 2) * 3, 1, 0, drawInfo[p][i].firstVertex, 0);
+	// 		}
+	// 	}
+	// }
 }
 
 
@@ -318,7 +316,7 @@ void Vk_DrawAliasShadow (dmdl_t *paliashdr, int posenum, float *modelMatrix)
 	int		count;
 	int		i;
 	daliasframe_t	*frame;
-	qvkpipeline_t pipelines[2] = { vk_shadowsPipelineStrip, vk_shadowsPipelineFan };
+	// qvkpipeline_t pipelines[2] = { vk_shadowsPipelineStrip, vk_shadowsPipelineFan };
 
 	enum {
 		TRIANGLE_STRIP = 0,
@@ -337,70 +335,70 @@ void Vk_DrawAliasShadow (dmdl_t *paliashdr, int posenum, float *modelMatrix)
 
 	height = -lheight + 1.0;
 
-	uint32_t uboOffset;
-	VkDescriptorSet uboDescriptorSet;
-	uint8_t *uboData = QVk_GetUniformBuffer(sizeof(float) * 16, &uboOffset, &uboDescriptorSet);
-	memcpy(uboData, modelMatrix, sizeof(float) * 16);
+	// uint32_t uboOffset;
+	// VkDescriptorSet uboDescriptorSet;
+	// uint8_t *uboData = QVk_GetUniformBuffer(sizeof(float) * 16, &uboOffset, &uboDescriptorSet);
+	// memcpy(uboData, modelMatrix, sizeof(float) * 16);
 
-	static vec3_t shadowverts[MAX_VERTS];
-	while (1)
-	{
-		i = 0;
-		// get the vertex count and primitive type
-		count = *order++;
-		if (!count)
-			break;		// done
-		if (count < 0)
-		{
-			count = -count;
-			pipelineIdx = TRIANGLE_FAN;
-		}
-		else
-		{
-			pipelineIdx = TRIANGLE_STRIP;
-		}
+	// static vec3_t shadowverts[MAX_VERTS];
+	// while (1)
+	// {
+	// 	i = 0;
+	// 	// get the vertex count and primitive type
+	// 	count = *order++;
+	// 	if (!count)
+	// 		break;		// done
+	// 	if (count < 0)
+	// 	{
+	// 		count = -count;
+	// 		pipelineIdx = TRIANGLE_FAN;
+	// 	}
+	// 	else
+	// 	{
+	// 		pipelineIdx = TRIANGLE_STRIP;
+	// 	}
 
-		do
-		{
-			// normals and vertexes come from the frame list
-			memcpy( point, s_lerped[order[2]], sizeof( point ) );
+	// 	do
+	// 	{
+	// 		// normals and vertexes come from the frame list
+	// 		memcpy( point, s_lerped[order[2]], sizeof( point ) );
 
-			point[0] -= shadevector[0]*(point[2]+lheight);
-			point[1] -= shadevector[1]*(point[2]+lheight);
-			point[2] = height;
+	// 		point[0] -= shadevector[0]*(point[2]+lheight);
+	// 		point[1] -= shadevector[1]*(point[2]+lheight);
+	// 		point[2] = height;
 
-			shadowverts[i][0] = point[0];
-			shadowverts[i][1] = point[1];
-			shadowverts[i][2] = point[2];
+	// 		shadowverts[i][0] = point[0];
+	// 		shadowverts[i][1] = point[1];
+	// 		shadowverts[i][2] = point[2];
 
-			order += 3;
-			i++;
-		} while (--count);
+	// 		order += 3;
+	// 		i++;
+	// 	} while (--count);
 
-		if (i > 0)
-		{
-			VkDeviceSize vaoSize = sizeof(vec3_t) * i;
-			VkBuffer vbo;
-			VkDeviceSize vboOffset;
-			uint8_t *vertData = QVk_GetVertexBuffer(vaoSize, &vbo, &vboOffset);
-			memcpy(vertData, shadowverts, vaoSize);
+	// 	if (i > 0)
+	// 	{
+	// 		VkDeviceSize vaoSize = sizeof(vec3_t) * i;
+	// 		VkBuffer vbo;
+	// 		VkDeviceSize vboOffset;
+	// 		uint8_t *vertData = QVk_GetVertexBuffer(vaoSize, &vbo, &vboOffset);
+	// 		memcpy(vertData, shadowverts, vaoSize);
 
-			QVk_BindPipeline(&pipelines[pipelineIdx]);
-			vkCmdPushConstants(vk_activeCmdbuffer, pipelines[pipelineIdx].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(r_viewproj_matrix), r_viewproj_matrix);
-			vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines[pipelineIdx].layout, 0, 1, &uboDescriptorSet, 1, &uboOffset);
-			vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
+	// 		QVk_BindPipeline(&pipelines[pipelineIdx]);
+	// 		vkCmdPushConstants(vk_activeCmdbuffer, pipelines[pipelineIdx].layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(r_viewproj_matrix), r_viewproj_matrix);
+	// 		vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelines[pipelineIdx].layout, 0, 1, &uboDescriptorSet, 1, &uboOffset);
+	// 		vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
 
-			if (pipelineIdx == TRIANGLE_STRIP)
-			{
-				vkCmdDraw(vk_activeCmdbuffer, i, 1, 0, 0);
-			}
-			else
-			{
-				vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((i - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-				vkCmdDrawIndexed(vk_activeCmdbuffer, (i - 2) * 3, 1, 0, 0, 0);
-			}
-		}
-	}
+	// 		if (pipelineIdx == TRIANGLE_STRIP)
+	// 		{
+	// 			vkCmdDraw(vk_activeCmdbuffer, i, 1, 0, 0);
+	// 		}
+	// 		else
+	// 		{
+	// 			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((i - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
+	// 			vkCmdDrawIndexed(vk_activeCmdbuffer, (i - 2) * 3, 1, 0, 0, 0);
+	// 		}
+	// 	}
+	// }
 }
 
 
@@ -417,134 +415,136 @@ static qboolean R_CullAliasModel( vec3_t bbox[8], entity_t *e )
 	daliasframe_t *pframe, *poldframe;
 	vec3_t angles;
 
-	paliashdr = (dmdl_t *)currentmodel->extradata;
+	// paliashdr = (dmdl_t *)currentmodel->extradata;
 
-	if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
-	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n", 
-			currentmodel->name, e->frame);
-		e->frame = 0;
-	}
-	if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
-	{
-		ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n", 
-			currentmodel->name, e->oldframe);
-		e->oldframe = 0;
-	}
+	// if ( ( e->frame >= paliashdr->num_frames ) || ( e->frame < 0 ) )
+	// {
+	// 	ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such frame %d\n", 
+	// 		currentmodel->name, e->frame);
+	// 	e->frame = 0;
+	// }
+	// if ( ( e->oldframe >= paliashdr->num_frames ) || ( e->oldframe < 0 ) )
+	// {
+	// 	ri.Con_Printf (PRINT_ALL, "R_CullAliasModel %s: no such oldframe %d\n", 
+	// 		currentmodel->name, e->oldframe);
+	// 	e->oldframe = 0;
+	// }
 
-	pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
-		                              paliashdr->ofs_frames +
-									  e->frame * paliashdr->framesize);
+	// pframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
+	// 	                              paliashdr->ofs_frames +
+	// 								  e->frame * paliashdr->framesize);
 
-	poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
-		                              paliashdr->ofs_frames +
-									  e->oldframe * paliashdr->framesize);
+	// poldframe = ( daliasframe_t * ) ( ( byte * ) paliashdr + 
+	// 	                              paliashdr->ofs_frames +
+	// 								  e->oldframe * paliashdr->framesize);
 
-	/*
-	** compute axially aligned mins and maxs
-	*/
-	if ( pframe == poldframe )
-	{
-		for ( i = 0; i < 3; i++ )
-		{
-			mins[i] = pframe->translate[i];
-			maxs[i] = mins[i] + pframe->scale[i]*255;
-		}
-	}
-	else
-	{
-		for ( i = 0; i < 3; i++ )
-		{
-			thismins[i] = pframe->translate[i];
-			thismaxs[i] = thismins[i] + pframe->scale[i]*255;
+	// /*
+	// ** compute axially aligned mins and maxs
+	// */
+	// if ( pframe == poldframe )
+	// {
+	// 	for ( i = 0; i < 3; i++ )
+	// 	{
+	// 		mins[i] = pframe->translate[i];
+	// 		maxs[i] = mins[i] + pframe->scale[i]*255;
+	// 	}
+	// }
+	// else
+	// {
+	// 	for ( i = 0; i < 3; i++ )
+	// 	{
+	// 		thismins[i] = pframe->translate[i];
+	// 		thismaxs[i] = thismins[i] + pframe->scale[i]*255;
 
-			oldmins[i]  = poldframe->translate[i];
-			oldmaxs[i]  = oldmins[i] + poldframe->scale[i]*255;
+	// 		oldmins[i]  = poldframe->translate[i];
+	// 		oldmaxs[i]  = oldmins[i] + poldframe->scale[i]*255;
 
-			if ( thismins[i] < oldmins[i] )
-				mins[i] = thismins[i];
-			else
-				mins[i] = oldmins[i];
+	// 		if ( thismins[i] < oldmins[i] )
+	// 			mins[i] = thismins[i];
+	// 		else
+	// 			mins[i] = oldmins[i];
 
-			if ( thismaxs[i] > oldmaxs[i] )
-				maxs[i] = thismaxs[i];
-			else
-				maxs[i] = oldmaxs[i];
-		}
-	}
+	// 		if ( thismaxs[i] > oldmaxs[i] )
+	// 			maxs[i] = thismaxs[i];
+	// 		else
+	// 			maxs[i] = oldmaxs[i];
+	// 	}
+	// }
 
-	/*
-	** compute a full bounding box
-	*/
-	for ( i = 0; i < 8; i++ )
-	{
-		vec3_t   tmp;
+	// /*
+	// ** compute a full bounding box
+	// */
+	// for ( i = 0; i < 8; i++ )
+	// {
+	// 	vec3_t   tmp;
 
-		if ( i & 1 )
-			tmp[0] = mins[0];
-		else
-			tmp[0] = maxs[0];
+	// 	if ( i & 1 )
+	// 		tmp[0] = mins[0];
+	// 	else
+	// 		tmp[0] = maxs[0];
 
-		if ( i & 2 )
-			tmp[1] = mins[1];
-		else
-			tmp[1] = maxs[1];
+	// 	if ( i & 2 )
+	// 		tmp[1] = mins[1];
+	// 	else
+	// 		tmp[1] = maxs[1];
 
-		if ( i & 4 )
-			tmp[2] = mins[2];
-		else
-			tmp[2] = maxs[2];
+	// 	if ( i & 4 )
+	// 		tmp[2] = mins[2];
+	// 	else
+	// 		tmp[2] = maxs[2];
 
-		VectorCopy( tmp, bbox[i] );
-	}
+	// 	VectorCopy( tmp, bbox[i] );
+	// }
 
-	/*
-	** rotate the bounding box
-	*/
-	VectorCopy( e->angles, angles );
-	angles[YAW] = -angles[YAW];
-	AngleVectors( angles, vectors[0], vectors[1], vectors[2] );
+	// /*
+	// ** rotate the bounding box
+	// */
+	// VectorCopy( e->angles, angles );
+	// angles[YAW] = -angles[YAW];
+	// AngleVectors( angles, vectors[0], vectors[1], vectors[2] );
 
-	for ( i = 0; i < 8; i++ )
-	{
-		vec3_t tmp;
+	// for ( i = 0; i < 8; i++ )
+	// {
+	// 	vec3_t tmp;
 
-		VectorCopy( bbox[i], tmp );
+	// 	VectorCopy( bbox[i], tmp );
 
-		bbox[i][0] = DotProduct( vectors[0], tmp );
-		bbox[i][1] = -DotProduct( vectors[1], tmp );
-		bbox[i][2] = DotProduct( vectors[2], tmp );
+	// 	bbox[i][0] = DotProduct( vectors[0], tmp );
+	// 	bbox[i][1] = -DotProduct( vectors[1], tmp );
+	// 	bbox[i][2] = DotProduct( vectors[2], tmp );
 
-		VectorAdd( e->origin, bbox[i], bbox[i] );
-	}
+	// 	VectorAdd( e->origin, bbox[i], bbox[i] );
+	// }
 
-	{
-		int p, f, aggregatemask = ~0;
+	// {
+	// 	int p, f, aggregatemask = ~0;
 
-		for ( p = 0; p < 8; p++ )
-		{
-			int mask = 0;
+	// 	for ( p = 0; p < 8; p++ )
+	// 	{
+	// 		int mask = 0;
 
-			for ( f = 0; f < 4; f++ )
-			{
-				float dp = DotProduct( frustum[f].normal, bbox[p] );
+	// 		for ( f = 0; f < 4; f++ )
+	// 		{
+	// 			float dp = DotProduct( frustum[f].normal, bbox[p] );
 
-				if ( ( dp - frustum[f].dist ) < 0 )
-				{
-					mask |= ( 1 << f );
-				}
-			}
+	// 			if ( ( dp - frustum[f].dist ) < 0 )
+	// 			{
+	// 				mask |= ( 1 << f );
+	// 			}
+	// 		}
 
-			aggregatemask &= mask;
-		}
+	// 		aggregatemask &= mask;
+	// 	}
 
-		if ( aggregatemask )
-		{
-			return true;
-		}
+	// 	if ( aggregatemask )
+	// 	{
+	// 		return true;
+	// 	}
 
-		return false;
-	}
+	// 	return false;
+	// }
+
+	return false;
 }
 
 /*
@@ -575,201 +575,201 @@ void R_DrawAliasModel (entity_t *e)
 			return;
 	}
 
-	paliashdr = (dmdl_t *)currentmodel->extradata;
+// 	paliashdr = (dmdl_t *)currentmodel->extradata;
 
-	//
-	// get lighting information
-	//
-	// PMM - rewrote, reordered to handle new shells & mixing
-	// PMM - 3.20 code .. replaced with original way of doing it to keep mod authors happy
-	//
-	if ( currententity->flags & ( RF_SHELL_HALF_DAM | RF_SHELL_GREEN | RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_DOUBLE ) )
-	{
-		VectorClear (shadelight);
-		if (currententity->flags & RF_SHELL_HALF_DAM)
-		{
-				shadelight[0] = 0.56;
-				shadelight[1] = 0.59;
-				shadelight[2] = 0.45;
-		}
-		if ( currententity->flags & RF_SHELL_DOUBLE )
-		{
-			shadelight[0] = 0.9;
-			shadelight[1] = 0.7;
-		}
-		if ( currententity->flags & RF_SHELL_RED )
-			shadelight[0] = 1.0;
-		if ( currententity->flags & RF_SHELL_GREEN )
-			shadelight[1] = 1.0;
-		if ( currententity->flags & RF_SHELL_BLUE )
-			shadelight[2] = 1.0;
-	}
-	else if ( currententity->flags & RF_FULLBRIGHT )
-	{
-		for (i=0 ; i<3 ; i++)
-			shadelight[i] = 1.0;
-	}
-	else
-	{
-		R_LightPoint (currententity->origin, shadelight);
+// 	//
+// 	// get lighting information
+// 	//
+// 	// PMM - rewrote, reordered to handle new shells & mixing
+// 	// PMM - 3.20 code .. replaced with original way of doing it to keep mod authors happy
+// 	//
+// 	if ( currententity->flags & ( RF_SHELL_HALF_DAM | RF_SHELL_GREEN | RF_SHELL_RED | RF_SHELL_BLUE | RF_SHELL_DOUBLE ) )
+// 	{
+// 		VectorClear (shadelight);
+// 		if (currententity->flags & RF_SHELL_HALF_DAM)
+// 		{
+// 				shadelight[0] = 0.56;
+// 				shadelight[1] = 0.59;
+// 				shadelight[2] = 0.45;
+// 		}
+// 		if ( currententity->flags & RF_SHELL_DOUBLE )
+// 		{
+// 			shadelight[0] = 0.9;
+// 			shadelight[1] = 0.7;
+// 		}
+// 		if ( currententity->flags & RF_SHELL_RED )
+// 			shadelight[0] = 1.0;
+// 		if ( currententity->flags & RF_SHELL_GREEN )
+// 			shadelight[1] = 1.0;
+// 		if ( currententity->flags & RF_SHELL_BLUE )
+// 			shadelight[2] = 1.0;
+// 	}
+// 	else if ( currententity->flags & RF_FULLBRIGHT )
+// 	{
+// 		for (i=0 ; i<3 ; i++)
+// 			shadelight[i] = 1.0;
+// 	}
+// 	else
+// 	{
+// 		R_LightPoint (currententity->origin, shadelight);
 
-		// player lighting hack for communication back to server
-		// big hack!
-		if ( currententity->flags & RF_WEAPONMODEL )
-		{
-			// pick the greatest component, which should be the same
-			// as the mono value returned by software
-			if (shadelight[0] > shadelight[1])
-			{
-				if (shadelight[0] > shadelight[2])
-					r_lightlevel->value = 150*shadelight[0];
-				else
-					r_lightlevel->value = 150*shadelight[2];
-			}
-			else
-			{
-				if (shadelight[1] > shadelight[2])
-					r_lightlevel->value = 150*shadelight[1];
-				else
-					r_lightlevel->value = 150*shadelight[2];
-			}
-		}
-	}
+// 		// player lighting hack for communication back to server
+// 		// big hack!
+// 		if ( currententity->flags & RF_WEAPONMODEL )
+// 		{
+// 			// pick the greatest component, which should be the same
+// 			// as the mono value returned by software
+// 			if (shadelight[0] > shadelight[1])
+// 			{
+// 				if (shadelight[0] > shadelight[2])
+// 					r_lightlevel->value = 150*shadelight[0];
+// 				else
+// 					r_lightlevel->value = 150*shadelight[2];
+// 			}
+// 			else
+// 			{
+// 				if (shadelight[1] > shadelight[2])
+// 					r_lightlevel->value = 150*shadelight[1];
+// 				else
+// 					r_lightlevel->value = 150*shadelight[2];
+// 			}
+// 		}
+// 	}
 
-	if ( currententity->flags & RF_MINLIGHT )
-	{
-		for (i=0 ; i<3 ; i++)
-			if (shadelight[i] > 0.1)
-				break;
-		if (i == 3)
-		{
-			shadelight[0] = 0.1;
-			shadelight[1] = 0.1;
-			shadelight[2] = 0.1;
-		}
-	}
+// 	if ( currententity->flags & RF_MINLIGHT )
+// 	{
+// 		for (i=0 ; i<3 ; i++)
+// 			if (shadelight[i] > 0.1)
+// 				break;
+// 		if (i == 3)
+// 		{
+// 			shadelight[0] = 0.1;
+// 			shadelight[1] = 0.1;
+// 			shadelight[2] = 0.1;
+// 		}
+// 	}
 
-	if ( currententity->flags & RF_GLOW )
-	{	// bonus items will pulse with time
-		float	scale;
-		float	min;
+// 	if ( currententity->flags & RF_GLOW )
+// 	{	// bonus items will pulse with time
+// 		float	scale;
+// 		float	min;
 
-		scale = 0.1 * sin(r_newrefdef.time*7);
-		for (i=0 ; i<3 ; i++)
-		{
-			min = shadelight[i] * 0.8;
-			shadelight[i] += scale;
-			if (shadelight[i] < min)
-				shadelight[i] = min;
-		}
-	}
+// 		scale = 0.1 * sin(r_newrefdef.time*7);
+// 		for (i=0 ; i<3 ; i++)
+// 		{
+// 			min = shadelight[i] * 0.8;
+// 			shadelight[i] += scale;
+// 			if (shadelight[i] < min)
+// 				shadelight[i] = min;
+// 		}
+// 	}
 
-// =================
-// PGM	ir goggles color override
-	if ( r_newrefdef.rdflags & RDF_IRGOGGLES && currententity->flags & RF_IR_VISIBLE)
-	{
-		shadelight[0] = 1.0;
-		shadelight[1] = 0.0;
-		shadelight[2] = 0.0;
-	}
-// PGM	
-// =================
+// // =================
+// // PGM	ir goggles color override
+// 	if ( r_newrefdef.rdflags & RDF_IRGOGGLES && currententity->flags & RF_IR_VISIBLE)
+// 	{
+// 		shadelight[0] = 1.0;
+// 		shadelight[1] = 0.0;
+// 		shadelight[2] = 0.0;
+// 	}
+// // PGM	
+// // =================
 
-	shadedots = r_avertexnormal_dots[((int)(currententity->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
+// 	shadedots = r_avertexnormal_dots[((int)(currententity->angles[1] * (SHADEDOT_QUANT / 360.0))) & (SHADEDOT_QUANT - 1)];
 	
-	an = currententity->angles[1]/180*M_PI;
-	shadevector[0] = cos(-an);
-	shadevector[1] = sin(-an);
-	shadevector[2] = 1;
-	VectorNormalize (shadevector);
+// 	an = currententity->angles[1]/180*M_PI;
+// 	shadevector[0] = cos(-an);
+// 	shadevector[1] = sin(-an);
+// 	shadevector[2] = 1;
+// 	VectorNormalize (shadevector);
 
-	//
-	// locate the proper data
-	//
+// 	//
+// 	// locate the proper data
+// 	//
 
-	c_alias_polys += paliashdr->num_tris;
+// 	c_alias_polys += paliashdr->num_tris;
 
-	//
-	// draw all the triangles
-	//
-	if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL) { // hack the depth range to prevent view model from poking into walls
-		extern float r_proj_aspect, r_proj_fovy;
-		// use different range for player setup screen so it doesn't collide with the viewmodel
-		r_vulkan_correction_dh[10] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
-		r_vulkan_correction_dh[14] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
+// 	//
+// 	// draw all the triangles
+// 	//
+// 	if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL) { // hack the depth range to prevent view model from poking into walls
+// 		extern float r_proj_aspect, r_proj_fovy;
+// 		// use different range for player setup screen so it doesn't collide with the viewmodel
+// 		r_vulkan_correction_dh[10] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
+// 		r_vulkan_correction_dh[14] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
 
-		memcpy(prev_viewproj, r_viewproj_matrix, sizeof(r_viewproj_matrix));
-		Mat_Perspective(r_projection_matrix, r_vulkan_correction_dh, r_proj_fovy, r_proj_aspect, 4, 4096);
-		Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
-	}
+// 		memcpy(prev_viewproj, r_viewproj_matrix, sizeof(r_viewproj_matrix));
+// 		Mat_Perspective(r_projection_matrix, r_vulkan_correction_dh, r_proj_fovy, r_proj_aspect, 4, 4096);
+// 		Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
+// 	}
 
-	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
-	{
-		Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
-		leftHandOffset = 2;
-	}
+// 	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
+// 	{
+// 		Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
+// 		leftHandOffset = 2;
+// 	}
 
-	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
-	float model[16];
-	Mat_Identity(model);
-	R_RotateForEntity (e, model);
-	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
+// 	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
+// 	float model[16];
+// 	Mat_Identity(model);
+// 	R_RotateForEntity (e, model);
+// 	e->angles[PITCH] = -e->angles[PITCH];	// sigh.
 
-	// select skin
-	if (currententity->skin)
-		skin = currententity->skin;	// custom player skin
-	else
-	{
-		if (currententity->skinnum >= MAX_MD2SKINS)
-			skin = currentmodel->skins[0];
-		else
-		{
-			skin = currentmodel->skins[currententity->skinnum];
-			if (!skin)
-				skin = currentmodel->skins[0];
-		}
-	}
-	if (!skin)
-		skin = r_notexture;	// fallback...
+// 	// select skin
+// 	if (currententity->skin)
+// 		skin = currententity->skin;	// custom player skin
+// 	else
+// 	{
+// 		if (currententity->skinnum >= MAX_MD2SKINS)
+// 			skin = currentmodel->skins[0];
+// 		else
+// 		{
+// 			skin = currentmodel->skins[currententity->skinnum];
+// 			if (!skin)
+// 				skin = currentmodel->skins[0];
+// 		}
+// 	}
+// 	if (!skin)
+// 		skin = r_notexture;	// fallback...
 
-	// draw it
-	if ( (currententity->frame >= paliashdr->num_frames) 
-		|| (currententity->frame < 0) )
-	{
-		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such frame %d\n",
-			currentmodel->name, currententity->frame);
-		currententity->frame = 0;
-		currententity->oldframe = 0;
-	}
+// 	// draw it
+// 	if ( (currententity->frame >= paliashdr->num_frames) 
+// 		|| (currententity->frame < 0) )
+// 	{
+// 		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such frame %d\n",
+// 			currentmodel->name, currententity->frame);
+// 		currententity->frame = 0;
+// 		currententity->oldframe = 0;
+// 	}
 
-	if ( (currententity->oldframe >= paliashdr->num_frames)
-		|| (currententity->oldframe < 0))
-	{
-		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such oldframe %d\n",
-			currentmodel->name, currententity->oldframe);
-		currententity->frame = 0;
-		currententity->oldframe = 0;
-	}
+// 	if ( (currententity->oldframe >= paliashdr->num_frames)
+// 		|| (currententity->oldframe < 0))
+// 	{
+// 		ri.Con_Printf (PRINT_ALL, "R_DrawAliasModel %s: no such oldframe %d\n",
+// 			currentmodel->name, currententity->oldframe);
+// 		currententity->frame = 0;
+// 		currententity->oldframe = 0;
+// 	}
 
-	if ( !r_lerpmodels->value )
-		currententity->backlerp = 0;
-	Vk_DrawAliasFrameLerp (paliashdr, currententity->backlerp, skin, model, leftHandOffset, currententity->flags & RF_TRANSLUCENT ? 1 : 0);
+// 	if ( !r_lerpmodels->value )
+// 		currententity->backlerp = 0;
+// 	Vk_DrawAliasFrameLerp (paliashdr, currententity->backlerp, skin, model, leftHandOffset, currententity->flags & RF_TRANSLUCENT ? 1 : 0);
 
-	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
-	{
-		Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
-	}
+// 	if ( ( currententity->flags & RF_WEAPONMODEL ) && ( r_lefthand->value == 1.0F ) )
+// 	{
+// 		Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
+// 	}
 
-	if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL)
-	{
-		memcpy(r_viewproj_matrix, prev_viewproj, sizeof(prev_viewproj));
-	}
+// 	if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL)
+// 	{
+// 		memcpy(r_viewproj_matrix, prev_viewproj, sizeof(prev_viewproj));
+// 	}
 
-	if (vk_shadows->value && !(currententity->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)))
-	{
-		float model[16];
-		Mat_Identity(model);
-		R_RotateForEntity(e, model);
-		Vk_DrawAliasShadow (paliashdr, currententity->frame, model);
-	}
+// 	if (vk_shadows->value && !(currententity->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)))
+// 	{
+// 		float model[16];
+// 		Mat_Identity(model);
+// 		R_RotateForEntity(e, model);
+// 		Vk_DrawAliasShadow (paliashdr, currententity->frame, model);
+// 	}
 }
