@@ -81,7 +81,7 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SCRIPTS, "Scripts");
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
 
-    GRA_init_graphics(this);
+    GRA_InitGraphics(this);
     refreshExport();
     InputSystemDesc inputDesc = {
         .pRenderer = pRenderer,
@@ -91,7 +91,7 @@ bool MainApp::Init()
     if (!initInputSystem(&inputDesc))
         return false;
 
-    SYS_register_input();
+    SYS_RegisterInput();
 
     return true;
 }
@@ -102,20 +102,20 @@ void MainApp::Exit()
     Qcommon_Shutdown();
     exitInputSystem();
 
-    GRA_exit_graphics();
+    GRA_ExitGraphics();
 
     gSoloud.deinit();
 }
 
 bool MainApp::Load(ReloadDesc *pReloadDesc)
 {
-    GRA_load(pReloadDesc, this);
+    GRA_Load(pReloadDesc, this);
     return true;
 }
 
 void MainApp::Unload(ReloadDesc *pReloadDesc)
 {
-    GRA_unload(pReloadDesc);
+    GRA_Unload(pReloadDesc);
 }
 
 void MainApp::Update(float deltaTime)
@@ -144,6 +144,7 @@ void MainApp::Update(float deltaTime)
 
 void MainApp::Draw()
 {
+    GRA_Draw(this);
 }
 
 DEFINE_APPLICATION_MAIN(MainApp);

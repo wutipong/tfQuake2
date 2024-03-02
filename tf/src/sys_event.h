@@ -3,6 +3,6 @@
 
 #include <IInput.h>
 
-void SYS_register_input();
+void SYS_RegisterInput();
 
 #endif

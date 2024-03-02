@@ -1,7 +1,10 @@
 #include "gra_common.h"
 
 #include <IGraphics.h>
+#include <IProfiler.h>
 #include <RingBuffer.h>
+#include <IUI.h>
+#include <IFont.h>
 
 const uint32_t gDataBufferCount = 2;
 
@@ -13,7 +16,10 @@ GpuCmdRing gGraphicsCmdRing = {};
 SwapChain *pSwapChain = NULL;
 RenderTarget *pDepthBuffer = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
-
+ProfileToken gGpuProfileToken = PROFILE_INVALID_TOKEN;
+int gFrameIndex = 0;
+FontDrawDesc gFrameTimeDraw = {};
+uint32_t gFontID = 0;
 extern Sampler *pSampler = NULL;
 
 // render pipelines
@@ -70,7 +76,7 @@ static void _removePipelines();
 static bool _addSwapChain(IApp *pApp);
 static bool _addDepthBuffer(IApp *pApp);
 
-bool GRA_init_graphics(IApp *app)
+bool GRA_InitGraphics(IApp *app)
 {
     // window and renderer setup
     RendererDesc settings = {
@@ -111,10 +117,12 @@ bool GRA_init_graphics(IApp *app)
     };
     addSampler(pRenderer, &samplerDesc, &pSampler);
 
+    gGpuProfileToken = addGpuProfiler(pRenderer, pGraphicsQueue, "Graphics");
+
     return true;
 }
 
-bool GRA_exit_graphics()
+bool GRA_ExitGraphics()
 {
     removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
@@ -130,7 +138,7 @@ bool GRA_exit_graphics()
     return true;
 }
 
-bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp)
+bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
 {
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
@@ -180,7 +188,7 @@ bool GRA_load(ReloadDesc *pReloadDesc, IApp *pApp)
         */
     return true;
 }
-void GRA_unload(ReloadDesc *pReloadDesc)
+void GRA_Unload(ReloadDesc *pReloadDesc)
 {
     waitQueueIdle(pGraphicsQueue);
 
@@ -887,4 +895,115 @@ static bool _addDepthBuffer(IApp *pApp)
     addRenderTarget(pRenderer, &depthRT, &pDepthBuffer);
 
     return pDepthBuffer != NULL;
+}
+
+void GRA_Draw(IApp *pApp)
+{
+    if (pSwapChain->mEnableVsync != pApp->mSettings.mVSyncEnabled)
+    {
+        waitQueueIdle(pGraphicsQueue);
+        ::toggleVSync(pRenderer, &pSwapChain);
+    }
+
+    uint32_t swapchainImageIndex;
+    acquireNextImage(pRenderer, pSwapChain, pImageAcquiredSemaphore, NULL, &swapchainImageIndex);
+
+    RenderTarget *pRenderTarget = pSwapChain->ppRenderTargets[swapchainImageIndex];
+    GpuCmdRingElement elem = getNextGpuCmdRingElement(&gGraphicsCmdRing, true, 1);
+
+    // Stall if CPU is running "gDataBufferCount" frames ahead of GPU
+    FenceStatus fenceStatus;
+    getFenceStatus(pRenderer, elem.pFence, &fenceStatus);
+    if (fenceStatus == FENCE_STATUS_INCOMPLETE)
+    {
+        waitForFences(pRenderer, 1, &elem.pFence);
+    }
+
+    /*********************************************************************/
+    // Update uniform buffers
+    /*********************************************************************/
+
+    // BufferUpdateDesc viewProjCbv = { pProjViewUniformBuffer[gFrameIndex] };
+    // beginUpdateResource(&viewProjCbv);
+    // memcpy(viewProjCbv.pMappedData, &gUniformData, sizeof(gUniformData));
+    // endUpdateResource(&viewProjCbv);
+
+    // BufferUpdateDesc skyboxViewProjCbv = { pSkyboxUniformBuffer[gFrameIndex] };
+    // beginUpdateResource(&skyboxViewProjCbv);
+    // memcpy(skyboxViewProjCbv.pMappedData, &gUniformDataSky, sizeof(gUniformDataSky));
+    // endUpdateResource(&skyboxViewProjCbv);
+
+    // Reset cmd pool for this frame
+    resetCmdPool(pRenderer, elem.pCmdPool);
+
+    Cmd *cmd = elem.pCmds[0];
+    beginCmd(cmd);
+
+    cmdBeginGpuFrameProfile(cmd, gGpuProfileToken);
+
+    RenderTargetBarrier barriers[] = {
+        {pRenderTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET},
+    };
+    cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
+
+    // simply record the screen cleaning command
+    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets.mRenderTargetCount = 1;
+    bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+    bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
+    cmdBindRenderTargets(cmd, &bindRenderTargets);
+    cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
+    cmdSetScissor(cmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+
+    const uint32_t skyboxVbStride = sizeof(float) * 4;
+
+    /************************************************************************/
+    // draw objects
+    /************************************************************************/
+
+    cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Draw UI");
+
+    gFrameTimeDraw.mFontColor = 0xff00ffff;
+    gFrameTimeDraw.mFontSize = 18.0f;
+    gFrameTimeDraw.mFontID = gFontID;
+    float2 txtSizePx = cmdDrawCpuProfile(cmd, float2(8.f, 15.f), &gFrameTimeDraw);
+    cmdDrawGpuProfile(cmd, float2(8.f, txtSizePx.y + 75.f), gGpuProfileToken, &gFrameTimeDraw);
+
+    cmdDrawUserInterface(cmd);
+
+    cmdBindRenderTargets(cmd, NULL);
+    cmdEndGpuTimestampQuery(cmd, gGpuProfileToken);
+
+    barriers[0] = {pRenderTarget, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT};
+    cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
+
+    cmdEndGpuFrameProfile(cmd, gGpuProfileToken);
+
+    endCmd(cmd);
+
+    FlushResourceUpdateDesc flushUpdateDesc = {};
+    flushUpdateDesc.mNodeIndex = 0;
+    flushResourceUpdates(&flushUpdateDesc);
+    Semaphore *waitSemaphores[2] = {flushUpdateDesc.pOutSubmittedSemaphore, pImageAcquiredSemaphore};
+
+    QueueSubmitDesc submitDesc = {};
+    submitDesc.mCmdCount = 1;
+    submitDesc.mSignalSemaphoreCount = 1;
+    submitDesc.mWaitSemaphoreCount = TF_ARRAY_COUNT(waitSemaphores);
+    submitDesc.ppCmds = &cmd;
+    submitDesc.ppSignalSemaphores = &elem.pSemaphore;
+    submitDesc.ppWaitSemaphores = waitSemaphores;
+    submitDesc.pSignalFence = elem.pFence;
+    queueSubmit(pGraphicsQueue, &submitDesc);
+    QueuePresentDesc presentDesc = {};
+    presentDesc.mIndex = swapchainImageIndex;
+    presentDesc.mWaitSemaphoreCount = 1;
+    presentDesc.pSwapChain = pSwapChain;
+    presentDesc.ppWaitSemaphores = &elem.pSemaphore;
+    presentDesc.mSubmitDone = true;
+
+    queuePresent(pGraphicsQueue, &presentDesc);
+    flipProfiler();
+
+    gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
 }

@@ -663,7 +663,7 @@ bool SYS_input_handler(InputActionContext *ctx)
     return true;
 }
 
-void SYS_register_input()
+void SYS_RegisterInput()
 {
     addActionMappings(gKeyboardMouseActionMappings, TF_ARRAY_COUNT(gKeyboardMouseActionMappings),
                       INPUT_ACTION_MAPPING_TARGET_ALL);
