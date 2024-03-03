@@ -75,9 +75,9 @@ Cmd *pCmd;
 DescriptorSet *pDescriptorSetTexture = {NULL};
 DescriptorSet *pDescriptorSetUniforms = {NULL};
 
-Buffer* texRectVbo;
-Buffer* colorRectVbo;
-Buffer* rectIbo;
+Buffer *texRectVbo;
+Buffer *colorRectVbo;
+Buffer *rectIbo;
 
 static void _addShaders();
 static void _removeShaders();
@@ -91,7 +91,6 @@ static bool _addDescriptorSets();
 static bool _removeDescriptorSets();
 static void _addStaticBuffers();
 static void _removeStaticBuffers();
-
 
 bool GRA_InitGraphics(IApp *app)
 {
@@ -1065,17 +1064,11 @@ bool _removeDescriptorSets()
 
 static void _addStaticBuffers()
 {
-	const float texVerts[] = {	-1., -1., 0., 0.,
-								 1.,  1., 1., 1.,
-								-1.,  1., 0., 1.,
-								 1., -1., 1., 0. };
+    const float texVerts[] = {-1., -1., 0., 0., 1., 1., 1., 1., -1., 1., 0., 1., 1., -1., 1., 0.};
 
-	const float colorVerts[] = { -1., -1.,
-								  1.,  1.,
-								 -1.,  1.,
-								  1., -1. };
+    const float colorVerts[] = {-1., -1., 1., 1., -1., 1., 1., -1.};
 
-	const uint32_t indices[] = { 0, 1, 2, 0, 3, 1 };
+    const uint32_t indices[] = {0, 1, 2, 0, 3, 1};
 
     BufferLoadDesc desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
@@ -1129,6 +1122,37 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
     cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
     cmdBindVertexBuffer(pCmd, 1, &colorRectVbo, &stride, 0);
+    cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
+
+    cmdDrawIndexed(pCmd, 6, 0, 0);
+}
+
+void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture)
+{
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, uboSize);
+    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, ubo, uboSize);
+    endUpdateResource(&updateDesc);
+
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
+    DescriptorData params[1] = {};
+    params[0].pName = "uniformBlock_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    DescriptorData paramsTex = {};
+    paramsTex.pName = "sTexture";
+    paramsTex.ppTextures = &texture;
+    updateDescriptorSet(pRenderer, 0, pDescriptorSetTexture, 1, &paramsTex);
+
+    const uint32_t stride = sizeof(float) * 4;
+
+    cmdBindPipeline(pCmd, drawTexQuadPipeline);
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetTexture);
+    cmdBindVertexBuffer(pCmd, 1, &texRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
 
     cmdDrawIndexed(pCmd, 6, 0, 0);

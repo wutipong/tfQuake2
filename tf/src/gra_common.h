@@ -20,4 +20,5 @@ void GRA_Unload(ReloadDesc *pReloadDesc);
 void GRA_Draw(IApp *pApp);
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
+void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture);
 #endif
