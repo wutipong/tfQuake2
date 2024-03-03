@@ -68,6 +68,17 @@ Shader *postprocessShader;
 
 RootSignature *pRootSignature = NULL;
 
+GPURingBuffer dynamicUniformBuffer;
+
+Cmd *pCmd;
+
+DescriptorSet *pDescriptorSetTexture = {NULL};
+DescriptorSet *pDescriptorSetUniforms = {NULL};
+
+Buffer* texRectVbo;
+Buffer* colorRectVbo;
+Buffer* rectIbo;
+
 static void _addShaders();
 static void _removeShaders();
 static bool _addRootSignatures();
@@ -76,6 +87,11 @@ static void _addPipelines();
 static void _removePipelines();
 static bool _addSwapChain(IApp *pApp);
 static bool _addDepthBuffer(IApp *pApp);
+static bool _addDescriptorSets();
+static bool _removeDescriptorSets();
+static void _addStaticBuffers();
+static void _removeStaticBuffers();
+
 
 bool GRA_InitGraphics(IApp *app)
 {
@@ -107,6 +123,7 @@ bool GRA_InitGraphics(IApp *app)
     addSemaphore(pRenderer, &pImageAcquiredSemaphore);
 
     initResourceLoaderInterface(pRenderer);
+    addUniformGPURingBuffer(pRenderer, 65536, &dynamicUniformBuffer, true);
 
     SamplerDesc samplerDesc = {
         .mMinFilter = FILTER_NEAREST,
@@ -148,6 +165,7 @@ bool GRA_ExitGraphics()
 
     removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
+    removeGPURingBuffer(&dynamicUniformBuffer);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
 
     exitResourceLoaderInterface(pRenderer);
@@ -169,7 +187,7 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
         {
             return false;
         }
-        // addDescriptorSets();
+        _addDescriptorSets();
     }
 
     if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
@@ -188,6 +206,7 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
         _addPipelines();
+        _addStaticBuffers();
     }
 
     //    prepareDescriptorSets();
@@ -220,6 +239,7 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
         _removePipelines();
+        _removeStaticBuffers();
         // removeResource(pSphereVertexBuffer);
         // removeResource(pSphereIndexBuffer);
     }
@@ -232,7 +252,7 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
 
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
     {
-        // removeDescriptorSets();
+        _removeDescriptorSets();
         _removeRootSignatures();
         _removeShaders();
     }
@@ -946,20 +966,6 @@ void GRA_Draw(IApp *pApp)
         waitForFences(pRenderer, 1, &elem.pFence);
     }
 
-    /*********************************************************************/
-    // Update uniform buffers
-    /*********************************************************************/
-
-    // BufferUpdateDesc viewProjCbv = { pProjViewUniformBuffer[gFrameIndex] };
-    // beginUpdateResource(&viewProjCbv);
-    // memcpy(viewProjCbv.pMappedData, &gUniformData, sizeof(gUniformData));
-    // endUpdateResource(&viewProjCbv);
-
-    // BufferUpdateDesc skyboxViewProjCbv = { pSkyboxUniformBuffer[gFrameIndex] };
-    // beginUpdateResource(&skyboxViewProjCbv);
-    // memcpy(skyboxViewProjCbv.pMappedData, &gUniformDataSky, sizeof(gUniformDataSky));
-    // endUpdateResource(&skyboxViewProjCbv);
-
     // Reset cmd pool for this frame
     resetCmdPool(pRenderer, elem.pCmdPool);
 
@@ -984,9 +990,13 @@ void GRA_Draw(IApp *pApp)
 
     const uint32_t skyboxVbStride = sizeof(float) * 4;
 
+    pCmd = cmd;
+
     /************************************************************************/
     // draw objects
     /************************************************************************/
+
+    pCmd = NULL;
 
     cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Draw UI");
 
@@ -1033,4 +1043,93 @@ void GRA_Draw(IApp *pApp)
     flipProfiler();
 
     gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
+}
+
+bool _addDescriptorSets()
+{
+    DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+    addDescriptorSet(pRenderer, &desc, &pDescriptorSetTexture);
+    desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
+    addDescriptorSet(pRenderer, &desc, &pDescriptorSetUniforms);
+
+    return true;
+}
+
+bool _removeDescriptorSets()
+{
+    removeDescriptorSet(pRenderer, pDescriptorSetTexture);
+    removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
+
+    return true;
+}
+
+static void _addStaticBuffers()
+{
+	const float texVerts[] = {	-1., -1., 0., 0.,
+								 1.,  1., 1., 1.,
+								-1.,  1., 0., 1.,
+								 1., -1., 1., 0. };
+
+	const float colorVerts[] = { -1., -1.,
+								  1.,  1.,
+								 -1.,  1.,
+								  1., -1. };
+
+	const uint32_t indices[] = { 0, 1, 2, 0, 3, 1 };
+
+    BufferLoadDesc desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(texVerts);
+    desc.pData = texVerts;
+    desc.ppBuffer = &texRectVbo;
+    addResource(&desc, nullptr);
+
+    desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(colorVerts);
+    desc.pData = colorVerts;
+    desc.ppBuffer = &colorRectVbo;
+    addResource(&desc, nullptr);
+
+    desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(indices);
+    desc.pData = indices;
+    desc.ppBuffer = &rectIbo;
+    addResource(&desc, nullptr);
+}
+
+static void _removeStaticBuffers()
+{
+    removeResource(texRectVbo);
+    removeResource(colorRectVbo);
+    removeResource(rectIbo);
+}
+
+void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
+{
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, uboSize);
+    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, ubo, uboSize);
+    endUpdateResource(&updateDesc);
+
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
+    DescriptorData params[1] = {};
+    params[0].pName = "uniformBlock_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    const uint32_t stride = sizeof(float) * 2;
+
+    cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    cmdBindVertexBuffer(pCmd, 1, &colorRectVbo, &stride, 0);
+    cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
+
+    cmdDrawIndexed(pCmd, 6, 0, 0);
 }
