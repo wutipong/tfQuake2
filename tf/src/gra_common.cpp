@@ -991,6 +991,12 @@ void GRA_Draw(IApp *pApp)
 
     pCmd = cmd;
 
+    float imgTransform[] = { 0.5f, 0.65f,
+							 0.25f, 0.45f,
+							 0.5f, 0.25f, 0.75f, 1.f };
+
+    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
+
     /************************************************************************/
     // draw objects
     /************************************************************************/
@@ -1113,7 +1119,7 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
 
     DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
     DescriptorData params[1] = {};
-    params[0].pName = "uniformBlock_rootcbv";
+    params[0].pName = "imageTransform";
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
@@ -1138,7 +1144,7 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture)
 
     DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
     DescriptorData params[1] = {};
-    params[0].pName = "uniformBlock_rootcbv";
+    params[0].pName = "imageTransform";
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 

@@ -2,7 +2,7 @@
 #define GRA_COMMON_H
 
 #include <IApp.h>
-
+#include <IGraphics.h>
 
 enum class RenderPass
 {
