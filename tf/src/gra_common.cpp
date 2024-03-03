@@ -153,6 +153,9 @@ bool GRA_InitGraphics(IApp *app)
 
     gGpuProfileToken = addGpuProfiler(pRenderer, pGraphicsQueue, "Graphics");
 
+    _addStaticBuffers();
+
+    waitForAllResourceLoads();
     return true;
 }
 
@@ -166,6 +169,7 @@ bool GRA_ExitGraphics()
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeGPURingBuffer(&dynamicUniformBuffer);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
+    _removeStaticBuffers();
 
     exitResourceLoaderInterface(pRenderer);
 
@@ -205,7 +209,6 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
         _addPipelines();
-        _addStaticBuffers();
     }
 
     //    prepareDescriptorSets();
@@ -238,7 +241,6 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
         _removePipelines();
-        _removeStaticBuffers();
         // removeResource(pSphereVertexBuffer);
         // removeResource(pSphereIndexBuffer);
     }
@@ -701,7 +703,7 @@ static void _addPipelines()
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF2Pos;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
-    desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_POINT_LIST,
+    desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST,
 
     addPipeline(pRenderer, &desc, &drawColorQuadPipeline[0]);
     addPipeline(pRenderer, &desc, &drawColorQuadPipeline[1]);
@@ -990,16 +992,23 @@ void GRA_Draw(IApp *pApp)
     const uint32_t skyboxVbStride = sizeof(float) * 4;
 
     pCmd = cmd;
+    cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Drawing Objects");
 
-    float imgTransform[] = { 0.5f, 0.65f,
-							 0.25f, 0.45f,
-							 0.5f, 0.25f, 0.75f, 1.f };
+    /************************************************************************/
+    // Start drawing objects
+    /************************************************************************/
+    float imgTransform[] = {0.5f, 0.65f, 0.25f, 0.45f, 0.5f, 0.25f, 0.75f, 1.f};
 
     GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
 
+    float imgTransform2[] = {0.5f, 0.15f, 0.15f, 0.45f, 0.0f, 0.8f, 0.25f, 1.f};
+
+    GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
+
     /************************************************************************/
-    // draw objects
+    // End drawing objects
     /************************************************************************/
+    cmdEndGpuTimestampQuery(cmd, gGpuProfileToken);
 
     pCmd = NULL;
 
@@ -1079,7 +1088,7 @@ static void _addStaticBuffers()
     BufferLoadDesc desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(texVerts);
+    desc.mDesc.mSize = sizeof(float) * 16;
     desc.pData = texVerts;
     desc.ppBuffer = &texRectVbo;
     addResource(&desc, nullptr);
@@ -1087,15 +1096,15 @@ static void _addStaticBuffers()
     desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(colorVerts);
+    desc.mDesc.mSize = sizeof(float) * 8;
     desc.pData = colorVerts;
     desc.ppBuffer = &colorRectVbo;
     addResource(&desc, nullptr);
 
     desc = {};
-    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(indices);
+    desc.mDesc.mSize = sizeof(float) * 6;
     desc.pData = indices;
     desc.ppBuffer = &rectIbo;
     addResource(&desc, nullptr);
@@ -1119,7 +1128,7 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
 
     DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
     DescriptorData params[1] = {};
-    params[0].pName = "imageTransform";
+    params[0].pName = "imageTransform_rootcbv";
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
@@ -1144,7 +1153,7 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture)
 
     DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
     DescriptorData params[1] = {};
-    params[0].pName = "imageTransform";
+    params[0].pName = "imageTransform_rootcbv";
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
