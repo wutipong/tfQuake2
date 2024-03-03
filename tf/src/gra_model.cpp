@@ -22,8 +22,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_model.h"
 #include <ILog.h>
+#include <IResourceLoader.h>
 #include <format>
 #include <string>
+
+extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
+extern image_t vktextures[MAX_VKTEXTURES];
+extern Renderer *pRenderer;
 
 model_t *loadmodel;
 int modfilelen;
@@ -1243,6 +1248,17 @@ void R_EndRegistration(void)
     }
 
     GRA_FreeUnusedImages();
+    waitForAllResourceLoads();
+
+    for (int i = 0; i < numvktextures; i++)
+    {
+        image_t& tex = vktextures[i];
+        DescriptorData paramsTex = {
+            .pName = "sTexture",
+            .ppTextures = &tex.texture,
+        };
+        updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[i], 1, &paramsTex);
+    }
 }
 
 //=============================================================================

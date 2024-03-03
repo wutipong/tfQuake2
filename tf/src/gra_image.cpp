@@ -687,6 +687,7 @@ image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, 
     }
     image = &vktextures[i];
     image->name = name;
+    image->index = i;
     image->registration_sequence = registration_sequence;
     image->width = width;
     image->height = height;
@@ -829,8 +830,9 @@ void GRA_FreeUnusedImages(void)
     image_t *image;
 
     // never free r_notexture or particle texture
-    r_notexture->registration_sequence = registration_sequence;
-    r_particletexture->registration_sequence = registration_sequence;
+    // FIXME: load these 2 textures
+    // r_notexture->registration_sequence = registration_sequence;
+    //r_particletexture->registration_sequence = registration_sequence;
 
     for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {

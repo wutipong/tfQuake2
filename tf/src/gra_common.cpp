@@ -1,5 +1,7 @@
 #include "gra_common.h"
 
+#include "gra_local.h"
+
 #include <IFont.h>
 #include <IGraphics.h>
 #include <IProfiler.h>
@@ -22,7 +24,7 @@ int gFrameIndex = 0;
 FontDrawDesc gFrameTimeDraw = {};
 uint32_t gFontID = 0;
 extern Sampler *pSampler = NULL;
-
+extern image_t vktextures[MAX_VKTEXTURES];
 // render pipelines
 Pipeline *drawTexQuadPipeline;
 Pipeline *drawColorQuadPipeline[2];
@@ -72,7 +74,7 @@ GPURingBuffer dynamicUniformBuffer;
 
 Cmd *pCmd;
 
-DescriptorSet *pDescriptorSetTexture = {NULL};
+DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES] = {NULL};
 DescriptorSet *pDescriptorSetUniforms = {NULL};
 
 Buffer *texRectVbo;
@@ -1003,7 +1005,11 @@ void GRA_Draw(IApp *pApp)
 
     float imgTransform2[] = {0.5f, 0.15f, 0.15f, 0.45f, 0.0f, 0.8f, 0.25f, 1.f};
 
-    GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
+    // GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
+
+    if(vktextures[153].texture != NULL){
+        GRA_DrawTexRect(imgTransform2, sizeof(imgTransform2), &vktextures[153]);
+    }
 
     /************************************************************************/
     // End drawing objects
@@ -1061,9 +1067,12 @@ void GRA_Draw(IApp *pApp)
 
 bool _addDescriptorSets()
 {
-    DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
-    addDescriptorSet(pRenderer, &desc, &pDescriptorSetTexture);
-    desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
+    for (int i = 0; i < MAX_VKTEXTURES; i++)
+    {
+        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+        addDescriptorSet(pRenderer, &desc, &pDescriptorSetsTexture[i]);
+    }
+    DescriptorSetDesc desc= {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
     addDescriptorSet(pRenderer, &desc, &pDescriptorSetUniforms);
 
     return true;
@@ -1071,7 +1080,11 @@ bool _addDescriptorSets()
 
 bool _removeDescriptorSets()
 {
-    removeDescriptorSet(pRenderer, pDescriptorSetTexture);
+    for (int i = 0; i < MAX_VKTEXTURES; i++)
+    {
+        removeDescriptorSet(pRenderer, pDescriptorSetsTexture[i]);
+    }
+
     removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
 
     return true;
@@ -1142,7 +1155,7 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
 
-void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture)
+void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 {
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, uboSize);
     BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
@@ -1157,16 +1170,11 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture)
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
-    DescriptorData paramsTex = {};
-    paramsTex.pName = "sTexture";
-    paramsTex.ppTextures = &texture;
-    updateDescriptorSet(pRenderer, 0, pDescriptorSetTexture, 1, &paramsTex);
-
     const uint32_t stride = sizeof(float) * 4;
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
     cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetTexture);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &texRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
 

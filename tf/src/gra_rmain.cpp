@@ -1402,7 +1402,7 @@ void refreshExport()
     re.RegisterPic = Draw_FindPic;
     re.SetSky = [](char *name, float rotate, vec3_t axis) { LOGF(LogLevel::eDEBUG, "re.SetSky"); };
     ;
-    re.EndRegistration = [](void) { LOGF(LogLevel::eDEBUG, "re.EndRegistration"); };
+    re.EndRegistration = R_EndRegistration;
 
     re.RenderFrame = R_RenderFrame;
 

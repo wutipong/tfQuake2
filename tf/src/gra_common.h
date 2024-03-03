@@ -1,6 +1,8 @@
 #ifndef GRA_COMMON_H
 #define GRA_COMMON_H
 
+#include "gra_local.h"
+
 #include <IApp.h>
 #include <IGraphics.h>
 
@@ -20,5 +22,5 @@ void GRA_Unload(ReloadDesc *pReloadDesc);
 void GRA_Draw(IApp *pApp);
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
-void GRA_DrawTexRect(float *ubo, size_t uboSize, Texture *texture);
+void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
 #endif

@@ -74,6 +74,7 @@ typedef enum
 typedef struct image_s
 {
     std::string name;
+    int index;
     imagetype_t type;
     int width, height;               // source image
     int registration_sequence;       // 0 = free
