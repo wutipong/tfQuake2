@@ -29,6 +29,7 @@ extern "C"
 #include "gra_model.h"
 
 #include "common.h"
+#include <RingBuffer.h>
 
 extern viddef_t vid;
 
@@ -136,6 +137,14 @@ cvar_t *vid_ref;
 cvar_t *vid_refresh;
 cvar_t *viewsize;
 
+extern Cmd *pCmd;
+extern DescriptorSet *pDescriptorSetUniforms;
+extern GPURingBuffer dynamicUniformBuffer;
+extern GPURingBuffer dynamicVertexBuffer;
+extern Pipeline *drawSpritePipeline;
+extern Pipeline* drawNullModelPipeline;
+extern RootSignature *pRootSignature;
+
 /*
 =================
 R_CullBox
@@ -158,10 +167,10 @@ qboolean R_CullBox(vec3_t mins, vec3_t maxs)
 
 void R_RotateForEntity(entity_t *e, float *mvMatrix)
 {
-    // Mat_Rotate(mvMatrix, -e->angles[2], 1.f, 0.f, 0.f);
-    // Mat_Rotate(mvMatrix, -e->angles[0], 0.f, 1.f, 0.f);
-    // Mat_Rotate(mvMatrix, e->angles[1], 0.f, 0.f, 1.f);
-    // Mat_Translate(mvMatrix, e->origin[0], e->origin[1], e->origin[2]);
+    Mat_Rotate(mvMatrix, -e->angles[2], 1.f, 0.f, 0.f);
+    Mat_Rotate(mvMatrix, -e->angles[0], 0.f, 1.f, 0.f);
+    Mat_Rotate(mvMatrix, e->angles[1], 0.f, 0.f, 1.f);
+    Mat_Translate(mvMatrix, e->origin[0], e->origin[1], e->origin[2]);
 }
 
 /*
@@ -180,63 +189,80 @@ R_DrawSpriteModel
 */
 void R_DrawSpriteModel(entity_t *e)
 {
-    // float alpha = 1.0F;
-    // vec3_t	point;
-    // dsprframe_t	*frame;
-    // float		*up, *right;
-    // dsprite_t		*psprite;
+    float alpha = 1.0F;
+    vec3_t point;
+    dsprframe_t *frame;
+    float *up, *right;
+    dsprite_t *psprite;
 
-    // // don't even bother culling, because it's just a single
-    // // polygon without a surface cache
+    // don't even bother culling, because it's just a single
+    // polygon without a surface cache
 
-    // psprite = (dsprite_t *)currentmodel->extradata;
+    psprite = (dsprite_t *)currentmodel->extradata;
 
-    // e->frame %= psprite->numframes;
+    e->frame %= psprite->numframes;
 
-    // frame = &psprite->frames[e->frame];
+    frame = &psprite->frames[e->frame];
 
-    // // normal sprite
-    // up = vup;
-    // right = vright;
+    // normal sprite
+    up = vup;
+    right = vright;
 
-    // if (e->flags & RF_TRANSLUCENT)
-    // 	alpha = e->alpha;
+    if (e->flags & RF_TRANSLUCENT)
+        alpha = e->alpha;
 
-    // vec3_t spriteQuad[4];
+    vec3_t spriteQuad[4];
 
-    // VectorMA(e->origin, -frame->origin_y, up, point);
-    // VectorMA(point, -frame->origin_x, right, spriteQuad[0]);
-    // VectorMA(e->origin, frame->height - frame->origin_y, up, point);
-    // VectorMA(point, -frame->origin_x, right, spriteQuad[1]);
-    // VectorMA(e->origin, frame->height - frame->origin_y, up, point);
-    // VectorMA(point, frame->width - frame->origin_x, right, spriteQuad[2]);
-    // VectorMA(e->origin, -frame->origin_y, up, point);
-    // VectorMA(point, frame->width - frame->origin_x, right, spriteQuad[3]);
+    VectorMA(e->origin, -frame->origin_y, up, point);
+    VectorMA(point, -frame->origin_x, right, spriteQuad[0]);
+    VectorMA(e->origin, frame->height - frame->origin_y, up, point);
+    VectorMA(point, -frame->origin_x, right, spriteQuad[1]);
+    VectorMA(e->origin, frame->height - frame->origin_y, up, point);
+    VectorMA(point, frame->width - frame->origin_x, right, spriteQuad[2]);
+    VectorMA(e->origin, -frame->origin_y, up, point);
+    VectorMA(point, frame->width - frame->origin_x, right, spriteQuad[3]);
 
-    // float quadVerts[] = { spriteQuad[0][0], spriteQuad[0][1], spriteQuad[0][2], 0.f, 1.f,
-    // 					  spriteQuad[1][0], spriteQuad[1][1], spriteQuad[1][2], 0.f, 0.f,
-    // 					  spriteQuad[2][0], spriteQuad[2][1], spriteQuad[2][2], 1.f, 0.f,
-    // 					  spriteQuad[0][0], spriteQuad[0][1], spriteQuad[0][2], 0.f, 1.f,
-    // 					  spriteQuad[2][0], spriteQuad[2][1], spriteQuad[2][2], 1.f, 0.f,
-    // 					  spriteQuad[3][0], spriteQuad[3][1], spriteQuad[3][2], 1.f, 1.f };
+    float quadVerts[] = {
+        spriteQuad[0][0], spriteQuad[0][1], spriteQuad[0][2], 0.f, 1.f,
+        spriteQuad[1][0], spriteQuad[1][1], spriteQuad[1][2], 0.f, 0.f,
+        spriteQuad[2][0], spriteQuad[2][1], spriteQuad[2][2], 1.f, 0.f,
+        spriteQuad[0][0], spriteQuad[0][1], spriteQuad[0][2], 0.f, 1.f,
+        spriteQuad[2][0], spriteQuad[2][1], spriteQuad[2][2], 1.f, 0.f,
+        spriteQuad[3][0], spriteQuad[3][1], spriteQuad[3][2], 1.f, 1.f,
+    };
 
-    // QVk_BindPipeline(&vk_drawSpritePipeline);
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(quadVerts));
+    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *vertData = QVk_GetVertexBuffer(sizeof(quadVerts), &vbo, &vboOffset);
-    // uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(alpha), &uboOffset, &uboDescriptorSet);
-    // memcpy(vertData, quadVerts, sizeof(quadVerts));
-    // memcpy(uboData, &alpha, sizeof(alpha));
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, quadVerts, sizeof(quadVerts));
+    endUpdateResource(&updateDesc);
 
-    // VkDescriptorSet descriptorSets[] = { currentmodel->skins[e->frame]->vk_texture.descriptorSet, uboDescriptorSet };
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawSpritePipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawSpritePipeline.layout, 0, 2, descriptorSets, 1, &uboOffset);
-    // vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // vkCmdDraw(vk_activeCmdbuffer, 6, 1, 0, 0);
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(alpha));
+    updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, &alpha, sizeof(alpha));
+    endUpdateResource(&updateDesc);
+
+    /*
+
+    VkDescriptorSet descriptorSets[] = {currentmodel->skins[e->frame]->vk_texture.descriptorSet, uboDescriptorSet};
+    vkCmdPushConstants(vk_activeCmdbuffer, vk_drawSpritePipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
+                       sizeof(r_viewproj_matrix), r_viewproj_matrix);
+    vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawSpritePipeline.layout, 0, 2,
+                            descriptorSets, 1, &uboOffset);
+    vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
+    vkCmdDraw(vk_activeCmdbuffer, 6, 1, 0, 0);
+*/
+
+    cmdBindPipeline(pCmd, drawSpritePipeline);
+    cmdBindDescriptorSet(pCmd, 1, pDescriptorSetUniforms);
+
+    constexpr uint32_t stride = sizeof(float) * 5;
+    cmdBindPushConstants(pCmd, pRootSignature, 0, r_viewproj_matrix);
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    cmdDraw(pCmd, 6, 0);
 }
 
 //==================================================================================
@@ -248,71 +274,81 @@ R_DrawNullModel
 */
 void R_DrawNullModel(void)
 {
-    // vec3_t	shadelight;
-    // int		i,j;
+    vec3_t	shadelight;
+    int		i,j;
 
-    // if (currententity->flags & RF_FULLBRIGHT)
-    // 	shadelight[0] = shadelight[1] = shadelight[2] = 1.0F;
-    // else
-    // 	R_LightPoint(currententity->origin, shadelight);
+    if (currententity->flags & RF_FULLBRIGHT)
+    	shadelight[0] = shadelight[1] = shadelight[2] = 1.0F;
+    else
+    	R_LightPoint(currententity->origin, shadelight);
 
-    // float model[16];
-    // Mat_Identity(model);
-    // R_RotateForEntity(currententity, model);
+    float model[16];
+    Mat_Identity(model);
+    R_RotateForEntity(currententity, model);
 
-    // vec3_t verts[24];
-    // verts[0][0] = 0.f;
-    // verts[0][1] = 0.f;
-    // verts[0][2] = -16.f;
-    // verts[1][0] = shadelight[0];
-    // verts[1][1] = shadelight[1];
-    // verts[1][2] = shadelight[2];
+    vec3_t verts[24];
+    verts[0][0] = 0.f;
+    verts[0][1] = 0.f;
+    verts[0][2] = -16.f;
+    verts[1][0] = shadelight[0];
+    verts[1][1] = shadelight[1];
+    verts[1][2] = shadelight[2];
 
-    // for (i = 2, j = 0; i < 12; i+=2, j++)
-    // {
-    // 	verts[i][0] = 16 * cos(j*M_PI / 2);
-    // 	verts[i][1] = 16 * sin(j*M_PI / 2);
-    // 	verts[i][2] = 0.f;
-    // 	verts[i+1][0] = shadelight[0];
-    // 	verts[i+1][1] = shadelight[1];
-    // 	verts[i+1][2] = shadelight[2];
-    // }
+    for (i = 2, j = 0; i < 12; i+=2, j++)
+    {
+    	verts[i][0] = 16 * cos(j*M_PI / 2);
+    	verts[i][1] = 16 * sin(j*M_PI / 2);
+    	verts[i][2] = 0.f;
+    	verts[i+1][0] = shadelight[0];
+    	verts[i+1][1] = shadelight[1];
+    	verts[i+1][2] = shadelight[2];
+    }
 
-    // verts[12][0] = 0.f;
-    // verts[12][1] = 0.f;
-    // verts[12][2] = 16.f;
-    // verts[13][0] = shadelight[0];
-    // verts[13][1] = shadelight[1];
-    // verts[13][2] = shadelight[2];
+    verts[12][0] = 0.f;
+    verts[12][1] = 0.f;
+    verts[12][2] = 16.f;
+    verts[13][0] = shadelight[0];
+    verts[13][1] = shadelight[1];
+    verts[13][2] = shadelight[2];
 
-    // for (i = 23, j = 4; i > 13; i-=2, j--)
-    // {
-    // 	verts[i-1][0] = 16 * cos(j*M_PI / 2);
-    // 	verts[i-1][1] = 16 * sin(j*M_PI / 2);
-    // 	verts[i-1][2] = 0.f;
-    // 	verts[i][0] = shadelight[0];
-    // 	verts[i][1] = shadelight[1];
-    // 	verts[i][2] = shadelight[2];
-    // }
+    for (i = 23, j = 4; i > 13; i-=2, j--)
+    {
+    	verts[i-1][0] = 16 * cos(j*M_PI / 2);
+    	verts[i-1][1] = 16 * sin(j*M_PI / 2);
+    	verts[i-1][2] = 0.f;
+    	verts[i][0] = shadelight[0];
+    	verts[i][1] = shadelight[1];
+    	verts[i][2] = shadelight[2];
+    }
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *vertData = QVk_GetVertexBuffer(sizeof(verts), &vbo, &vboOffset);
-    // uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(model), &uboOffset, &uboDescriptorSet);
-    // memcpy(vertData, verts, sizeof(verts));
-    // memcpy(uboData,  model, sizeof(model));
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(verts));
+    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    // QVk_BindPipeline(&vk_drawNullModelPipeline);
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, verts, sizeof(verts));
+    endUpdateResource(&updateDesc);
 
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawNullModelPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawNullModelPipeline.layout, 0, 1, &uboDescriptorSet, 1, &uboOffset);
-    // vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(model));
+    updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, &model, sizeof(model));
+    endUpdateResource(&updateDesc);
+
+    cmdBindPipeline(pCmd, drawNullModelPipeline);
+
+    cmdBindPushConstants(pCmd, pRootSignature, 0, r_viewproj_matrix);
+
+    constexpr uint32_t stride = sizeof(vec3_t);
+
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
     // vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(12), 0, VK_INDEX_TYPE_UINT16);
+    
     // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 0, 0);
     // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 6, 0);
+
+    cmdDrawIndexed(pCmd, 12, 1, 0);
+    //cmdDrawIndexed(pCmd, 12, 1, 6);
 }
 
 /*

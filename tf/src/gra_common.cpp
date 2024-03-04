@@ -71,6 +71,7 @@ Shader *postprocessShader;
 RootSignature *pRootSignature = NULL;
 
 GPURingBuffer dynamicUniformBuffer;
+GPURingBuffer dynamicVertexBuffer;
 
 Cmd *pCmd;
 
@@ -126,6 +127,13 @@ bool GRA_InitGraphics(IApp *app)
     initResourceLoaderInterface(pRenderer);
     addUniformGPURingBuffer(pRenderer, 65536, &dynamicUniformBuffer, true);
 
+    BufferDesc vbDesc = {};
+    vbDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    vbDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+    vbDesc.mSize = 65536;
+    vbDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+    addGPURingBuffer(pRenderer, &vbDesc, &dynamicVertexBuffer);
+
     SamplerDesc samplerDesc = {
         .mMinFilter = FILTER_NEAREST,
         .mMagFilter = FILTER_NEAREST,
@@ -170,6 +178,7 @@ bool GRA_ExitGraphics()
     removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeGPURingBuffer(&dynamicUniformBuffer);
+    removeGPURingBuffer(&dynamicVertexBuffer);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
     _removeStaticBuffers();
 
@@ -1007,7 +1016,8 @@ void GRA_Draw(IApp *pApp)
 
     // GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
 
-    if(vktextures[153].texture != NULL){
+    if (vktextures[153].texture != NULL)
+    {
         GRA_DrawTexRect(imgTransform2, sizeof(imgTransform2), &vktextures[153]);
     }
 
@@ -1072,7 +1082,7 @@ bool _addDescriptorSets()
         DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
         addDescriptorSet(pRenderer, &desc, &pDescriptorSetsTexture[i]);
     }
-    DescriptorSetDesc desc= {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
+    DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
     addDescriptorSet(pRenderer, &desc, &pDescriptorSetUniforms);
 
     return true;
