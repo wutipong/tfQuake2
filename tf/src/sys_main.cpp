@@ -93,6 +93,11 @@ bool MainApp::Init()
 
     SYS_RegisterInput();
 
+    if (!R_Init())
+    {
+        return false;
+    };
+
     return true;
 }
 
@@ -121,7 +126,7 @@ void MainApp::Unload(ReloadDesc *pReloadDesc)
 void MainApp::Update(float deltaTime)
 {
     updateInputSystem(deltaTime, mSettings.mWidth, mSettings.mHeight);
-    
+
     sys_frame_time = getSystemTime();
     vid.width = mSettings.mWidth;
     vid.height = mSettings.mHeight;
@@ -155,11 +160,11 @@ extern "C"
     void Sys_Error(char *error, ...)
     {
         va_list argptr;
-        
+
         va_start(argptr, error);
         LOGF(eERROR, argptr);
         va_end(argptr);
-        
+
         isQuit = true;
     }
 

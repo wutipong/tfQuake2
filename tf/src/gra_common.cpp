@@ -1003,7 +1003,7 @@ void GRA_Draw(IApp *pApp)
 
     GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
 
-    float imgTransform2[] = {0.5f, 0.15f, 0.15f, 0.45f, 0.0f, 0.8f, 0.25f, 1.f};
+    float imgTransform2[] = {0.5f, 0.15f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.f};
 
     // GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
 

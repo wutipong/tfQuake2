@@ -1046,7 +1046,7 @@ qboolean R_SetMode(void)
 R_Init
 ===============
 */
-qboolean R_Init(void *hinstance, void *hWnd)
+qboolean R_Init(/* void *hinstance, void *hWnd */)
 {
     // ri.Con_Printf(PRINT_ALL, "ref_vk version: "REF_VERSION"\n");
 
@@ -1416,7 +1416,7 @@ void refreshExport()
 
     re.DrawStretchRaw = Draw_StretchRaw;
 
-    re.Init = R_Init;
+    // re.Init = R_Init;
     re.Shutdown = R_Shutdown;
 
     re.CinematicSetPalette = R_SetPalette;
