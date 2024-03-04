@@ -954,8 +954,8 @@ void GRA_ShutdownImages(void)
         *image = {};
     }
 
-    removeResource(rawTexture);
+    // removeResource(rawTexture);
 
-    for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
-        removeResource(vk_state.lightmap_textures[i]);
+    // for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
+    //     removeResource(vk_state.lightmap_textures[i]);
 }
