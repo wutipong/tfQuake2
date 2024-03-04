@@ -1428,3 +1428,134 @@ void refreshExport()
 
     // Swap_Init();
 }
+
+void Mat_Identity(float *matrix)
+{
+    matrix[0] = 1.f;
+    matrix[1] = 0.f;
+    matrix[2] = 0.f;
+    matrix[3] = 0.f;
+    matrix[4] = 0.f;
+    matrix[5] = 1.f;
+    matrix[6] = 0.f;
+    matrix[7] = 0.f;
+    matrix[8] = 0.f;
+    matrix[9] = 0.f;
+    matrix[10] = 1.f;
+    matrix[11] = 0.f;
+    matrix[12] = 0.f;
+    matrix[13] = 0.f;
+    matrix[14] = 0.f;
+    matrix[15] = 1.f;
+}
+
+void Mat_Mul(float *m1, float *m2, float *res)
+{
+    float mul[16] = {m1[0] * m2[0] + m1[1] * m2[4] + m1[2] * m2[8] + m1[3] * m2[12],
+                     m1[0] * m2[1] + m1[1] * m2[5] + m1[2] * m2[9] + m1[3] * m2[13],
+                     m1[0] * m2[2] + m1[1] * m2[6] + m1[2] * m2[10] + m1[3] * m2[14],
+                     m1[0] * m2[3] + m1[1] * m2[7] + m1[2] * m2[11] + m1[3] * m2[15],
+                     m1[4] * m2[0] + m1[5] * m2[4] + m1[6] * m2[8] + m1[7] * m2[12],
+                     m1[4] * m2[1] + m1[5] * m2[5] + m1[6] * m2[9] + m1[7] * m2[13],
+                     m1[4] * m2[2] + m1[5] * m2[6] + m1[6] * m2[10] + m1[7] * m2[14],
+                     m1[4] * m2[3] + m1[5] * m2[7] + m1[6] * m2[11] + m1[7] * m2[15],
+                     m1[8] * m2[0] + m1[9] * m2[4] + m1[10] * m2[8] + m1[11] * m2[12],
+                     m1[8] * m2[1] + m1[9] * m2[5] + m1[10] * m2[9] + m1[11] * m2[13],
+                     m1[8] * m2[2] + m1[9] * m2[6] + m1[10] * m2[10] + m1[11] * m2[14],
+                     m1[8] * m2[3] + m1[9] * m2[7] + m1[10] * m2[11] + m1[11] * m2[15],
+                     m1[12] * m2[0] + m1[13] * m2[4] + m1[14] * m2[8] + m1[15] * m2[12],
+                     m1[12] * m2[1] + m1[13] * m2[5] + m1[14] * m2[9] + m1[15] * m2[13],
+                     m1[12] * m2[2] + m1[13] * m2[6] + m1[14] * m2[10] + m1[15] * m2[14],
+                     m1[12] * m2[3] + m1[13] * m2[7] + m1[14] * m2[11] + m1[15] * m2[15]};
+
+    memcpy(res, mul, sizeof(float) * 16);
+}
+
+void Mat_Translate(float *matrix, float x, float y, float z)
+{
+    float t[16] = {1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f, 0.f, x, y, z, 1.f};
+
+    Mat_Mul(matrix, t, matrix);
+}
+
+void Mat_Rotate(float *matrix, float deg, float x, float y, float z)
+{
+    double c = cos(deg * M_PI / 180.0);
+    double s = sin(deg * M_PI / 180.0);
+    double cd = 1.0 - c;
+    vec3_t r = {x, y, z};
+    VectorNormalize(r);
+
+    float rot[16] = {
+        static_cast<float>(r[0] * r[0] * cd + c),
+        static_cast<float>(r[1] * r[0] * cd + r[2] * s),
+        static_cast<float>(r[0] * r[2] * cd - r[1] * s),
+        0.f,
+        static_cast<float>(r[0] * r[1] * cd - r[2] * s),
+        static_cast<float>(r[1] * r[1] * cd + c),
+        static_cast<float>(r[1] * r[2] * cd + r[0] * s),
+        0.f,
+        static_cast<float>(r[0] * r[2] * cd + r[1] * s),
+        static_cast<float>(r[1] * r[2] * cd - r[0] * s),
+        static_cast<float>(r[2] * r[2] * cd + c),
+        0.f,
+        0.f,
+        0.f,
+        0.f,
+        1.f,
+    };
+
+    Mat_Mul(matrix, rot, matrix);
+}
+
+void Mat_Scale(float *matrix, float x, float y, float z)
+{
+    float s[16] = {x, 0.f, 0.f, 0.f, 0.f, y, 0.f, 0.f, 0.f, 0.f, z, 0.f, 0.f, 0.f, 0.f, 1.f};
+
+    Mat_Mul(matrix, s, matrix);
+}
+
+void Mat_Perspective(float *matrix, float *correction_matrix, float fovy, float aspect, float zNear, float zFar)
+{
+    float xmin, xmax, ymin, ymax;
+
+    ymax = zNear * tan(fovy * M_PI / 360.0);
+    ymin = -ymax;
+
+    xmin = ymin * aspect;
+    xmax = ymax * aspect;
+
+    xmin += -(2 * vk_state.camera_separation) / zNear;
+    xmax += -(2 * vk_state.camera_separation) / zNear;
+
+    float proj[16];
+    memset(proj, 0, sizeof(float) * 16);
+    proj[0] = 2.f * zNear / (xmax - xmin);
+    proj[2] = (xmax + xmin) / (xmax - xmin);
+    proj[5] = 2.f * zNear / (ymax - ymin);
+    proj[6] = (ymax + ymin) / (ymax - ymin);
+    proj[10] = -(zFar + zNear) / (zFar - zNear);
+    proj[11] = -1.f;
+    proj[14] = -2.f * zFar * zNear / (zFar - zNear);
+
+    // Convert projection matrix to Vulkan coordinate system
+    // (https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/)
+    Mat_Mul(proj, correction_matrix, matrix);
+}
+
+void Mat_Ortho(float *matrix, float left, float right, float bottom, float top, float zNear, float zFar)
+{
+    float proj[16];
+    memset(proj, 0, sizeof(float) * 16);
+    proj[0] = 2.f / (right - left);
+    proj[3] = (right + left) / (right - left);
+    proj[5] = 2.f / (top - bottom);
+    proj[7] = (top + bottom) / (top - bottom);
+    proj[10] = -2.f / (zFar - zNear);
+    proj[11] = -(zFar + zNear) / (zFar - zNear);
+    proj[15] = 1.f;
+
+    // Convert projection matrix to Vulkan coordinate system
+    // (https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/)
+    Mat_Mul(proj, r_vulkan_correction, matrix);
+}

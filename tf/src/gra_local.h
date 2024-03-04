@@ -345,4 +345,12 @@ void Vkimp_GetInstanceExtensions(char **extensions, uint32_t *extCount);
 VkResult Vkimp_CreateSurface(void);
 VkSurfaceCapabilitiesKHR Vkimp_SetupFullScreenExclusive(void);
 
+void Mat_Identity(float *matrix);
+void Mat_Mul(float *m1, float *m2, float *res);
+void Mat_Translate(float *matrix, float x, float y, float z);
+void Mat_Rotate(float *matrix, float deg, float x, float y, float z);
+void Mat_Scale(float *matrix, float x, float y, float z);
+void Mat_Perspective(float *matrix, float *correction_matrix, float fovy, float aspect, float zNear, float zFar);
+void Mat_Ortho(float *matrix, float left, float right, float bottom, float top, float zNear, float zFar);
+
 #endif
