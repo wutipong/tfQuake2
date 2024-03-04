@@ -142,8 +142,9 @@ extern DescriptorSet *pDescriptorSetUniforms;
 extern GPURingBuffer dynamicUniformBuffer;
 extern GPURingBuffer dynamicVertexBuffer;
 extern Pipeline *drawSpritePipeline;
-extern Pipeline* drawNullModelPipeline;
+extern Pipeline *drawNullModelPipeline;
 extern RootSignature *pRootSignature;
+extern uint32_t gPushConstant;
 
 /*
 =================
@@ -260,7 +261,7 @@ void R_DrawSpriteModel(entity_t *e)
     cmdBindDescriptorSet(pCmd, 1, pDescriptorSetUniforms);
 
     constexpr uint32_t stride = sizeof(float) * 5;
-    cmdBindPushConstants(pCmd, pRootSignature, 0, r_viewproj_matrix);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
     cmdDraw(pCmd, 6, 0);
 }
@@ -274,13 +275,13 @@ R_DrawNullModel
 */
 void R_DrawNullModel(void)
 {
-    vec3_t	shadelight;
-    int		i,j;
+    vec3_t shadelight;
+    int i, j;
 
     if (currententity->flags & RF_FULLBRIGHT)
-    	shadelight[0] = shadelight[1] = shadelight[2] = 1.0F;
+        shadelight[0] = shadelight[1] = shadelight[2] = 1.0F;
     else
-    	R_LightPoint(currententity->origin, shadelight);
+        R_LightPoint(currententity->origin, shadelight);
 
     float model[16];
     Mat_Identity(model);
@@ -294,14 +295,14 @@ void R_DrawNullModel(void)
     verts[1][1] = shadelight[1];
     verts[1][2] = shadelight[2];
 
-    for (i = 2, j = 0; i < 12; i+=2, j++)
+    for (i = 2, j = 0; i < 12; i += 2, j++)
     {
-    	verts[i][0] = 16 * cos(j*M_PI / 2);
-    	verts[i][1] = 16 * sin(j*M_PI / 2);
-    	verts[i][2] = 0.f;
-    	verts[i+1][0] = shadelight[0];
-    	verts[i+1][1] = shadelight[1];
-    	verts[i+1][2] = shadelight[2];
+        verts[i][0] = 16 * cos(j * M_PI / 2);
+        verts[i][1] = 16 * sin(j * M_PI / 2);
+        verts[i][2] = 0.f;
+        verts[i + 1][0] = shadelight[0];
+        verts[i + 1][1] = shadelight[1];
+        verts[i + 1][2] = shadelight[2];
     }
 
     verts[12][0] = 0.f;
@@ -311,14 +312,14 @@ void R_DrawNullModel(void)
     verts[13][1] = shadelight[1];
     verts[13][2] = shadelight[2];
 
-    for (i = 23, j = 4; i > 13; i-=2, j--)
+    for (i = 23, j = 4; i > 13; i -= 2, j--)
     {
-    	verts[i-1][0] = 16 * cos(j*M_PI / 2);
-    	verts[i-1][1] = 16 * sin(j*M_PI / 2);
-    	verts[i-1][2] = 0.f;
-    	verts[i][0] = shadelight[0];
-    	verts[i][1] = shadelight[1];
-    	verts[i][2] = shadelight[2];
+        verts[i - 1][0] = 16 * cos(j * M_PI / 2);
+        verts[i - 1][1] = 16 * sin(j * M_PI / 2);
+        verts[i - 1][2] = 0.f;
+        verts[i][0] = shadelight[0];
+        verts[i][1] = shadelight[1];
+        verts[i][2] = shadelight[2];
     }
 
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(verts));
@@ -336,19 +337,16 @@ void R_DrawNullModel(void)
     endUpdateResource(&updateDesc);
 
     cmdBindPipeline(pCmd, drawNullModelPipeline);
-
-    cmdBindPushConstants(pCmd, pRootSignature, 0, r_viewproj_matrix);
-
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     constexpr uint32_t stride = sizeof(vec3_t);
-
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
     // vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(12), 0, VK_INDEX_TYPE_UINT16);
-    
+
     // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 0, 0);
     // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 6, 0);
 
     cmdDrawIndexed(pCmd, 12, 1, 0);
-    //cmdDrawIndexed(pCmd, 12, 1, 6);
+    // cmdDrawIndexed(pCmd, 12, 1, 6);
 }
 
 /*

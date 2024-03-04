@@ -82,6 +82,8 @@ Buffer *texRectVbo;
 Buffer *colorRectVbo;
 Buffer *rectIbo;
 
+uint32_t gPushConstant;
+
 static void _addShaders();
 static void _removeShaders();
 static bool _addRootSignatures();
@@ -412,6 +414,7 @@ bool _addRootSignatures()
     };
 
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
+    gPushConstant = getDescriptorIndexFromName(pRootSignature, "PushConstant");
 
     return pRootSignature != NULL;
 }
