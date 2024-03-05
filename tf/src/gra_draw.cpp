@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "../../client/vid.h"
 #include "gra_local.h"
+#include "gra_common.h"
 #include <format>
 
 image_t *draw_chars;
@@ -90,7 +91,7 @@ void Draw_Char(int x, int y, int num)
                             frow,
                             size,
                             size};
-    // QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &draw_chars->vk_texture);
+    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), draw_chars);
 }
 
 /*
@@ -158,7 +159,7 @@ void Draw_StretchPic(int x, int y, int w, int h, char *pic)
     float imgTransform[] = {
         (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0, 1, 0, 0,
     };
-    // QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &vk->vk_texture);
+    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), vk);
 }
 
 /*
@@ -202,7 +203,7 @@ void Draw_TileClear(int x, int y, int w, int h, char *pic)
 
     float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
                             (float)x / 64.0f,     (float)y / 64.0f,      (float)w / 64.0f,     (float)h / 64.0f};
-    //  QVk_DrawTexRect(imgTransform, sizeof(imgTransform), &image->vk_texture);
+    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), image);
 }
 
 /*
@@ -231,7 +232,7 @@ void Draw_Fill(int x, int y, int w, int h, int c)
 
     float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
                             color.v[0] / 255.f,   color.v[1] / 255.f,    color.v[2] / 255.f,   1.f};
-    // QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
+    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
 }
 
 //=============================================================================
@@ -252,7 +253,7 @@ void Draw_FadeScreen(void)
         return;
     }
 
-    // QVk_DrawColorRect(imgTransform, sizeof(imgTransform), RP_UI);
+    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
 }
 
 //====================================================================

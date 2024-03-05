@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // vk_rmain.c
+#include "gra_common.h"
 #include "gra_local.h"
 
 extern "C"
@@ -390,7 +391,7 @@ void R_DrawEntitiesOnList(void)
     // 			R_DrawSpriteModel(currententity);
     // 			break;
     // 		default:
-    // 			ri.Sys_Error(ERR_DROP, "Bad modeltype");
+    // 			LOGF(eERROR, "Bad modeltype");
     // 			break;
     // 		}
     // 	}
@@ -429,7 +430,7 @@ void R_DrawEntitiesOnList(void)
     // 			R_DrawSpriteModel(currententity);
     // 			break;
     // 		default:
-    // 			ri.Sys_Error(ERR_DROP, "Bad modeltype");
+    // 			LOGF(eERROR, "Bad modeltype");
     // 			break;
     // 		}
     // 	}
@@ -555,7 +556,7 @@ void R_DrawParticles(void)
     // 	} particleUbo;
 
     // 	particleUbo.particleSize = vk_particle_size->value;
-    // 	particleUbo.particleScale = vid.width * ri.Cvar_Get("viewsize", "100", CVAR_ARCHIVE)->value / 102400;
+    // 	particleUbo.particleScale = vid.width * Cvar_Get("viewsize", "100", CVAR_ARCHIVE)->value / 102400;
     // 	particleUbo.minPointSize = vk_particle_min_size->value;
     // 	particleUbo.maxPointSize = vk_particle_max_size->value;
     // 	particleUbo.att_a = vk_particle_att_a->value;
@@ -610,13 +611,13 @@ R_PolyBlend
 */
 void R_PolyBlend(void)
 {
-    // if (!vk_polyblend->value)
-    // 	return;
-    // if (!v_blend[3])
-    // 	return;
+    if (!vk_polyblend->value)
+        return;
+    if (!v_blend[3])
+        return;
 
-    // float polyTransform[] = { 0.f, 0.f, vid.width, vid.height, v_blend[0], v_blend[1], v_blend[2], v_blend[3] };
-    // QVk_DrawColorRect(polyTransform, sizeof(polyTransform), RP_WORLD);
+    float polyTransform[] = {0.f, 0.f, vid.width, vid.height, v_blend[0], v_blend[1], v_blend[2], v_blend[3]};
+    GRA_DrawColorRect(polyTransform, sizeof(polyTransform), RenderPass::WORLD);
 }
 
 //=======================================================================
@@ -625,35 +626,34 @@ int SignbitsForPlane(cplane_t *out)
 {
     int bits, j;
 
-    // // for fast box on planeside test
+    // for fast box on planeside test
 
-    // bits = 0;
-    // for (j = 0; j<3; j++)
-    // {
-    // 	if (out->normal[j] < 0)
-    // 		bits |= 1 << j;
-    // }
-    // return bits;
-    return 0;
+    bits = 0;
+    for (j = 0; j < 3; j++)
+    {
+        if (out->normal[j] < 0)
+            bits |= 1 << j;
+    }
+    return bits;
 }
 
 void R_SetFrustum(float fovx, float fovy)
 {
-    // // rotate VPN right by FOV_X/2 degrees
-    // RotatePointAroundVector(frustum[0].normal, vup, vpn, -(90 - fovx / 2));
-    // // rotate VPN left by FOV_X/2 degrees
-    // RotatePointAroundVector(frustum[1].normal, vup, vpn, 90 - fovx / 2);
-    // // rotate VPN up by FOV_X/2 degrees
-    // RotatePointAroundVector(frustum[2].normal, vright, vpn, 90 - fovy / 2);
-    // // rotate VPN down by FOV_X/2 degrees
-    // RotatePointAroundVector(frustum[3].normal, vright, vpn, -(90 - fovy / 2));
+    // rotate VPN right by FOV_X/2 degrees
+    RotatePointAroundVector(frustum[0].normal, vup, vpn, -(90 - fovx / 2));
+    // rotate VPN left by FOV_X/2 degrees
+    RotatePointAroundVector(frustum[1].normal, vup, vpn, 90 - fovx / 2);
+    // rotate VPN up by FOV_X/2 degrees
+    RotatePointAroundVector(frustum[2].normal, vright, vpn, 90 - fovy / 2);
+    // rotate VPN down by FOV_X/2 degrees
+    RotatePointAroundVector(frustum[3].normal, vright, vpn, -(90 - fovy / 2));
 
-    // for (int i = 0; i < 4; i++)
-    // {
-    // 	frustum[i].type = PLANE_ANYZ;
-    // 	frustum[i].dist = DotProduct(r_origin, frustum[i].normal);
-    // 	frustum[i].signbits = SignbitsForPlane(&frustum[i]);
-    // }
+    for (int i = 0; i < 4; i++)
+    {
+        frustum[i].type = PLANE_ANYZ;
+        frustum[i].dist = DotProduct(r_origin, frustum[i].normal);
+        frustum[i].signbits = SignbitsForPlane(&frustum[i]);
+    }
 }
 
 //=======================================================================
@@ -665,64 +665,67 @@ R_SetupFrame
 */
 void R_SetupFrame(void)
 {
-    // int i;
-    // mleaf_t	*leaf;
+    int i;
+    mleaf_t *leaf;
 
-    // r_framecount++;
+    r_framecount++;
 
-    // // build the transformation matrix for the given view angles
-    // VectorCopy(r_newrefdef.vieworg, r_origin);
+    // build the transformation matrix for the given view angles
+    VectorCopy(r_newrefdef.vieworg, r_origin);
 
-    // AngleVectors(r_newrefdef.viewangles, vpn, vright, vup);
+    AngleVectors(r_newrefdef.viewangles, vpn, vright, vup);
 
-    // // current viewcluster
-    // if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
-    // {
-    // 	r_oldviewcluster = r_viewcluster;
-    // 	r_oldviewcluster2 = r_viewcluster2;
-    // 	leaf = Mod_PointInLeaf(r_origin, r_worldmodel);
-    // 	r_viewcluster = r_viewcluster2 = leaf->cluster;
+    // current viewcluster
+    if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
+    {
+        r_oldviewcluster = r_viewcluster;
+        r_oldviewcluster2 = r_viewcluster2;
+        leaf = Mod_PointInLeaf(r_origin, r_worldmodel);
+        r_viewcluster = r_viewcluster2 = leaf->cluster;
 
-    // 	// check above and below so crossing solid water doesn't draw wrong
-    // 	if (!leaf->contents)
-    // 	{	// look down a bit
-    // 		vec3_t	temp;
+        // check above and below so crossing solid water doesn't draw wrong
+        if (!leaf->contents)
+        { // look down a bit
+            vec3_t temp;
 
-    // 		VectorCopy(r_origin, temp);
-    // 		temp[2] -= 16;
-    // 		leaf = Mod_PointInLeaf(temp, r_worldmodel);
-    // 		if (!(leaf->contents & CONTENTS_SOLID) &&
-    // 			(leaf->cluster != r_viewcluster2))
-    // 			r_viewcluster2 = leaf->cluster;
-    // 	}
-    // 	else
-    // 	{	// look up a bit
-    // 		vec3_t	temp;
+            VectorCopy(r_origin, temp);
+            temp[2] -= 16;
+            leaf = Mod_PointInLeaf(temp, r_worldmodel);
+            if (!(leaf->contents & CONTENTS_SOLID) && (leaf->cluster != r_viewcluster2))
+                r_viewcluster2 = leaf->cluster;
+        }
+        else
+        { // look up a bit
+            vec3_t temp;
 
-    // 		VectorCopy(r_origin, temp);
-    // 		temp[2] += 16;
-    // 		leaf = Mod_PointInLeaf(temp, r_worldmodel);
-    // 		if (!(leaf->contents & CONTENTS_SOLID) &&
-    // 			(leaf->cluster != r_viewcluster2))
-    // 			r_viewcluster2 = leaf->cluster;
-    // 	}
-    // }
+            VectorCopy(r_origin, temp);
+            temp[2] += 16;
+            leaf = Mod_PointInLeaf(temp, r_worldmodel);
+            if (!(leaf->contents & CONTENTS_SOLID) && (leaf->cluster != r_viewcluster2))
+                r_viewcluster2 = leaf->cluster;
+        }
+    }
 
-    // for (i = 0; i < 4; i++)
-    // 	v_blend[i] = r_newrefdef.blend[i];
+    for (i = 0; i < 4; i++)
+        v_blend[i] = r_newrefdef.blend[i];
 
-    // c_brush_polys = 0;
-    // c_alias_polys = 0;
+    c_brush_polys = 0;
+    c_alias_polys = 0;
 
-    // // clear out the portion of the screen that the NOWORLDMODEL defines
-    // // unlike OpenGL, draw a rectangle in proper location - it's easier to do in Vulkan
-    // if (r_newrefdef.rdflags & RDF_NOWORLDMODEL)
-    // {
-    // 	float clearArea[] = { (float)r_newrefdef.x / vid.width, (float)r_newrefdef.y / vid.height,
-    // 						  (float)r_newrefdef.width / vid.width, (float)r_newrefdef.height / vid.height,
-    // 						  .3f, .3f, .3f, 1.f };
-    // 	QVk_DrawColorRect(clearArea, sizeof(clearArea), RP_UI);
-    // }
+    // clear out the portion of the screen that the NOWORLDMODEL defines
+    // unlike OpenGL, draw a rectangle in proper location - it's easier to do in Vulkan
+    if (r_newrefdef.rdflags & RDF_NOWORLDMODEL)
+    {
+        float clearArea[] = {(float)r_newrefdef.x / vid.width,
+                             (float)r_newrefdef.y / vid.height,
+                             (float)r_newrefdef.width / vid.width,
+                             (float)r_newrefdef.height / vid.height,
+                             .3f,
+                             .3f,
+                             .3f,
+                             1.f};
+        GRA_DrawColorRect(clearArea, sizeof(clearArea), RenderPass::UI);
+    }
 }
 
 /*
@@ -732,54 +735,46 @@ R_SetupVulkan
 */
 void R_SetupVulkan(void)
 {
-    // int		x, x2, y2, y, w, h;
+    int x, x2, y2, y, w, h;
 
-    // //
-    // // set up viewport
-    // //
-    // x = floor(r_newrefdef.x * vid.width / vid.width);
-    // x2 = ceil((r_newrefdef.x + r_newrefdef.width) * vid.width / vid.width);
-    // y = floor(vid.height - r_newrefdef.y * vid.height / vid.height);
-    // y2 = ceil(vid.height - (r_newrefdef.y + r_newrefdef.height) * vid.height / vid.height);
+    //
+    // set up viewport
+    //
+    x = floor(r_newrefdef.x * vid.width / vid.width);
+    x2 = ceil((r_newrefdef.x + r_newrefdef.width) * vid.width / vid.width);
+    y = floor(vid.height - r_newrefdef.y * vid.height / vid.height);
+    y2 = ceil(vid.height - (r_newrefdef.y + r_newrefdef.height) * vid.height / vid.height);
 
-    // w = x2 - x;
-    // h = y - y2;
+    w = x2 - x;
+    h = y - y2;
 
-    // VkViewport viewport = {
-    // 	.x = x,
-    // 	.y = vid.height - h - y2,
-    // 	.width = w,
-    // 	.height = h,
-    // 	.minDepth = 0.f,
-    // 	.maxDepth = 1.f,
-    // };
-    // vkCmdSetViewport(vk_activeCmdbuffer, 0, 1, &viewport);
+    cmdSetViewport(pCmd, x, vid.height - h - y2, w, h, 0, 1);
 
-    // // set up projection matrix
-    // r_proj_fovx = r_newrefdef.fov_x;
-    // r_proj_fovy = r_newrefdef.fov_y;
-    // r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
-    // Mat_Perspective(r_projection_matrix, r_vulkan_correction, r_proj_fovy, r_proj_aspect, 4, 4096);
+    // set up projection matrix
+    r_proj_fovx = r_newrefdef.fov_x;
+    r_proj_fovy = r_newrefdef.fov_y;
+    r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
+    Mat_Perspective(r_projection_matrix, r_vulkan_correction, r_proj_fovy, r_proj_aspect, 4, 4096);
 
-    // R_SetFrustum(r_proj_fovx, r_proj_fovy);
+    R_SetFrustum(r_proj_fovx, r_proj_fovy);
 
-    // // set up view matrix
-    // Mat_Identity(r_view_matrix);
-    // // put Z going up
-    // Mat_Translate(r_view_matrix, -r_newrefdef.vieworg[0], -r_newrefdef.vieworg[1], -r_newrefdef.vieworg[2]);
-    // Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[1], 0.f, 0.f, 1.f);
-    // Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[0], 0.f, 1.f, 0.f);
-    // Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[2], 1.f, 0.f, 0.f);
-    // Mat_Rotate(r_view_matrix, 90.f, 0.f, 0.f, 1.f);
-    // Mat_Rotate(r_view_matrix, -90.f, 1.f, 0.f, 0.f);
+    // set up view matrix
+    Mat_Identity(r_view_matrix);
+    // put Z going up
+    Mat_Translate(r_view_matrix, -r_newrefdef.vieworg[0], -r_newrefdef.vieworg[1], -r_newrefdef.vieworg[2]);
+    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[1], 0.f, 0.f, 1.f);
+    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[0], 0.f, 1.f, 0.f);
+    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[2], 1.f, 0.f, 0.f);
+    Mat_Rotate(r_view_matrix, 90.f, 0.f, 0.f, 1.f);
+    Mat_Rotate(r_view_matrix, -90.f, 1.f, 0.f, 0.f);
 
-    // // precalculate view-projection matrix
-    // Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
+    // precalculate view-projection matrix
+    Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
 }
 
 void R_Flash(void)
 {
-    // R_PolyBlend ();
+    R_PolyBlend();
 }
 
 /*
@@ -791,59 +786,49 @@ r_newrefdef must be set before the first call
 */
 void R_RenderView(refdef_t *fd)
 {
-    // if (r_norefresh->value)
-    // 	return;
+    if (r_norefresh->value)
+        return;
 
-    // r_newrefdef = *fd;
+    r_newrefdef = *fd;
 
-    // if (!r_worldmodel && !(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
-    // 	ri.Sys_Error(ERR_DROP, "R_RenderView: NULL worldmodel");
+    if (!r_worldmodel && !(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
+        LOGF(eERROR, "R_RenderView: NULL worldmodel");
 
-    // if (r_speeds->value)
-    // {
-    // 	c_brush_polys = 0;
-    // 	c_alias_polys = 0;
-    // }
+    if (r_speeds->value)
+    {
+        c_brush_polys = 0;
+        c_alias_polys = 0;
+    }
 
-    // VkRect2D scissor = {
-    // 	.offset = { r_newrefdef.x, r_newrefdef.y },
-    // 	.extent = { r_newrefdef.width, r_newrefdef.height }
-    // };
+    cmdSetScissor(pCmd, r_newrefdef.x, r_newrefdef.y, r_newrefdef.width, r_newrefdef.height);
 
-    // vkCmdSetScissor(vk_activeCmdbuffer, 0, 1, &scissor);
+    R_PushDlights();
 
-    // R_PushDlights();
+    // added for compatibility sake with OpenGL implementation - don't use it!
 
-    // // added for compatibility sake with OpenGL implementation - don't use it!
-    // if (vk_finish->value)
-    // 	vkDeviceWaitIdle(vk_device.logical);
+    R_SetupFrame();
 
-    // R_SetupFrame();
+    R_SetupVulkan();
 
-    // R_SetupVulkan();
+    R_MarkLeaves(); // done here so we know if we're in water
 
-    // R_MarkLeaves();	// done here so we know if we're in water
+    R_DrawWorld();
 
-    // R_DrawWorld();
+    R_DrawEntitiesOnList();
 
-    // R_DrawEntitiesOnList();
+    R_RenderDlights();
 
-    // R_RenderDlights();
+    R_DrawParticles();
 
-    // R_DrawParticles();
+    R_DrawAlphaSurfaces();
 
-    // R_DrawAlphaSurfaces();
+    R_Flash();
 
-    // R_Flash();
-
-    // if (r_speeds->value)
-    // {
-    // 	ri.Con_Printf(PRINT_ALL, "%4i wpoly %4i epoly %i tex %i lmaps\n",
-    // 		c_brush_polys,
-    // 		c_alias_polys,
-    // 		c_visible_textures,
-    // 		c_visible_lightmaps);
-    // }
+    if (r_speeds->value)
+    {
+        LOGF(eINFO, "%4i wpoly %4i epoly %i tex %i lmaps\n", c_brush_polys, c_alias_polys, c_visible_textures,
+             c_visible_lightmaps);
+    }
 }
 
 void R_EndWorldRenderpass(void)
@@ -870,25 +855,28 @@ void R_EndWorldRenderpass(void)
 
 void R_SetVulkan2D(void)
 {
-    // // player configuration screen renders a model using the UI renderpass, so skip finishing RP_WORLD twice
-    // if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
-    // 	R_EndWorldRenderpass();
+    // player configuration screen renders a model using the UI renderpass, so skip finishing RP_WORLD twice
+    if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
+        R_EndWorldRenderpass();
 
     // extern VkViewport vk_viewport;
     // extern VkRect2D vk_scissor;
-    // vkCmdSetViewport(vk_activeCmdbuffer, 0, 1, &vk_viewport);
-    // vkCmdSetScissor(vk_activeCmdbuffer, 0, 1, &vk_scissor);
+    // cmdSetViewport(pCmd, vk_viewport.x, vk_viewport.y, vk_viewport.width, vk_viewport.height, vk_viewport.minDepth,
+    //                vk_viewport.maxDepth);
+    // cmdSetScissor(pCmd, vk_scissor.offset.x, vk_scissor.offset.y, vk_scissor.extent.width, vk_scissor.extent.height);
 
-    // // first, blit offscreen color buffer with warped/postprocessed world view
-    // // skip this step if we're in player config screen since it uses RP_UI and draws directly to swapchain
+    // first, blit offscreen color buffer with warped/postprocessed world view
+    // skip this step if we're in player config screen since it uses RP_UI and draws directly to swapchain
     // if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
     // {
-    // 	float pushConsts[] = { vk_postprocess->value, vid_gamma->value };
-    // 	vkCmdPushConstants(vk_activeCmdbuffer, vk_postprocessPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-    // sizeof(pushConsts), pushConsts); 	vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS,
-    // vk_postprocessPipeline.layout, 0, 1, &vk_colorbufferWarp.descriptorSet, 0, NULL);
-    // 	QVk_BindPipeline(&vk_postprocessPipeline);
-    // 	vkCmdDraw(vk_activeCmdbuffer, 3, 1, 0, 0);
+    //     float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
+    //     vkCmdPushConstants(vk_activeCmdbuffer, vk_postprocessPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+    //                        sizeof(pushConsts), pushConsts);
+    //     vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_postprocessPipeline.layout,
+    //     0,
+    //                             1, &vk_colorbufferWarp.descriptorSet, 0, NULL);
+    //     QVk_BindPipeline(&vk_postprocessPipeline);
+    //     vkCmdDraw(vk_activeCmdbuffer, 3, 1, 0, 0);
     // }
 }
 
@@ -900,31 +888,31 @@ R_SetLightLevel
 */
 void R_SetLightLevel(void)
 {
-    // vec3_t		shadelight;
+    vec3_t shadelight;
 
-    // if (r_newrefdef.rdflags & RDF_NOWORLDMODEL)
-    // 	return;
+    if (r_newrefdef.rdflags & RDF_NOWORLDMODEL)
+        return;
 
-    // // save off light value for server to look at (BIG HACK!)
+    // save off light value for server to look at (BIG HACK!)
 
-    // R_LightPoint(r_newrefdef.vieworg, shadelight);
+    R_LightPoint(r_newrefdef.vieworg, shadelight);
 
-    // // pick the greatest component, which should be the same
-    // // as the mono value returned by software
-    // if (shadelight[0] > shadelight[1])
-    // {
-    // 	if (shadelight[0] > shadelight[2])
-    // 		r_lightlevel->value = 150 * shadelight[0];
-    // 	else
-    // 		r_lightlevel->value = 150 * shadelight[2];
-    // }
-    // else
-    // {
-    // 	if (shadelight[1] > shadelight[2])
-    // 		r_lightlevel->value = 150 * shadelight[1];
-    // 	else
-    // 		r_lightlevel->value = 150 * shadelight[2];
-    // }
+    // pick the greatest component, which should be the same
+    // as the mono value returned by software
+    if (shadelight[0] > shadelight[1])
+    {
+        if (shadelight[0] > shadelight[2])
+            r_lightlevel->value = 150 * shadelight[0];
+        else
+            r_lightlevel->value = 150 * shadelight[2];
+    }
+    else
+    {
+        if (shadelight[1] > shadelight[2])
+            r_lightlevel->value = 150 * shadelight[1];
+        else
+            r_lightlevel->value = 150 * shadelight[2];
+    }
 }
 
 /*
@@ -938,78 +926,78 @@ void R_RenderFrame(refdef_t *fd)
     // if (!vk_frameStarted)
     // 	return;
 
-    // R_RenderView( fd );
-    // R_SetLightLevel ();
-    // R_SetVulkan2D ();
+    R_RenderView(fd);
+    R_SetLightLevel();
+    R_SetVulkan2D();
 }
 
 void R_Register(void)
 {
     r_lefthand = Cvar_Get("hand", "0", CVAR_USERINFO | CVAR_ARCHIVE);
-    // 	r_norefresh = ri.Cvar_Get("r_norefresh", "0", 0);
-    // 	r_fullbright = ri.Cvar_Get("r_fullbright", "0", 0);
-    // 	r_drawentities = ri.Cvar_Get("r_drawentities", "1", 0);
-    // 	r_drawworld = ri.Cvar_Get("r_drawworld", "1", 0);
-    // 	r_novis = ri.Cvar_Get("r_novis", "0", 0);
-    // 	r_nocull = ri.Cvar_Get("r_nocull", "0", 0);
-    // 	r_lerpmodels = ri.Cvar_Get("r_lerpmodels", "1", 0);
-    // 	r_speeds = ri.Cvar_Get("r_speeds", "0", 0);
-    // 	r_lightlevel = ri.Cvar_Get("r_lightlevel", "0", 0);
-    // #if defined(_DEBUG)
-    // 	vk_validation = ri.Cvar_Get("vk_validation", "2", 0);
-    // #else
-    // 	vk_validation = ri.Cvar_Get("vk_validation", "0", 0);
-    // #endif
-    // 	vk_mode = ri.Cvar_Get("vk_mode", "11", CVAR_ARCHIVE);
-    // 	vk_log = ri.Cvar_Get("vk_log", "0", 0);
-    // 	vk_picmip = ri.Cvar_Get("vk_picmip", "0", 0);
-    // 	vk_skymip = ri.Cvar_Get("vk_skymip", "0", 0);
-    // 	vk_round_down = ri.Cvar_Get("vk_round_down", "1", 0);
-    // 	vk_flashblend = ri.Cvar_Get("vk_flashblend", "0", 0);
-    // 	vk_finish = ri.Cvar_Get("vk_finish", "0", CVAR_ARCHIVE);
-    // 	vk_clear = ri.Cvar_Get("vk_clear", "0", CVAR_ARCHIVE);
-    // 	vk_lockpvs = ri.Cvar_Get("vk_lockpvs", "0", 0);
-    // 	vk_polyblend = ri.Cvar_Get("vk_polyblend", "1", 0);
-    // 	vk_modulate = ri.Cvar_Get("vk_modulate", "1", CVAR_ARCHIVE);
-    // 	vk_shadows = ri.Cvar_Get("vk_shadows", "0", CVAR_ARCHIVE);
-    // 	vk_particle_size = ri.Cvar_Get("vk_particle_size", "40", CVAR_ARCHIVE);
-    // 	vk_particle_att_a = ri.Cvar_Get("vk_particle_att_a", "0.01", CVAR_ARCHIVE);
-    // 	vk_particle_att_b = ri.Cvar_Get("vk_particle_att_b", "0.0", CVAR_ARCHIVE);
-    // 	vk_particle_att_c = ri.Cvar_Get("vk_particle_att_c", "0.01", CVAR_ARCHIVE);
-    // 	vk_particle_min_size = ri.Cvar_Get("vk_particle_min_size", "2", CVAR_ARCHIVE);
-    // 	vk_particle_max_size = ri.Cvar_Get("vk_particle_max_size", "40", CVAR_ARCHIVE);
-    // 	vk_point_particles = ri.Cvar_Get("vk_point_particles", "1", CVAR_ARCHIVE);
-    // 	vk_postprocess = ri.Cvar_Get("vk_postprocess", "1", CVAR_ARCHIVE);
-    // 	vk_underwater = ri.Cvar_Get("vk_underwater", "1", CVAR_ARCHIVE);
-    // 	vk_dynamic = ri.Cvar_Get("vk_dynamic", "1", 0);
-    // 	vk_msaa = ri.Cvar_Get("vk_msaa", "0", CVAR_ARCHIVE);
-    // 	vk_showtris = ri.Cvar_Get("vk_showtris", "0", 0);
-    // 	vk_lightmap = ri.Cvar_Get("vk_lightmap", "0", 0);
-    // 	vk_texturemode = ri.Cvar_Get("vk_texturemode", "VK_MIPMAP_LINEAR", CVAR_ARCHIVE);
-    // 	vk_lmaptexturemode = ri.Cvar_Get("vk_lmaptexturemode", "VK_MIPMAP_LINEAR", CVAR_ARCHIVE);
-    // 	vk_aniso = ri.Cvar_Get("vk_aniso", "1", CVAR_ARCHIVE);
-    // 	vk_mip_nearfilter = ri.Cvar_Get("vk_mip_nearfilter", "0", CVAR_ARCHIVE);
-    // 	vk_sampleshading = ri.Cvar_Get("vk_sampleshading", "0", CVAR_ARCHIVE);
-    // 	vk_vsync = ri.Cvar_Get("vk_vsync", "0", CVAR_ARCHIVE);
-    // 	vk_device_idx = ri.Cvar_Get("vk_device", "-1", CVAR_ARCHIVE);
-    // 	vk_fullscreen_exclusive = ri.Cvar_Get("vk_fullscreen_exclusive", "1", CVAR_ARCHIVE);
-    // 	// clamp vk_msaa to accepted range so that video menu doesn't crash on us
-    // 	if (vk_msaa->value < 0)
-    // 		ri.Cvar_Set("vk_msaa", "0");
-    // 	else if (vk_msaa->value > 4)
-    // 		ri.Cvar_Set("vk_msaa", "4");
+    r_norefresh = Cvar_Get("r_norefresh", "0", 0);
+    r_fullbright = Cvar_Get("r_fullbright", "0", 0);
+    r_drawentities = Cvar_Get("r_drawentities", "1", 0);
+    r_drawworld = Cvar_Get("r_drawworld", "1", 0);
+    r_novis = Cvar_Get("r_novis", "0", 0);
+    r_nocull = Cvar_Get("r_nocull", "0", 0);
+    r_lerpmodels = Cvar_Get("r_lerpmodels", "1", 0);
+    r_speeds = Cvar_Get("r_speeds", "0", 0);
+    r_lightlevel = Cvar_Get("r_lightlevel", "0", 0);
+#if defined(_DEBUG)
+    vk_validation = Cvar_Get("vk_validation", "2", 0);
+#else
+    vk_validation = Cvar_Get("vk_validation", "0", 0);
+#endif
+    vk_mode = Cvar_Get("vk_mode", "11", CVAR_ARCHIVE);
+    vk_log = Cvar_Get("vk_log", "0", 0);
+    vk_picmip = Cvar_Get("vk_picmip", "0", 0);
+    vk_skymip = Cvar_Get("vk_skymip", "0", 0);
+    vk_round_down = Cvar_Get("vk_round_down", "1", 0);
+    vk_flashblend = Cvar_Get("vk_flashblend", "0", 0);
+    vk_finish = Cvar_Get("vk_finish", "0", CVAR_ARCHIVE);
+    vk_clear = Cvar_Get("vk_clear", "0", CVAR_ARCHIVE);
+    vk_lockpvs = Cvar_Get("vk_lockpvs", "0", 0);
+    vk_polyblend = Cvar_Get("vk_polyblend", "1", 0);
+    vk_modulate = Cvar_Get("vk_modulate", "1", CVAR_ARCHIVE);
+    vk_shadows = Cvar_Get("vk_shadows", "0", CVAR_ARCHIVE);
+    vk_particle_size = Cvar_Get("vk_particle_size", "40", CVAR_ARCHIVE);
+    vk_particle_att_a = Cvar_Get("vk_particle_att_a", "0.01", CVAR_ARCHIVE);
+    vk_particle_att_b = Cvar_Get("vk_particle_att_b", "0.0", CVAR_ARCHIVE);
+    vk_particle_att_c = Cvar_Get("vk_particle_att_c", "0.01", CVAR_ARCHIVE);
+    vk_particle_min_size = Cvar_Get("vk_particle_min_size", "2", CVAR_ARCHIVE);
+    vk_particle_max_size = Cvar_Get("vk_particle_max_size", "40", CVAR_ARCHIVE);
+    vk_point_particles = Cvar_Get("vk_point_particles", "1", CVAR_ARCHIVE);
+    vk_postprocess = Cvar_Get("vk_postprocess", "1", CVAR_ARCHIVE);
+    vk_underwater = Cvar_Get("vk_underwater", "1", CVAR_ARCHIVE);
+    vk_dynamic = Cvar_Get("vk_dynamic", "1", 0);
+    vk_msaa = Cvar_Get("vk_msaa", "0", CVAR_ARCHIVE);
+    vk_showtris = Cvar_Get("vk_showtris", "0", 0);
+    vk_lightmap = Cvar_Get("vk_lightmap", "0", 0);
+    vk_texturemode = Cvar_Get("vk_texturemode", "VK_MIPMAP_LINEAR", CVAR_ARCHIVE);
+    vk_lmaptexturemode = Cvar_Get("vk_lmaptexturemode", "VK_MIPMAP_LINEAR", CVAR_ARCHIVE);
+    vk_aniso = Cvar_Get("vk_aniso", "1", CVAR_ARCHIVE);
+    vk_mip_nearfilter = Cvar_Get("vk_mip_nearfilter", "0", CVAR_ARCHIVE);
+    vk_sampleshading = Cvar_Get("vk_sampleshading", "0", CVAR_ARCHIVE);
+    vk_vsync = Cvar_Get("vk_vsync", "0", CVAR_ARCHIVE);
+    vk_device_idx = Cvar_Get("vk_device", "-1", CVAR_ARCHIVE);
+    vk_fullscreen_exclusive = Cvar_Get("vk_fullscreen_exclusive", "1", CVAR_ARCHIVE);
+    // clamp vk_msaa to accepted range so that video menu doesn't crash on us
+    if (vk_msaa->value < 0)
+        Cvar_Set("vk_msaa", "0");
+    else if (vk_msaa->value > 4)
+        Cvar_Set("vk_msaa", "4");
 
-    // 	vid_fullscreen = ri.Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
-    // 	vid_gamma = ri.Cvar_Get("vid_gamma", "1.0", CVAR_ARCHIVE);
-    // 	vid_ref = ri.Cvar_Get("vid_ref", "soft", CVAR_ARCHIVE);
-    // 	vid_refresh = ri.Cvar_Get("vid_refresh", "0", CVAR_NOSET);
-    // 	viewsize = ri.Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
+    vid_fullscreen = Cvar_Get("vid_fullscreen", "0", CVAR_ARCHIVE);
+    vid_gamma = Cvar_Get("vid_gamma", "1.0", CVAR_ARCHIVE);
+    vid_ref = Cvar_Get("vid_ref", "soft", CVAR_ARCHIVE);
+    vid_refresh = Cvar_Get("vid_refresh", "0", CVAR_NOSET);
+    viewsize = Cvar_Get("viewsize", "100", CVAR_ARCHIVE);
 
-    // 	ri.Cmd_AddCommand("vk_strings", Vk_Strings_f);
-    // 	ri.Cmd_AddCommand("vk_restart", Vk_PollRestart_f);
-    // 	ri.Cmd_AddCommand("vk_mem", Vk_Mem_f);
-    // 	ri.Cmd_AddCommand("imagelist", Vk_ImageList_f);
-    // 	ri.Cmd_AddCommand("screenshot", Vk_ScreenShot_f);
+    // Cmd_AddCommand("vk_strings", Vk_Strings_f);
+    // Cmd_AddCommand("vk_restart", Vk_PollRestart_f);
+    // Cmd_AddCommand("vk_mem", Vk_Mem_f);
+    // Cmd_AddCommand("imagelist", GRA_ImageList_f);
+    // Cmd_AddCommand("screenshot", Vk_ScreenShot_f);
 }
 
 /*
@@ -1050,23 +1038,23 @@ qboolean R_SetMode(void)
     // {
     // 	if (err == rserr_invalid_fullscreen)
     // 	{
-    // 		ri.Cvar_SetValue("vid_fullscreen", 0);
+    // 		Cvar_SetValue("vid_fullscreen", 0);
     // 		vid_fullscreen->modified = false;
-    // 		ri.Con_Printf(PRINT_ALL, "ref_vk::R_SetMode() - fullscreen unavailable in this mode\n");
+    // 		LOGF(eINFO, "ref_vk::R_SetMode() - fullscreen unavailable in this mode\n");
     // 		if ((err = Vkimp_SetMode((int*)&vid.width, (int*)&vid.height, vk_mode->value, false)) == rserr_ok)
     // 			return true;
     // 	}
     // 	else if (err == rserr_invalid_mode)
     // 	{
-    // 		ri.Cvar_SetValue("vk_mode", vk_state.prev_mode);
+    // 		Cvar_SetValue("vk_mode", vk_state.prev_mode);
     // 		vk_mode->modified = false;
-    // 		ri.Con_Printf(PRINT_ALL, "ref_vk::R_SetMode() - invalid mode\n");
+    // 		LOGF(eINFO, "ref_vk::R_SetMode() - invalid mode\n");
     // 	}
 
     // 	// try setting it back to something safe
     // 	if ((err = Vkimp_SetMode((int*)&vid.width, (int*)&vid.height, vk_state.prev_mode, false)) != rserr_ok)
     // 	{
-    // 		ri.Con_Printf(PRINT_ALL, "ref_vk::R_SetMode() - could not revert to safe mode\n");
+    // 		LOGF(eINFO, "ref_vk::R_SetMode() - could not revert to safe mode\n");
     // 		return false;
     // 	}
     // }
@@ -1080,9 +1068,9 @@ R_Init
 */
 qboolean R_Init(/* void *hinstance, void *hWnd */)
 {
-    // ri.Con_Printf(PRINT_ALL, "ref_vk version: "REF_VERSION"\n");
+    // LOGF(eINFO, "ref_vk version: "REF_VERSION"\n");
 
-    // R_Register();
+    R_Register();
 
     // // create the window (OS-specific)
     // if (!Vkimp_Init(hinstance, hWnd))
@@ -1095,26 +1083,26 @@ qboolean R_Init(/* void *hinstance, void *hWnd */)
     // // set video mode/screen resolution
     // if (!R_SetMode())
     // {
-    // 	ri.Con_Printf(PRINT_ALL, "ref_vk::R_Init() - could not R_SetMode()\n");
+    // 	LOGF(eINFO, "ref_vk::R_Init() - could not R_SetMode()\n");
     // 	return false;
     // }
-    // ri.Vid_MenuInit();
+    // Vid_MenuInit();
 
     // // window is ready, initialize Vulkan now
     // if (!QVk_Init())
     // {
-    // 	ri.Con_Printf(PRINT_ALL, "ref_vk::R_Init() - could not initialize Vulkan!\n");
+    // 	LOGF(eINFO, "ref_vk::R_Init() - could not initialize Vulkan!\n");
     // 	return false;
     // }
 
-    // ri.Con_Printf(PRINT_ALL, "Successfully initialized Vulkan!\n");
+    // LOGF(eINFO, "Successfully initialized Vulkan!\n");
     // // print device information during startup
     // Vk_Strings_f();
 
     GRA_InitImages();
-    // Mod_Init();
+    Mod_Init();
     // R_InitParticleTexture();
-    // Draw_InitLocal();
+    Draw_InitLocal();
 
     return true;
 }
@@ -1126,11 +1114,11 @@ R_Shutdown
 */
 void R_Shutdown(void)
 {
-    // ri.Cmd_RemoveCommand("vk_strings");
-    // ri.Cmd_RemoveCommand("vk_mem");
-    // ri.Cmd_RemoveCommand("vk_restart");
-    // ri.Cmd_RemoveCommand("imagelist");
-    // ri.Cmd_RemoveCommand("screenshot");
+    // Cmd_RemoveCommand("vk_strings");
+    // Cmd_RemoveCommand("vk_mem");
+    // Cmd_RemoveCommand("vk_restart");
+    // Cmd_RemoveCommand("imagelist");
+    // Cmd_RemoveCommand("screenshot");
 
     // vkDeviceWaitIdle(vk_device.logical);
 
@@ -1150,7 +1138,7 @@ R_BeginFrame
 */
 void R_BeginFrame(float camera_separation)
 {
-    // // if ri.Sys_Error() had been issued mid-frame, we might end up here without properly submitting the image, so
+    // // if Sys_Error() had been issued mid-frame, we might end up here without properly submitting the image, so
     // call QVk_EndFrame to be safe if (QVk_EndFrame(true) != VK_SUCCESS)
     // {
     // 	Vk_PollRestart_f();
@@ -1179,7 +1167,7 @@ void R_BeginFrame(float camera_separation)
     // 	}
     // 	else
     // 	{
-    // 		cvar_t	*ref = ri.Cvar_Get("vid_ref", "vk", 0);
+    // 		cvar_t	*ref = Cvar_Get("vid_ref", "vk", 0);
     // 		ref->modified = true;
     // 	}
     // }
@@ -1256,10 +1244,10 @@ void R_EndFrame(void)
     // 	// initialize
     // 	if (!QVk_Init())
     // 	{
-    // 		ri.Sys_Error(ERR_FATAL, "R_EndFrame(): could not re-initialize Vulkan!");
+    // 		Sys_Error(ERR_FATAL, "R_EndFrame(): could not re-initialize Vulkan!");
     // 	}
 
-    // 	ri.Con_Printf(PRINT_ALL, "Successfully restarted Vulkan!\n");
+    // 	LOGF(eINFO, "Successfully restarted Vulkan!\n");
 
     // 	Vk_Strings_f();
 
@@ -1433,7 +1421,7 @@ void refreshExport()
     re.RegisterSkin = R_RegisterSkin;
     re.RegisterPic = Draw_FindPic;
     re.SetSky = R_SetSky;
-    
+
     re.EndRegistration = R_EndRegistration;
 
     re.RenderFrame = R_RenderFrame;

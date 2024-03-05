@@ -409,7 +409,7 @@ void ClipSkyPolygon(int nump, vec3_t vecs, int stage)
     if (nump > MAX_CLIP_VERTS - 2)
     {
         LOGF(eERROR, "ClipSkyPolygon: MAX_CLIP_VERTS");
-		//throw
+        // throw
     }
     if (stage == 6)
     { // fully clipped, so draw it
@@ -652,7 +652,7 @@ R_SetSky
 const char *suf[6] = {"rt", "bk", "lf", "ft", "up", "dn"};
 void R_SetSky(char *name, float rotate, vec3_t axis)
 {
-	LOGF(eINFO, "Set sky: %s", name);
+    LOGF(eINFO, "Set sky: %s", name);
 
     int i;
     char pathname[MAX_QPATH];
@@ -664,22 +664,24 @@ void R_SetSky(char *name, float rotate, vec3_t axis)
     for (i = 0; i < 6; i++)
     {
         // chop down rotating skies for less memory
-        if (vk_skymip->value || skyrotate)
-            vk_picmip->value++;
+        // if (vk_skymip->value || skyrotate)
+        //     vk_picmip->value++;
 
         std::string pathname = std::format("env/{}{}.tga", skyname, suf[i]);
 
         sky_images[i] = GRA_FindImage(pathname, it_sky);
         if (!sky_images[i])
+        {
             sky_images[i] = r_notexture;
-
-        if (vk_skymip->value || skyrotate)
-        { // take less memory
-            vk_picmip->value--;
-            sky_min = 1.0 / 256;
-            sky_max = 255.0 / 256;
         }
-        else
+
+        // if (vk_skymip->value || skyrotate)
+        // { // take less memory
+        //     vk_picmip->value--;
+        //     sky_min = 1.0 / 256;
+        //     sky_max = 255.0 / 256;
+        // }
+        // else
         {
             sky_min = 1.0 / 512;
             sky_max = 511.0 / 512;

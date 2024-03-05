@@ -45,6 +45,8 @@ viddef_t vid;
 
 void refreshSettings()
 {
+    vid_ref->modified = false;
+    vid_hudscale = Cvar_Set(std::string("hudscale").data(), std::string("1").data());
     refresh = true;
 }
 
@@ -133,7 +135,6 @@ void MainApp::Update(float deltaTime)
 
     Sys_Milliseconds();
 
-    Qcommon_Frame(static_cast<int>(deltaTime * 1000));
     if (!_errorMsg.empty())
     {
         LOGF(LogLevel::eERROR, _errorMsg.c_str());

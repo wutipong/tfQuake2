@@ -8,6 +8,7 @@
 #include <IScreenshot.h>
 #include <IUI.h>
 #include <RingBuffer.h>
+#include <ITime.h>
 
 const uint32_t gDataBufferCount = 2;
 
@@ -1011,18 +1012,11 @@ void GRA_Draw(IApp *pApp)
     /************************************************************************/
     // Start drawing objects
     /************************************************************************/
-    float imgTransform[] = {0.5f, 0.65f, 0.25f, 0.45f, 0.5f, 0.25f, 0.75f, 1.f};
 
-    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
-
-    float imgTransform2[] = {0.5f, 0.15f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.f};
-
-    // GRA_DrawColorRect(imgTransform2, sizeof(imgTransform2), RenderPass::UI);
-
-    if (vktextures[153].texture != NULL)
-    {
-        GRA_DrawTexRect(imgTransform2, sizeof(imgTransform2), &vktextures[153]);
-    }
+    static uint32_t lastframe = getSystemTime();
+    uint32_t currentframe = getSystemTime();
+    Qcommon_Frame(currentframe - lastframe);
+    lastframe = currentframe;
 
     /************************************************************************/
     // End drawing objects
