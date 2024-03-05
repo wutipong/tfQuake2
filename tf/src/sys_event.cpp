@@ -1,13 +1,16 @@
 #include "sys_event.h"
 
-extern "C"{
+extern "C"
+{
 #include "../../qcommon/qcommon.h"
+
 #include "../../client/keys.h"
 
-uint32_t sys_msg_time;
+    uint32_t sys_msg_time;
 }
 
 #include <ITime.h>
+#include <IUI.h>
 
 ActionMappingDesc gKeyboardMouseActionMappings[] = {
     // Keyboard
@@ -651,7 +654,7 @@ bool SYS_InputHandler(InputActionContext *ctx)
     switch (ctx->mDeviceType)
     {
     case InputDeviceType::INPUT_DEVICE_KEYBOARD:
-        Key_Event( ctx->mActionId, ctx->mBool, sys_msg_time);
+        Key_Event(ctx->mActionId, ctx->mBool, sys_msg_time);
         break;
 
     case InputDeviceType::INPUT_DEVICE_MOUSE:
@@ -663,8 +666,30 @@ bool SYS_InputHandler(InputActionContext *ctx)
     return true;
 }
 
-void SYS_RegisterInput()
+void SYS_RegisterInput(IApp *pApp)
 {
+    InputActionCallback onAnyInput = [](InputActionContext *ctx) {
+        if (ctx->mActionId > UISystemInputActions::UI_ACTION_START_ID_)
+        {
+            uiOnInput(ctx->mActionId, ctx->mBool, ctx->pPosition, &ctx->mFloat2);
+        }
+
+        return true;
+    };
+
+    GlobalInputActionDesc globalInputActionDesc = {GlobalInputActionDesc::ANY_BUTTON_ACTION, onAnyInput, pApp};
+    setGlobalInputAction(&globalInputActionDesc);
+
+    InputActionDesc actionDesc = {DefaultInputActions::CAPTURE_INPUT,
+                                  [](InputActionContext *ctx) {
+                                      setEnableCaptureInput(!uiIsFocused() &&
+                                                            INPUT_ACTION_PHASE_CANCELED != ctx->mPhase);
+                                      return true;
+                                  },
+                                  NULL};
+    addInputAction(&actionDesc);
+
+    /*
     addActionMappings(gKeyboardMouseActionMappings, TF_ARRAY_COUNT(gKeyboardMouseActionMappings),
                       INPUT_ACTION_MAPPING_TARGET_ALL);
 
@@ -676,4 +701,5 @@ void SYS_RegisterInput()
         };
         addInputAction(&actionDesc);
     }
+    */
 }

@@ -93,9 +93,11 @@ bool MainApp::Init()
     };
 
     if (!initInputSystem(&inputDesc))
+    {
         return false;
+    }
 
-    SYS_RegisterInput();
+    SYS_RegisterInput(this);
 
     if (!R_Init())
     {
