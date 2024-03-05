@@ -221,24 +221,49 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
         verts[i].texCoord[1] = v[4];
     }
 
-    // QVk_BindPipeline(&vk_drawPolyPipeline);
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(polyvert) * p->numverts);
+    {
+        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *vertData = QVk_GetVertexBuffer(sizeof(polyvert) * p->numverts, &vbo, &vboOffset);
-    // uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(float) * 4, &uboOffset, &uboDescriptorSet);
-    // memcpy(vertData, verts, sizeof(polyvert) * p->numverts);
-    // memcpy(uboData,  color, sizeof(float) * 4);
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, verts, sizeof(polyvert) * p->numverts);
+        endUpdateResource(&updateDesc);
+    }
 
-    // VkDescriptorSet descriptorSets[] = { texture->vk_texture.descriptorSet, uboDescriptorSet };
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawPolyPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyPipeline.layout, 0, 2, descriptorSets, 1, &uboOffset);
-    // vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((p->numverts - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-    // vkCmdDrawIndexed(vk_activeCmdbuffer, (p->numverts - 2) * 3, 1, 0, 0, 0);
+    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(polyvert) * p->numverts);
+    {
+        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * p->numverts);
+        endUpdateResource(&updateDesc);
+    }
+
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
+        endUpdateResource(&updateDesc);
+    }
+
+    cmdBindPipeline(pCmd, drawPolyPipeline);
+
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    uint32_t stride = sizeof(polyvert);
+
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
+    cmdDrawIndexed(pCmd, (p->numverts - 2) * 3, 0, 0);
 }
 // PGM
 //============
