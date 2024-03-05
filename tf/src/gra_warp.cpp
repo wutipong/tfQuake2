@@ -21,9 +21,22 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // vk_warp.c -- sky and water polygons
 #include "gra_local.h"
 
+#include <IResourceLoader.h>
+#include <RingBuffer.h>
 #include <format>
 
 extern model_t *loadmodel;
+
+extern Cmd *pCmd;
+extern Pipeline *drawSkyboxPipeline;
+extern DescriptorSet *pDescriptorSetUniforms;
+extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
+extern GPURingBuffer dynamicUniformBuffer;
+extern GPURingBuffer dynamicVertexBuffer;
+extern Pipeline *drawSpritePipeline;
+extern Pipeline *drawNullModelPipeline;
+extern RootSignature *pRootSignature;
+extern uint32_t gPushConstant;
 
 char skyname[MAX_QPATH];
 float skyrotate;
@@ -595,52 +608,63 @@ void R_DrawSkyBox(void)
         float data[5];
     } skyVerts[4];
 
-    // QVk_BindPipeline(&vk_drawSkyboxPipeline);
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *uboData = QVk_GetUniformBuffer(sizeof(model), &uboOffset, &uboDescriptorSet);
-    // memcpy(uboData, model, sizeof(model));
+    cmdBindPipeline(pCmd, drawSkyboxPipeline);
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(model));
+    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    // for (i = 0; i < 6; i++)
-    // {
-    //     if (skyrotate)
-    //     { // hack, forces full sky to draw when rotating
-    //         skymins[0][i] = -1;
-    //         skymins[1][i] = -1;
-    //         skymaxs[0][i] = 1;
-    //         skymaxs[1][i] = 1;
-    //     }
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, model, sizeof(model));
+    endUpdateResource(&updateDesc);
 
-    //     if (skymins[0][i] >= skymaxs[0][i] || skymins[1][i] >= skymaxs[1][i])
-    //         continue;
+    for (i = 0; i < 6; i++)
+    {
+        if (skyrotate)
+        { // hack, forces full sky to draw when rotating
+            skymins[0][i] = -1;
+            skymins[1][i] = -1;
+            skymaxs[0][i] = 1;
+            skymaxs[1][i] = 1;
+        }
 
-    //     MakeSkyVec(skymins[0][i], skymins[1][i], i, skyVerts[0].data);
-    //     MakeSkyVec(skymins[0][i], skymaxs[1][i], i, skyVerts[1].data);
-    //     MakeSkyVec(skymaxs[0][i], skymaxs[1][i], i, skyVerts[2].data);
-    //     MakeSkyVec(skymaxs[0][i], skymins[1][i], i, skyVerts[3].data);
+        if (skymins[0][i] >= skymaxs[0][i] || skymins[1][i] >= skymaxs[1][i])
+            continue;
 
-    //     float verts[] = {
-    //         skyVerts[0].data[0], skyVerts[0].data[1], skyVerts[0].data[2], skyVerts[0].data[3], skyVerts[0].data[4],
-    //         skyVerts[1].data[0], skyVerts[1].data[1], skyVerts[1].data[2], skyVerts[1].data[3], skyVerts[1].data[4],
-    //         skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
-    //         skyVerts[0].data[0], skyVerts[0].data[1], skyVerts[0].data[2], skyVerts[0].data[3], skyVerts[0].data[4],
-    //         skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
-    //         skyVerts[3].data[0], skyVerts[3].data[1], skyVerts[3].data[2], skyVerts[3].data[3], skyVerts[3].data[4]};
+        MakeSkyVec(skymins[0][i], skymins[1][i], i, skyVerts[0].data);
+        MakeSkyVec(skymins[0][i], skymaxs[1][i], i, skyVerts[1].data);
+        MakeSkyVec(skymaxs[0][i], skymaxs[1][i], i, skyVerts[2].data);
+        MakeSkyVec(skymaxs[0][i], skymins[1][i], i, skyVerts[3].data);
 
-    //     VkBuffer vbo;
-    //     VkDeviceSize vboOffset;
-    //     uint8_t *vertData = QVk_GetVertexBuffer(sizeof(verts), &vbo, &vboOffset);
-    //     memcpy(vertData, verts, sizeof(verts));
+        float verts[] = {
+            skyVerts[0].data[0], skyVerts[0].data[1], skyVerts[0].data[2], skyVerts[0].data[3], skyVerts[0].data[4],
+            skyVerts[1].data[0], skyVerts[1].data[1], skyVerts[1].data[2], skyVerts[1].data[3], skyVerts[1].data[4],
+            skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
+            skyVerts[0].data[0], skyVerts[0].data[1], skyVerts[0].data[2], skyVerts[0].data[3], skyVerts[0].data[4],
+            skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
+            skyVerts[3].data[0], skyVerts[3].data[1], skyVerts[3].data[2], skyVerts[3].data[3], skyVerts[3].data[4]};
 
-    //     VkDescriptorSet descriptorSets[] = {sky_images[skytexorder[i]]->vk_texture.descriptorSet, uboDescriptorSet};
-    //     vkCmdPushConstants(vk_activeCmdbuffer, vk_drawSkyboxPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    //                        sizeof(r_viewproj_matrix), r_viewproj_matrix);
-    //     vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawSkyboxPipeline.layout, 0,
-    //     2,
-    //                             descriptorSets, 1, &uboOffset);
-    //     vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    //     vkCmdDraw(vk_activeCmdbuffer, 6, 1, 0, 0);
-    // }
+        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(model));
+        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, verts, sizeof(verts));
+        endUpdateResource(&updateDesc);
+
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[sky_images[skytexorder[i]]->index]);
+
+        DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(model)};
+        DescriptorData params[1] = {};
+        params[0].pName = "UniformBufferObject_rootcbv";
+        params[0].ppBuffers = &uniformBlock.pBuffer;
+        params[0].pRanges = &range;
+
+        cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+
+        constexpr uint32_t stride = sizeof(float) * 5;
+        cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+		cmdDraw(pCmd, 6, 0);
+    }
 }
 
 /*
