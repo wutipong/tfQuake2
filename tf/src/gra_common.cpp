@@ -73,6 +73,7 @@ RootSignature *pRootSignature = NULL;
 
 GPURingBuffer dynamicUniformBuffer;
 GPURingBuffer dynamicVertexBuffer;
+GPURingBuffer dynamicIndexBuffer;
 
 Cmd *pCmd;
 
@@ -137,6 +138,15 @@ bool GRA_InitGraphics(IApp *app)
     vbDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
     addGPURingBuffer(pRenderer, &vbDesc, &dynamicVertexBuffer);
 
+    BufferDesc ibDesc = {};
+    ibDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
+    ibDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
+    ibDesc.mSize = 65536;
+    ibDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
+    addGPURingBuffer(pRenderer, &vbDesc, &dynamicIndexBuffer);
+
+
+
     SamplerDesc samplerDesc = {
         .mMinFilter = FILTER_NEAREST,
         .mMagFilter = FILTER_NEAREST,
@@ -182,6 +192,7 @@ bool GRA_ExitGraphics()
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
     removeGPURingBuffer(&dynamicUniformBuffer);
     removeGPURingBuffer(&dynamicVertexBuffer);
+    removeGPURingBuffer(&dynamicIndexBuffer);
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
     _removeStaticBuffers();
 
@@ -1186,4 +1197,21 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
 
     cmdDrawIndexed(pCmd, 6, 0, 0);
+}
+
+void GRA_FillTriangleFanIbo(void* buffer, size_t size)
+{
+	int idx = 0;
+	VkDeviceSize dstOffset = 0;
+	VkDeviceSize bufferSize = 3 * vk_config.triangle_fan_index_count * sizeof(uint32_t);
+    uint32_t count = size/ (sizeof(uint32_t) * 3);
+	uint32_t *fanData = (uint32_t*) buffer;
+
+	// fill the index buffer so that we can emulate triangle fans via triangle lists
+	for (int i = 0; i < count; ++i)
+	{
+		fanData[idx++] = 0;
+		fanData[idx++] = i + 1;
+		fanData[idx++] = i + 2;
+	}
 }
