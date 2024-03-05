@@ -1254,6 +1254,9 @@ void R_EndRegistration(void)
     for (int i = 0; i < numvktextures; i++)
     {
         image_t& tex = vktextures[i];
+        if (tex.name.empty())
+            continue;
+
         DescriptorData paramsTex = {
             .pName = "sTexture",
             .ppTextures = &tex.texture,

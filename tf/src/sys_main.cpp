@@ -45,6 +45,8 @@ viddef_t vid;
 
 void refreshSettings()
 {
+    viddef.width = vid.width;
+    viddef.height = vid.height;
     vid_ref->modified = false;
     vid_hudscale = Cvar_Set(std::string("hudscale").data(), std::string("1").data());
     refresh = true;
