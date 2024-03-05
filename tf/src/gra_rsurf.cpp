@@ -23,7 +23,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_common.h"
 #include "gra_local.h"
-#include <RingBuffer.h>
 
 extern model_t *currentmodel;
 extern model_t *r_worldmodel;
@@ -64,18 +63,6 @@ static qboolean LM_AllocBlock(int w, int h, int *x, int *y);
 
 extern void R_SetCacheState(msurface_t *surf);
 extern void R_BuildLightMap(msurface_t *surf, byte *dest, int stride);
-
-extern Cmd *pCmd;
-extern Pipeline *drawPolyPipeline;
-extern DescriptorSet *pDescriptorSetUniforms;
-extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
-extern GPURingBuffer dynamicUniformBuffer;
-extern GPURingBuffer dynamicVertexBuffer;
-extern GPURingBuffer dynamicIndexBuffer;
-extern Pipeline *drawSpritePipeline;
-extern Pipeline *drawNullModelPipeline;
-extern RootSignature *pRootSignature;
-extern uint32_t gPushConstant;
 
 /*
 =============================================================
@@ -273,67 +260,68 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
 */
 void R_DrawTriangleOutlines(void)
 {
-    // int			i, j, k;
-    // vkpoly_t	*p;
+    int i, j, k;
+    vkpoly_t *p;
 
-    // if (!vk_showtris->value)
-    // 	return;
+    if (!vk_showtris->value)
+        return;
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // float color[3] = { 1.f, 1.f, 1.f };
-    // struct {
-    // 	vec3_t v;
-    // 	float color[3];
-    // } triVert[4];
+    VkBuffer vbo;
+    VkDeviceSize vboOffset;
+    float color[3] = {1.f, 1.f, 1.f};
+    struct
+    {
+        vec3_t v;
+        float color[3];
+    } triVert[4];
 
-    // QVk_BindPipeline(&vk_showTrisPipeline);
+    // cmdBindPipeline(pCmd, showTrisPipeline);
     // uint32_t uboOffset;
     // VkDescriptorSet uboDescriptorSet;
     // uint8_t *uboData = QVk_GetUniformBuffer(sizeof(r_viewproj_matrix), &uboOffset, &uboDescriptorSet);
     // memcpy(uboData, r_viewproj_matrix, sizeof(r_viewproj_matrix));
     // vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_showTrisPipeline.layout, 0, 1,
-    // &uboDescriptorSet, 1, &uboOffset);
+    //                         &uboDescriptorSet, 1, &uboOffset);
 
     // for (i = 0; i < MAX_LIGHTMAPS; i++)
     // {
-    // 	msurface_t *surf;
+    //     msurface_t *surf;
 
-    // 	for (surf = vk_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain)
-    // 	{
-    // 		p = surf->polys;
-    // 		for (; p; p = p->chain)
-    // 		{
-    // 			for (j = 2, k = 0; j < p->numverts; j++, k++)
-    // 			{
-    // 				triVert[0].v[0] = p->verts[0][0];
-    // 				triVert[0].v[1] = p->verts[0][1];
-    // 				triVert[0].v[2] = p->verts[0][2];
-    // 				memcpy(triVert[0].color, color, sizeof(color));
+    //     for (surf = vk_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain)
+    //     {
+    //         p = surf->polys;
+    //         for (; p; p = p->chain)
+    //         {
+    //             for (j = 2, k = 0; j < p->numverts; j++, k++)
+    //             {
+    //                 triVert[0].v[0] = p->verts[0][0];
+    //                 triVert[0].v[1] = p->verts[0][1];
+    //                 triVert[0].v[2] = p->verts[0][2];
+    //                 memcpy(triVert[0].color, color, sizeof(color));
 
-    // 				triVert[1].v[0] = p->verts[j - 1][0];
-    // 				triVert[1].v[1] = p->verts[j - 1][1];
-    // 				triVert[1].v[2] = p->verts[j - 1][2];
-    // 				memcpy(triVert[1].color, color, sizeof(color));
+    //                 triVert[1].v[0] = p->verts[j - 1][0];
+    //                 triVert[1].v[1] = p->verts[j - 1][1];
+    //                 triVert[1].v[2] = p->verts[j - 1][2];
+    //                 memcpy(triVert[1].color, color, sizeof(color));
 
-    // 				triVert[2].v[0] = p->verts[j][0];
-    // 				triVert[2].v[1] = p->verts[j][1];
-    // 				triVert[2].v[2] = p->verts[j][2];
-    // 				memcpy(triVert[2].color, color, sizeof(color));
+    //                 triVert[2].v[0] = p->verts[j][0];
+    //                 triVert[2].v[1] = p->verts[j][1];
+    //                 triVert[2].v[2] = p->verts[j][2];
+    //                 memcpy(triVert[2].color, color, sizeof(color));
 
-    // 				triVert[3].v[0] = p->verts[0][0];
-    // 				triVert[3].v[1] = p->verts[0][1];
-    // 				triVert[3].v[2] = p->verts[0][2];
-    // 				memcpy(triVert[3].color, color, sizeof(color));
+    //                 triVert[3].v[0] = p->verts[0][0];
+    //                 triVert[3].v[1] = p->verts[0][1];
+    //                 triVert[3].v[2] = p->verts[0][2];
+    //                 memcpy(triVert[3].color, color, sizeof(color));
 
-    // 				uint8_t *vertData = QVk_GetVertexBuffer(sizeof(triVert), &vbo, &vboOffset);
-    // 				memcpy(vertData, triVert, sizeof(triVert));
+    //                 uint8_t *vertData = QVk_GetVertexBuffer(sizeof(triVert), &vbo, &vboOffset);
+    //                 memcpy(vertData, triVert, sizeof(triVert));
 
-    // 				vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 				vkCmdDraw(vk_activeCmdbuffer, 4, 1, 0, 0);
-    // 			}
-    // 		}
-    // 	}
+    //                 vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
+    //                 vkCmdDraw(vk_activeCmdbuffer, 4, 1, 0, 0);
+    //             }
+    //         }
+    //     }
     // }
 }
 

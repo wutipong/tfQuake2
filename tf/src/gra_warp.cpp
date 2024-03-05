@@ -20,23 +20,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vk_warp.c -- sky and water polygons
 #include "gra_local.h"
+#include "gra_common.h"
 
-#include <IResourceLoader.h>
-#include <RingBuffer.h>
 #include <format>
 
 extern model_t *loadmodel;
-
-extern Cmd *pCmd;
-extern Pipeline *drawSkyboxPipeline;
-extern DescriptorSet *pDescriptorSetUniforms;
-extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
-extern GPURingBuffer dynamicUniformBuffer;
-extern GPURingBuffer dynamicVertexBuffer;
-extern Pipeline *drawSpritePipeline;
-extern Pipeline *drawNullModelPipeline;
-extern RootSignature *pRootSignature;
-extern uint32_t gPushConstant;
 
 char skyname[MAX_QPATH];
 float skyrotate;

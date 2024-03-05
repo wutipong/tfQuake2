@@ -5,6 +5,7 @@
 
 #include <IApp.h>
 #include <IGraphics.h>
+#include <RingBuffer.h>
 
 enum class RenderPass
 {
@@ -25,4 +26,49 @@ void GRA_FillTriangleFanIbo(void* buffer, size_t size);
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
 void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
+
+extern Sampler *pSampler;
+extern image_t vktextures[MAX_VKTEXTURES];
+// render pipelines
+extern Pipeline *drawTexQuadPipeline;
+extern Pipeline *drawColorQuadPipeline[2];
+extern Pipeline *drawModelPipelineStrip[2];
+extern Pipeline *drawModelPipelineFan[2];
+extern Pipeline *drawNoDepthModelPipelineStrip;
+extern Pipeline *drawNoDepthModelPipelineFan;
+extern Pipeline *drawLefthandModelPipelineStrip;
+extern Pipeline *drawLefthandModelPipelineFan;
+extern Pipeline *drawNullModelPipeline;
+extern Pipeline *drawParticlesPipeline;
+extern Pipeline *drawPointParticlesPipeline;
+extern Pipeline *drawSpritePipeline;
+extern Pipeline *drawPolyPipeline;
+extern Pipeline *drawPolyLmapPipeline;
+extern Pipeline *drawPolyWarpPipeline;
+extern Pipeline *drawBeamPipeline;
+extern Pipeline *drawSkyboxPipeline;
+extern Pipeline *drawDLightPipeline;
+extern Pipeline *showTrisPipeline;
+extern Pipeline *shadowsPipelineStrip;
+extern Pipeline *shadowsPipelineFan;
+extern Pipeline *worldWarpPipeline;
+extern Pipeline *postprocessPipeline;
+
+extern RootSignature *pRootSignature;
+
+extern GPURingBuffer dynamicUniformBuffer;
+extern GPURingBuffer dynamicVertexBuffer;
+extern GPURingBuffer dynamicIndexBuffer;
+
+extern Cmd *pCmd;
+
+extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
+extern DescriptorSet *pDescriptorSetUniforms ;
+
+extern Buffer *texRectVbo;
+extern Buffer *colorRectVbo;
+extern Buffer *rectIbo;
+
+extern uint32_t gPushConstant;
+
 #endif

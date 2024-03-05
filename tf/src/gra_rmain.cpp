@@ -28,7 +28,6 @@ extern "C"
 }
 
 #include "common.h"
-#include <RingBuffer.h>
 
 extern viddef_t vid;
 
@@ -135,16 +134,6 @@ cvar_t *vid_gamma;
 cvar_t *vid_ref;
 cvar_t *vid_refresh;
 cvar_t *viewsize;
-
-extern Cmd *pCmd;
-extern DescriptorSet *pDescriptorSetUniforms;
-extern GPURingBuffer dynamicUniformBuffer;
-extern GPURingBuffer dynamicVertexBuffer;
-extern Pipeline *drawSpritePipeline;
-extern Pipeline *drawNullModelPipeline;
-extern RootSignature *pRootSignature;
-extern uint32_t gPushConstant;
-
 /*
 =================
 R_CullBox

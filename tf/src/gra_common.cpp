@@ -7,7 +7,6 @@
 #include <IProfiler.h>
 #include <IScreenshot.h>
 #include <IUI.h>
-#include <RingBuffer.h>
 #include <ITime.h>
 
 const uint32_t gDataBufferCount = 2;
