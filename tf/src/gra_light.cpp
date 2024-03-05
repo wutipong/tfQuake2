@@ -21,7 +21,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // vk_light.c
 
 #include "gra_local.h"
-#include "gra_model.h"
 
 int r_dlightframecount;
 

@@ -97,7 +97,7 @@ typedef enum
     rserr_unknown
 } rserr_t;
 
-// #include "vk_model.h"
+#include "gra_model.h"
 
 #define MAX_LBM_HEIGHT 480
 
@@ -115,7 +115,6 @@ extern int r_visframecount;
 extern int r_framecount;
 extern cplane_t frustum[4];
 extern int c_brush_polys, c_alias_polys;
-
 //
 // view origin
 //
@@ -217,8 +216,8 @@ qboolean R_CullBox(vec3_t mins, vec3_t maxs);
 void R_RotateForEntity(entity_t *e, float *mvMatrix);
 void R_MarkLeaves(void);
 
-// void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float *color);
-// void R_AddSkySurface(msurface_t *fa);
+void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float *color);
+void R_AddSkySurface(msurface_t *fa);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
 // void R_MarkLights(dlight_t *light, int bit, mnode_t *node);

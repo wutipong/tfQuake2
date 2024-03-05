@@ -20,7 +20,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // models.c -- model loading and caching
 
-#include "gra_model.h"
+#include "gra_local.h"
+
 #include <ILog.h>
 #include <IResourceLoader.h>
 #include <format>

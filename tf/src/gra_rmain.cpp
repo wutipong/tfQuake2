@@ -26,8 +26,6 @@ extern "C"
 #include "../../client/client.h"
 }
 
-#include "gra_model.h"
-
 #include "common.h"
 #include <RingBuffer.h>
 
