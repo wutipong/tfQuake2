@@ -213,7 +213,7 @@ model_t *Mod_ForName(std::string name, qboolean crash)
     //
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name.empty())
+        if (mod->name.empty())
         {
             continue;
         }
@@ -228,7 +228,7 @@ model_t *Mod_ForName(std::string name, qboolean crash)
     //
     for (i = 0, mod = mod_known; i < mod_numknown; i++, mod++)
     {
-        if (!mod->name.empty())
+        if (mod->name.empty())
             break; // free spot
     }
     if (i == mod_numknown)
