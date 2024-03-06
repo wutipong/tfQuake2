@@ -1119,49 +1119,116 @@ static void LM_InitBlock(void)
 
 static void LM_UploadBlock(qboolean dynamic)
 {
-    // int texture;
-    // int height = 0;
+    int texture;
+    int height = 0;
 
-    // if ( dynamic )
-    // {
-    // 	texture = 0;
-    // }
-    // else
-    // {
-    // 	texture = vk_lms.current_lightmap_texture;
-    // }
+    if (dynamic)
+    {
+        texture = 0;
+    }
+    else
+    {
+        texture = vk_lms.current_lightmap_texture;
+    }
 
-    // if ( dynamic )
-    // {
-    // 	int i;
+    if (dynamic)
+    {
+        int i;
 
-    // 	for ( i = 0; i < BLOCK_WIDTH; i++ )
-    // 	{
-    // 		if ( vk_lms.allocated[i] > height )
-    // 			height = vk_lms.allocated[i];
-    // 	}
-    // 	QVk_UpdateTextureData(&vk_state.lightmap_textures[texture], vk_lms.lightmap_buffer, 0, 0, BLOCK_WIDTH, height);
-    // }
-    // else
-    // {
-    // 	if (vk_state.lightmap_textures[texture].image != VK_NULL_HANDLE)
-    // 		QVk_UpdateTextureData(&vk_state.lightmap_textures[texture], vk_lms.lightmap_buffer, 0, 0, BLOCK_WIDTH,
-    // BLOCK_HEIGHT); 	else
-    // 	{
-    // 		QVVKTEXTURE_CLEAR(vk_state.lightmap_textures[texture]);
-    // 		QVk_CreateTexture(&vk_state.lightmap_textures[texture], vk_lms.lightmap_buffer, BLOCK_WIDTH, BLOCK_HEIGHT,
-    // vk_current_lmap_sampler); 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[texture].image,
-    // VK_OBJECT_TYPE_IMAGE, va("Image: dynamic lightmap #%d", texture));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[texture].imageView, VK_OBJECT_TYPE_IMAGE_VIEW,
-    // va("Image View: dynamic lightmap #%d", texture));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[texture].descriptorSet,
-    // VK_OBJECT_TYPE_DESCRIPTOR_SET, va("Descriptor Set: dynamic lightmap #%d", texture));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[texture].allocInfo.deviceMemory,
-    // VK_OBJECT_TYPE_DEVICE_MEMORY, va("Memory: dynamic lightmap #%d", texture));
-    // 	}
-    // 	if ( ++vk_lms.current_lightmap_texture == MAX_LIGHTMAPS )
-    // 		ri.Sys_Error( ERR_DROP, "LM_UploadBlock() - MAX_LIGHTMAPS exceeded\n" );
-    // }
+        for (i = 0; i < BLOCK_WIDTH; i++)
+        {
+            if (vk_lms.allocated[i] > height)
+                height = vk_lms.allocated[i];
+        }
+
+        TextureUpdateDesc updateDesc{
+            .pTexture = vk_state.lightmap_textures[texture],
+            .mBaseMipLevel = 0,
+            .mMipLevels = 1,
+            .mBaseArrayLayer = 0,
+            .mLayerCount = 1,
+            .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+        };
+
+        beginUpdateResource(&updateDesc);
+
+        TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+        for (uint32_t r = 0; r < subresource.mRowCount; ++r)
+        {
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+        }
+        endUpdateResource(&updateDesc);
+    }
+    else
+    {
+        if (vk_state.lightmap_textures[texture] != NULL)
+        {
+            TextureUpdateDesc updateDesc{
+                .pTexture = vk_state.lightmap_textures[texture],
+                .mBaseMipLevel = 0,
+                .mMipLevels = 1,
+                .mBaseArrayLayer = 0,
+                .mLayerCount = 1,
+                .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            };
+
+            beginUpdateResource(&updateDesc);
+
+            TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+            for (uint32_t r = 0; r < subresource.mRowCount; ++r)
+            {
+                memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+            }
+            endUpdateResource(&updateDesc);
+        }
+        else
+        {
+            SyncToken token = {};
+
+            TextureDesc textureDesc = {
+                .pName = std::format("Image: dynamic lightmap #{}", texture).c_str(),
+                .mWidth = BLOCK_WIDTH,
+                .mHeight = BLOCK_HEIGHT,
+                .mDepth = 1,
+                .mArraySize = 1,
+                .mMipLevels = 1,
+                .mSampleCount = SAMPLE_COUNT_1,
+                .mFormat = TinyImageFormat_R8G8B8A8_UNORM,
+                .mStartState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                .mDescriptors = DESCRIPTOR_TYPE_TEXTURE,
+            };
+
+            TextureLoadDesc loadDesc{};
+            loadDesc.pDesc = &textureDesc;
+            loadDesc.ppTexture = &vk_state.lightmap_textures[texture];
+
+            addResource(&loadDesc, &token);
+
+            waitForToken(&token);
+
+            TextureUpdateDesc updateDesc{
+                .pTexture = vk_state.lightmap_textures[texture],
+                .mBaseMipLevel = 0,
+                .mMipLevels = 1,
+                .mBaseArrayLayer = 0,
+                .mLayerCount = 1,
+                .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            };
+
+            beginUpdateResource(&updateDesc);
+
+            TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+            for (uint32_t r = 0; r < subresource.mRowCount; ++r)
+            {
+                memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+            }
+            endUpdateResource(&updateDesc);
+        }
+        if (++vk_lms.current_lightmap_texture == MAX_LIGHTMAPS)
+        {
+            LOGF(eERROR, "LM_UploadBlock() - MAX_LIGHTMAPS exceeded.");
+        }
+    }
 }
 
 // returns a texture number and the position inside it
@@ -1363,7 +1430,7 @@ void Vk_BeginBuildingLightmaps(model_t *m)
 
             TextureLoadDesc loadDesc{};
             loadDesc.pDesc = &textureDesc;
-            loadDesc.ppTexture = &vk_state.lightmap_textures[DYNLIGHTMAP_OFFSET];
+            loadDesc.ppTexture = &vk_state.lightmap_textures[i];
 
             addResource(&loadDesc, &token);
         }
