@@ -1352,7 +1352,7 @@ static void LM_UploadBlock(qboolean dynamic)
                 .pName = "sLightmap",
                 .ppTextures = &vk_state.lightmap_textures[texture],
             };
-            updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[texture], 1, &paramsTex);
+            updateDescriptorSet(pRenderer, 0, pDescriptorSetsLightMap[texture], 1, &paramsTex);
         }
         if (++vk_lms.current_lightmap_texture == MAX_LIGHTMAPS)
         {
