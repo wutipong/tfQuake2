@@ -344,86 +344,86 @@ R_DrawEntitiesOnList
 */
 void R_DrawEntitiesOnList(void)
 {
-    // int		i;
+    int i;
 
-    // if (!r_drawentities->value)
-    // 	return;
+    if (!r_drawentities->value)
+        return;
 
-    // // draw non-transparent first
-    // for (i = 0; i<r_newrefdef.num_entities; i++)
-    // {
-    // 	currententity = &r_newrefdef.entities[i];
-    // 	if (currententity->flags & RF_TRANSLUCENT)
-    // 		continue;	// solid
+    // draw non-transparent first
+    for (i = 0; i < r_newrefdef.num_entities; i++)
+    {
+        currententity = &r_newrefdef.entities[i];
+        if (currententity->flags & RF_TRANSLUCENT)
+            continue; // solid
 
-    // 	if (currententity->flags & RF_BEAM)
-    // 	{
-    // 		R_DrawBeam(currententity);
-    // 	}
-    // 	else
-    // 	{
-    // 		currentmodel = currententity->model;
-    // 		if (!currentmodel)
-    // 		{
-    // 			R_DrawNullModel();
-    // 			continue;
-    // 		}
-    // 		switch (currentmodel->type)
-    // 		{
-    // 		case mod_alias:
-    // 			R_DrawAliasModel(currententity);
-    // 			break;
-    // 		case mod_brush:
-    // 			R_DrawBrushModel(currententity);
-    // 			break;
-    // 		case mod_sprite:
-    // 			R_DrawSpriteModel(currententity);
-    // 			break;
-    // 		default:
-    // 			LOGF(eERROR, "Bad modeltype");
-    // 			break;
-    // 		}
-    // 	}
-    // }
+        if (currententity->flags & RF_BEAM)
+        {
+            R_DrawBeam(currententity);
+        }
+        else
+        {
+            currentmodel = currententity->model;
+            if (!currentmodel)
+            {
+                R_DrawNullModel();
+                continue;
+            }
+            switch (currentmodel->type)
+            {
+            case mod_alias:
+                R_DrawAliasModel(currententity);
+                break;
+            case mod_brush:
+                R_DrawBrushModel(currententity);
+                break;
+            case mod_sprite:
+                R_DrawSpriteModel(currententity);
+                break;
+            default:
+                LOGF(eERROR, "Bad modeltype");
+                break;
+            }
+        }
+    }
 
-    // // draw transparent entities
-    // // we could sort these if it ever becomes a problem...
-    // for (i = 0; i<r_newrefdef.num_entities; i++)
-    // {
-    // 	currententity = &r_newrefdef.entities[i];
-    // 	if (!(currententity->flags & RF_TRANSLUCENT))
-    // 		continue;	// solid
+    // draw transparent entities
+    // we could sort these if it ever becomes a problem...
+    for (i = 0; i < r_newrefdef.num_entities; i++)
+    {
+        currententity = &r_newrefdef.entities[i];
+        if (!(currententity->flags & RF_TRANSLUCENT))
+            continue; // solid
 
-    // 	if (currententity->flags & RF_BEAM)
-    // 	{
-    // 		R_DrawBeam(currententity);
-    // 	}
-    // 	else
-    // 	{
-    // 		currentmodel = currententity->model;
+        if (currententity->flags & RF_BEAM)
+        {
+            R_DrawBeam(currententity);
+        }
+        else
+        {
+            currentmodel = currententity->model;
 
-    // 		if (!currentmodel)
-    // 		{
-    // 			R_DrawNullModel();
-    // 			continue;
-    // 		}
-    // 		switch (currentmodel->type)
-    // 		{
-    // 		case mod_alias:
-    // 			R_DrawAliasModel(currententity);
-    // 			break;
-    // 		case mod_brush:
-    // 			R_DrawBrushModel(currententity);
-    // 			break;
-    // 		case mod_sprite:
-    // 			R_DrawSpriteModel(currententity);
-    // 			break;
-    // 		default:
-    // 			LOGF(eERROR, "Bad modeltype");
-    // 			break;
-    // 		}
-    // 	}
-    // }
+            if (!currentmodel)
+            {
+                R_DrawNullModel();
+                continue;
+            }
+            switch (currentmodel->type)
+            {
+            case mod_alias:
+                R_DrawAliasModel(currententity);
+                break;
+            case mod_brush:
+                R_DrawBrushModel(currententity);
+                break;
+            case mod_sprite:
+                R_DrawSpriteModel(currententity);
+                break;
+            default:
+                LOGF(eERROR, "Bad modeltype");
+                break;
+            }
+        }
+    }
 }
 
 /*
@@ -1090,7 +1090,7 @@ qboolean R_Init(/* void *hinstance, void *hWnd */)
 
     GRA_InitImages();
     Mod_Init();
-    // R_InitParticleTexture();
+    R_InitParticleTexture();
     Draw_InitLocal();
 
     return true;
@@ -1111,7 +1111,7 @@ void R_Shutdown(void)
 
     // vkDeviceWaitIdle(vk_device.logical);
 
-    // Mod_FreeAll();
+    Mod_FreeAll();
     GRA_ShutdownImages();
 
     // // Shutdown Vulkan subsystem
@@ -1290,91 +1290,108 @@ void R_SetPalette(const unsigned char *palette)
 */
 void R_DrawBeam(entity_t *e)
 {
-    // #define NUM_BEAM_SEGS 6
+#define NUM_BEAM_SEGS 6
 
-    // 	int	i;
-    // 	float r, g, b;
+    int i;
+    float r, g, b;
 
-    // 	vec3_t perpvec;
-    // 	vec3_t direction, normalized_direction;
-    // 	vec3_t	start_points[NUM_BEAM_SEGS], end_points[NUM_BEAM_SEGS];
-    // 	vec3_t oldorigin, origin;
+    vec3_t perpvec;
+    vec3_t direction, normalized_direction;
+    vec3_t start_points[NUM_BEAM_SEGS], end_points[NUM_BEAM_SEGS];
+    vec3_t oldorigin, origin;
 
-    // 	oldorigin[0] = e->oldorigin[0];
-    // 	oldorigin[1] = e->oldorigin[1];
-    // 	oldorigin[2] = e->oldorigin[2];
+    oldorigin[0] = e->oldorigin[0];
+    oldorigin[1] = e->oldorigin[1];
+    oldorigin[2] = e->oldorigin[2];
 
-    // 	origin[0] = e->origin[0];
-    // 	origin[1] = e->origin[1];
-    // 	origin[2] = e->origin[2];
+    origin[0] = e->origin[0];
+    origin[1] = e->origin[1];
+    origin[2] = e->origin[2];
 
-    // 	normalized_direction[0] = direction[0] = oldorigin[0] - origin[0];
-    // 	normalized_direction[1] = direction[1] = oldorigin[1] - origin[1];
-    // 	normalized_direction[2] = direction[2] = oldorigin[2] - origin[2];
+    normalized_direction[0] = direction[0] = oldorigin[0] - origin[0];
+    normalized_direction[1] = direction[1] = oldorigin[1] - origin[1];
+    normalized_direction[2] = direction[2] = oldorigin[2] - origin[2];
 
-    // 	if (VectorNormalize(normalized_direction) == 0)
-    // 		return;
+    if (VectorNormalize(normalized_direction) == 0)
+        return;
 
-    // 	PerpendicularVector(perpvec, normalized_direction);
-    // 	VectorScale(perpvec, e->frame / 2, perpvec);
+    PerpendicularVector(perpvec, normalized_direction);
+    VectorScale(perpvec, e->frame / 2, perpvec);
 
-    // 	for (i = 0; i < 6; i++)
-    // 	{
-    // 		RotatePointAroundVector(start_points[i], normalized_direction, perpvec, (360.0 / NUM_BEAM_SEGS)*i);
-    // 		VectorAdd(start_points[i], origin, start_points[i]);
-    // 		VectorAdd(start_points[i], direction, end_points[i]);
-    // 	}
+    for (i = 0; i < 6; i++)
+    {
+        RotatePointAroundVector(start_points[i], normalized_direction, perpvec, (360.0 / NUM_BEAM_SEGS) * i);
+        VectorAdd(start_points[i], origin, start_points[i]);
+        VectorAdd(start_points[i], direction, end_points[i]);
+    }
 
-    // 	r = (d_8to24table[e->skinnum & 0xFF]) & 0xFF;
-    // 	g = (d_8to24table[e->skinnum & 0xFF] >> 8) & 0xFF;
-    // 	b = (d_8to24table[e->skinnum & 0xFF] >> 16) & 0xFF;
+    r = (d_8to24table[e->skinnum & 0xFF]) & 0xFF;
+    g = (d_8to24table[e->skinnum & 0xFF] >> 8) & 0xFF;
+    b = (d_8to24table[e->skinnum & 0xFF] >> 16) & 0xFF;
 
-    // 	r *= 1 / 255.0F;
-    // 	g *= 1 / 255.0F;
-    // 	b *= 1 / 255.0F;
+    r *= 1 / 255.0F;
+    g *= 1 / 255.0F;
+    b *= 1 / 255.0F;
 
-    // 	float color[4] = { r, g, b, e->alpha };
+    float color[4] = {r, g, b, e->alpha};
 
-    // 	struct {
-    // 		float v[3];
-    // 	} beamvertex[NUM_BEAM_SEGS*4];
+    struct
+    {
+        float v[3];
+    } beamvertex[NUM_BEAM_SEGS * 4];
 
-    // 	for (i = 0; i < NUM_BEAM_SEGS; i++)
-    // 	{
-    // 		int idx = i * 4;
-    // 		beamvertex[idx].v[0] = start_points[i][0];
-    // 		beamvertex[idx].v[1] = start_points[i][1];
-    // 		beamvertex[idx].v[2] = start_points[i][2];
+    for (i = 0; i < NUM_BEAM_SEGS; i++)
+    {
+        int idx = i * 4;
+        beamvertex[idx].v[0] = start_points[i][0];
+        beamvertex[idx].v[1] = start_points[i][1];
+        beamvertex[idx].v[2] = start_points[i][2];
 
-    // 		beamvertex[idx + 1].v[0] = end_points[i][0];
-    // 		beamvertex[idx + 1].v[1] = end_points[i][1];
-    // 		beamvertex[idx + 1].v[2] = end_points[i][2];
+        beamvertex[idx + 1].v[0] = end_points[i][0];
+        beamvertex[idx + 1].v[1] = end_points[i][1];
+        beamvertex[idx + 1].v[2] = end_points[i][2];
 
-    // 		beamvertex[idx + 2].v[0] = start_points[(i + 1) % NUM_BEAM_SEGS][0];
-    // 		beamvertex[idx + 2].v[1] = start_points[(i + 1) % NUM_BEAM_SEGS][1];
-    // 		beamvertex[idx + 2].v[2] = start_points[(i + 1) % NUM_BEAM_SEGS][2];
+        beamvertex[idx + 2].v[0] = start_points[(i + 1) % NUM_BEAM_SEGS][0];
+        beamvertex[idx + 2].v[1] = start_points[(i + 1) % NUM_BEAM_SEGS][1];
+        beamvertex[idx + 2].v[2] = start_points[(i + 1) % NUM_BEAM_SEGS][2];
 
-    // 		beamvertex[idx + 3].v[0] = end_points[(i + 1) % NUM_BEAM_SEGS][0];
-    // 		beamvertex[idx + 3].v[1] = end_points[(i + 1) % NUM_BEAM_SEGS][1];
-    // 		beamvertex[idx + 3].v[2] = end_points[(i + 1) % NUM_BEAM_SEGS][2];
-    // 	}
+        beamvertex[idx + 3].v[0] = end_points[(i + 1) % NUM_BEAM_SEGS][0];
+        beamvertex[idx + 3].v[1] = end_points[(i + 1) % NUM_BEAM_SEGS][1];
+        beamvertex[idx + 3].v[2] = end_points[(i + 1) % NUM_BEAM_SEGS][2];
+    }
 
-    // 	QVk_BindPipeline(&vk_drawBeamPipeline);
+    cmdBindPipeline(pCmd, drawBeamPipeline);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
-    // 	VkBuffer vbo;
-    // 	VkDeviceSize vboOffset;
-    // 	uint32_t uboOffset;
-    // 	VkDescriptorSet uboDescriptorSet;
-    // 	uint8_t *vertData = QVk_GetVertexBuffer(sizeof(beamvertex), &vbo, &vboOffset);
-    // 	uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(color), &uboOffset, &uboDescriptorSet);
-    // 	memcpy(vertData, beamvertex, sizeof(beamvertex));
-    // 	memcpy(uboData,  color, sizeof(color));
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(beamvertex));
+    {
+        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
-    // 	vkCmdPushConstants(vk_activeCmdbuffer, vk_drawBeamPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); 	vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawBeamPipeline.layout, 0, 1, &uboDescriptorSet, 1, &uboOffset);
-    // 	vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 	vkCmdDraw(vk_activeCmdbuffer, NUM_BEAM_SEGS * 4, 1, 0, 0);
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, beamvertex, sizeof(beamvertex));
+        endUpdateResource(&updateDesc);
+    }
+
+    constexpr uint32_t stride = sizeof(float) * 3;
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
+        endUpdateResource(&updateDesc);
+    }
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+
+    cmdDraw(pCmd, NUM_BEAM_SEGS * 4, 0);
 }
 
 //===================================================================

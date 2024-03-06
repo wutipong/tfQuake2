@@ -248,6 +248,7 @@ add_executable(tf-quake2-main
     "src/gra_model.h"
     "src/gra_warp.cpp"
     "src/gra_rsurf.cpp"
+    "src/gra_rmisc.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
