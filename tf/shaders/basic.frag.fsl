@@ -7,6 +7,7 @@ STRUCT(VSOutput)
 };
 
 RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 1);
+RES(Tex2D(float4), sLightmap, UPDATE_FREQ_NONE, t2, binding = 2);
 RES(SamplerState,  textureSampler, UPDATE_FREQ_NONE, s0, binding = 0);
 
 float4 PS_MAIN( VSOutput In )
