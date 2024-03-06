@@ -752,15 +752,16 @@ void R_DrawInlineBModel(float *modelMatrix)
     dlight_t *lt;
     float alpha = 1.f;
 
-    // calculate dynamic lighting for bmodel
-    // if (!vk_flashblend->value)
-    // {
-    // 	lt = r_newrefdef.dlights;
-    // 	for (k = 0; k<r_newrefdef.num_dlights; k++, lt++)
-    // 	{
-    // 		R_MarkLights(lt, 1 << k, currentmodel->nodes + currentmodel->firstnode);
-    // 	}
-    // }
+    //calculate dynamic lighting for bmodel
+    
+    if (!vk_flashblend->value)
+    {
+    	lt = r_newrefdef.dlights;
+    	for (k = 0; k<r_newrefdef.num_dlights; k++, lt++)
+    	{
+    		R_MarkLights(lt, 1 << k, currentmodel->nodes + currentmodel->firstnode);
+    	}
+    }
 
     psurf = &currentmodel->surfaces[currentmodel->firstmodelsurface];
 

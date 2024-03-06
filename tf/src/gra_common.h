@@ -6,6 +6,7 @@
 #include <IApp.h>
 #include <IGraphics.h>
 #include <RingBuffer.h>
+#include <IProfiler.h>
 
 enum class RenderPass
 {
@@ -70,5 +71,7 @@ extern Buffer *colorRectVbo;
 extern Buffer *rectIbo;
 
 extern uint32_t gPushConstant;
+
+extern ProfileToken gGpuProfileToken;
 
 #endif

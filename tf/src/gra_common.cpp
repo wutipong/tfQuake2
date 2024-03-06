@@ -6,8 +6,8 @@
 #include <IGraphics.h>
 #include <IProfiler.h>
 #include <IScreenshot.h>
-#include <IUI.h>
 #include <ITime.h>
+#include <IUI.h>
 
 const uint32_t gDataBufferCount = 2;
 
@@ -143,8 +143,6 @@ bool GRA_InitGraphics(IApp *app)
     ibDesc.mSize = 65536;
     ibDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
     addGPURingBuffer(pRenderer, &vbDesc, &dynamicIndexBuffer);
-
-
 
     SamplerDesc samplerDesc = {
         .mMinFilter = FILTER_NEAREST,
@@ -1198,19 +1196,19 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
 
-void GRA_FillTriangleFanIbo(void* buffer, size_t size)
+void GRA_FillTriangleFanIbo(void *buffer, size_t size)
 {
-	int idx = 0;
-	VkDeviceSize dstOffset = 0;
-	VkDeviceSize bufferSize = 3 * vk_config.triangle_fan_index_count * sizeof(uint32_t);
-    uint32_t count = size/ (sizeof(uint32_t) * 3);
-	uint32_t *fanData = (uint32_t*) buffer;
+    int idx = 0;
+    VkDeviceSize dstOffset = 0;
+    VkDeviceSize bufferSize = 3 * vk_config.triangle_fan_index_count * sizeof(uint32_t);
+    uint32_t count = size / (sizeof(uint32_t) * 3);
+    uint32_t *fanData = (uint32_t *)buffer;
 
-	// fill the index buffer so that we can emulate triangle fans via triangle lists
-	for (int i = 0; i < count; ++i)
-	{
-		fanData[idx++] = 0;
-		fanData[idx++] = i + 1;
-		fanData[idx++] = i + 2;
-	}
+    // fill the index buffer so that we can emulate triangle fans via triangle lists
+    for (int i = 0; i < count; ++i)
+    {
+        fanData[idx++] = 0;
+        fanData[idx++] = i + 1;
+        fanData[idx++] = i + 2;
+    }
 }

@@ -220,7 +220,7 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float 
 void R_AddSkySurface(msurface_t *fa);
 void R_ClearSkyBox(void);
 void R_DrawSkyBox(void);
-// void R_MarkLights(dlight_t *light, int bit, mnode_t *node);
+void R_MarkLights(dlight_t *light, int bit, mnode_t *node);
 
 void COM_StripExtension(char *in, char *out);
 

@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // vk_light.c
 
+#include "gra_common.h"
 #include "gra_local.h"
 
 int r_dlightframecount;
@@ -38,6 +39,7 @@ DYNAMIC LIGHTS BLEND RENDERING
 
 void R_RenderDlight(dlight_t *light)
 {
+    cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "R_RenderDlight");
     int i, j;
     float a;
     float rad;
@@ -67,23 +69,49 @@ void R_RenderDlight(dlight_t *light)
         }
     }
 
-    /*
-        QVk_BindPipeline(&vk_drawDLightPipeline);
+    cmdBindPipeline(pCmd, drawDLightPipeline);
 
-        VkBuffer vbo;
-        VkDeviceSize vboOffset;
-        uint32_t uboOffset;
-        VkDescriptorSet uboDescriptorSet;
-        uint8_t *vertData = QVk_GetVertexBuffer(sizeof(lightVerts), &vbo, &vboOffset);
-        uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(r_viewproj_matrix), &uboOffset, &uboDescriptorSet);
-        memcpy(vertData, lightVerts, sizeof(lightVerts));
-        memcpy(uboData,  r_viewproj_matrix, sizeof(r_viewproj_matrix));
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lightVerts));
+    {
+        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
-        vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-        vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawDLightPipeline.layout, 0, 1,
-       &uboDescriptorSet, 1, &uboOffset); vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(48), 0,
-       VK_INDEX_TYPE_UINT16); vkCmdDrawIndexed(vk_activeCmdbuffer, 48, 1, 0, 0, 0);
-    */
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, lightVerts, sizeof(lightVerts));
+        endUpdateResource(&updateDesc);
+    }
+    uint32_t stride = sizeof(float) * 6;
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(r_viewproj_matrix));
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, r_viewproj_matrix, sizeof(r_viewproj_matrix));
+        endUpdateResource(&updateDesc);
+    }
+
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+
+    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, 48 * 3 * sizeof(uint32_t));
+    {
+        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        GRA_FillTriangleFanIbo(updateDesc.pMappedData, 48 * 3 * sizeof(uint32_t));
+        endUpdateResource(&updateDesc);
+    }
+    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
+
+    cmdDrawIndexed(pCmd, 48, 0, 0);
+
+    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
 }
 
 /*
