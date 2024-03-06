@@ -326,8 +326,7 @@ void R_DrawTriangleOutlines(void)
                     triVert[3].v[2] = p->verts[0][2];
                     memcpy(triVert[3].color, color, sizeof(color));
 
-                    GPURingBufferOffset vertexBuffer =
-                        getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(triVert));
+                    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(triVert));
                     {
                         BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
@@ -336,7 +335,7 @@ void R_DrawTriangleOutlines(void)
                         endUpdateResource(&updateDesc);
                     }
 
-                    uint32_t stride = sizeof(float) *6;
+                    uint32_t stride = sizeof(float) * 6;
                     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
                     cmdDraw(pCmd, 4, 0);
                 }
@@ -1305,7 +1304,7 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
         }
         else
@@ -1345,7 +1344,7 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
 
             DescriptorData paramsTex = {
