@@ -78,6 +78,7 @@ Cmd *pCmd;
 
 DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES] = {NULL};
 DescriptorSet *pDescriptorSetUniforms = {NULL};
+DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2] = {NULL};
 
 Buffer *texRectVbo;
 Buffer *colorRectVbo;
@@ -1090,6 +1091,12 @@ bool _addDescriptorSets()
     DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
     addDescriptorSet(pRenderer, &desc, &pDescriptorSetUniforms);
 
+    for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
+    {
+        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+        addDescriptorSet(pRenderer, &desc, &pDescriptorSetsLightMap[i]);
+    }
+
     return true;
 }
 
@@ -1102,6 +1109,10 @@ bool _removeDescriptorSets()
 
     removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
 
+    for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
+    {
+        removeDescriptorSet(pRenderer, pDescriptorSetsLightMap[i]);
+    }
     return true;
 }
 

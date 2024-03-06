@@ -28,6 +28,7 @@ void GRA_FillTriangleFanIbo(void* buffer, size_t size);
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
 void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
 
+extern Renderer *pRenderer;
 extern Sampler *pSampler;
 extern image_t vktextures[MAX_VKTEXTURES];
 // render pipelines
@@ -64,7 +65,8 @@ extern GPURingBuffer dynamicIndexBuffer;
 extern Cmd *pCmd;
 
 extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
-extern DescriptorSet *pDescriptorSetUniforms ;
+extern DescriptorSet *pDescriptorSetUniforms;
+extern DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2];
 
 extern Buffer *texRectVbo;
 extern Buffer *colorRectVbo;

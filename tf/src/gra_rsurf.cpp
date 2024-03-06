@@ -276,54 +276,73 @@ void R_DrawTriangleOutlines(void)
         float color[3];
     } triVert[4];
 
-    // cmdBindPipeline(pCmd, showTrisPipeline);
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *uboData = QVk_GetUniformBuffer(sizeof(r_viewproj_matrix), &uboOffset, &uboDescriptorSet);
-    // memcpy(uboData, r_viewproj_matrix, sizeof(r_viewproj_matrix));
-    // vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_showTrisPipeline.layout, 0, 1,
-    //                         &uboDescriptorSet, 1, &uboOffset);
+    cmdBindPipeline(pCmd, showTrisPipeline);
 
-    // for (i = 0; i < MAX_LIGHTMAPS; i++)
-    // {
-    //     msurface_t *surf;
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    //     for (surf = vk_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain)
-    //     {
-    //         p = surf->polys;
-    //         for (; p; p = p->chain)
-    //         {
-    //             for (j = 2, k = 0; j < p->numverts; j++, k++)
-    //             {
-    //                 triVert[0].v[0] = p->verts[0][0];
-    //                 triVert[0].v[1] = p->verts[0][1];
-    //                 triVert[0].v[2] = p->verts[0][2];
-    //                 memcpy(triVert[0].color, color, sizeof(color));
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
+        endUpdateResource(&updateDesc);
+    }
 
-    //                 triVert[1].v[0] = p->verts[j - 1][0];
-    //                 triVert[1].v[1] = p->verts[j - 1][1];
-    //                 triVert[1].v[2] = p->verts[j - 1][2];
-    //                 memcpy(triVert[1].color, color, sizeof(color));
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
 
-    //                 triVert[2].v[0] = p->verts[j][0];
-    //                 triVert[2].v[1] = p->verts[j][1];
-    //                 triVert[2].v[2] = p->verts[j][2];
-    //                 memcpy(triVert[2].color, color, sizeof(color));
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 
-    //                 triVert[3].v[0] = p->verts[0][0];
-    //                 triVert[3].v[1] = p->verts[0][1];
-    //                 triVert[3].v[2] = p->verts[0][2];
-    //                 memcpy(triVert[3].color, color, sizeof(color));
+    for (i = 0; i < MAX_LIGHTMAPS; i++)
+    {
+        msurface_t *surf;
 
-    //                 uint8_t *vertData = QVk_GetVertexBuffer(sizeof(triVert), &vbo, &vboOffset);
-    //                 memcpy(vertData, triVert, sizeof(triVert));
+        for (surf = vk_lms.lightmap_surfaces[i]; surf != 0; surf = surf->lightmapchain)
+        {
+            p = surf->polys;
+            for (; p; p = p->chain)
+            {
+                for (j = 2, k = 0; j < p->numverts; j++, k++)
+                {
+                    triVert[0].v[0] = p->verts[0][0];
+                    triVert[0].v[1] = p->verts[0][1];
+                    triVert[0].v[2] = p->verts[0][2];
+                    memcpy(triVert[0].color, color, sizeof(color));
 
-    //                 vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    //                 vkCmdDraw(vk_activeCmdbuffer, 4, 1, 0, 0);
-    //             }
-    //         }
-    //     }
-    // }
+                    triVert[1].v[0] = p->verts[j - 1][0];
+                    triVert[1].v[1] = p->verts[j - 1][1];
+                    triVert[1].v[2] = p->verts[j - 1][2];
+                    memcpy(triVert[1].color, color, sizeof(color));
+
+                    triVert[2].v[0] = p->verts[j][0];
+                    triVert[2].v[1] = p->verts[j][1];
+                    triVert[2].v[2] = p->verts[j][2];
+                    memcpy(triVert[2].color, color, sizeof(color));
+
+                    triVert[3].v[0] = p->verts[0][0];
+                    triVert[3].v[1] = p->verts[0][1];
+                    triVert[3].v[2] = p->verts[0][2];
+                    memcpy(triVert[3].color, color, sizeof(color));
+
+                    GPURingBufferOffset vertexBuffer =
+                        getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(triVert));
+                    {
+                        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+                        beginUpdateResource(&updateDesc);
+                        memcpy(updateDesc.pMappedData, triVert, sizeof(triVert));
+                        endUpdateResource(&updateDesc);
+                    }
+
+                    uint32_t stride = sizeof(float) *6;
+                    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+                    cmdDraw(pCmd, 4, 0);
+                }
+            }
+        }
+    }
 }
 
 /*
@@ -359,58 +378,70 @@ void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha)
     // PGM
     //======
 
-    // /*
-    // ** check for lightmap modification
-    // */
-    // for (maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++)
-    // {
-    // 	if (r_newrefdef.lightstyles[fa->styles[maps]].white != fa->cached_light[maps])
-    // 		goto dynamic;
-    // }
+    /*
+    ** check for lightmap modification
+    */
+    for (maps = 0; maps < MAXLIGHTMAPS && fa->styles[maps] != 255; maps++)
+    {
+        if (r_newrefdef.lightstyles[fa->styles[maps]].white != fa->cached_light[maps])
+            goto dynamic;
+    }
 
-    // // dynamic this frame or dynamic previously
-    // if (fa->dlightframe == r_framecount)
-    // {
-    // dynamic:
-    // 	if (vk_dynamic->value)
-    // 	{
-    // 		if (!(fa->texinfo->flags & (SURF_SKY | SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)))
-    // 		{
-    // 			is_dynamic = true;
-    // 		}
-    // 	}
-    // }
+    // dynamic this frame or dynamic previously
+    if (fa->dlightframe == r_framecount)
+    {
+    dynamic:
+        if (vk_dynamic->value)
+        {
+            if (!(fa->texinfo->flags & (SURF_SKY | SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)))
+            {
+                is_dynamic = true;
+            }
+        }
+    }
 
-    // if (is_dynamic)
-    // {
-    // 	if ((fa->styles[maps] >= 32 || fa->styles[maps] == 0) && (fa->dlightframe != r_framecount))
-    // 	{
-    // 		unsigned	temp[34 * 34];
-    // 		int			smax, tmax;
+    if (is_dynamic)
+    {
+        if ((fa->styles[maps] >= 32 || fa->styles[maps] == 0) && (fa->dlightframe != r_framecount))
+        {
+            unsigned temp[34 * 34];
+            int smax, tmax;
 
-    // 		smax = (fa->extents[0] >> 4) + 1;
-    // 		tmax = (fa->extents[1] >> 4) + 1;
+            smax = (fa->extents[0] >> 4) + 1;
+            tmax = (fa->extents[1] >> 4) + 1;
 
-    // 		R_BuildLightMap(fa, (void *)temp, smax * 4);
-    // 		R_SetCacheState(fa);
+            R_BuildLightMap(fa, (byte *)temp, smax * 4);
+            R_SetCacheState(fa);
 
-    // 		QVk_UpdateTextureData(&vk_state.lightmap_textures[fa->lightmaptexturenum], (unsigned char*)temp,
-    // fa->light_s, fa->light_t, smax, tmax);
+            TextureUpdateDesc updateDesc{
+                .pTexture = vk_state.lightmap_textures[fa->lightmaptexturenum],
+                .mBaseMipLevel = 0,
+                .mMipLevels = 1,
+                .mBaseArrayLayer = 0,
+                .mLayerCount = 1,
+                .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            };
 
-    // 		fa->lightmapchain = vk_lms.lightmap_surfaces[fa->lightmaptexturenum];
-    // 		vk_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
-    // 	}
-    // 	else
-    // 	{
-    // 		fa->lightmapchain = vk_lms.lightmap_surfaces[0];
-    // 		vk_lms.lightmap_surfaces[0] = fa;
-    // 	}
-    // }
-    // else
-    // {
-    // 	fa->lightmapchain = vk_lms.lightmap_surfaces[fa->lightmaptexturenum];
-    // 	vk_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
-    // }
+            beginUpdateResource(&updateDesc);
+
+            TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+            memcpy(subresource.pMappedData, (unsigned char *)temp, sizeof(temp));
+            endUpdateResource(&updateDesc);
+
+            fa->lightmapchain = vk_lms.lightmap_surfaces[fa->lightmaptexturenum];
+            vk_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
+        }
+        else
+        {
+            fa->lightmapchain = vk_lms.lightmap_surfaces[0];
+            vk_lms.lightmap_surfaces[0] = fa;
+        }
+    }
+    else
+    {
+        fa->lightmapchain = vk_lms.lightmap_surfaces[fa->lightmaptexturenum];
+        vk_lms.lightmap_surfaces[fa->lightmaptexturenum] = fa;
+    }
 }
 
 /*
@@ -499,243 +530,344 @@ void DrawTextureChains(void)
 
 static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float alpha)
 {
-    // int		i, nv = surf->polys->numverts;
-    // int		map;
-    // float	*v;
-    // image_t *image = R_TextureAnimation(surf->texinfo);
-    // qboolean is_dynamic = false;
-    // unsigned lmtex = surf->lightmaptexturenum;
-    // vkpoly_t *p;
+    int i, nv = surf->polys->numverts;
+    int map;
+    float *v;
+    image_t *image = R_TextureAnimation(surf->texinfo);
+    qboolean is_dynamic = false;
+    unsigned lmtex = surf->lightmaptexturenum;
+    vkpoly_t *p;
 
-    // typedef struct {
-    // 	float vertex[3];
-    // 	float texCoord[2];
-    // 	float texCoordLmap[2];
-    // } lmappolyvert;
+    typedef struct
+    {
+        float vertex[3];
+        float texCoord[2];
+        float texCoordLmap[2];
+    } lmappolyvert;
 
-    // static lmappolyvert verts[MAX_VERTS];
+    static lmappolyvert verts[MAX_VERTS];
 
-    // struct {
-    // 	float model[16];
-    // 	float viewLightmaps;
-    // } lmapPolyUbo;
+    struct
+    {
+        float model[16];
+        float viewLightmaps;
+    } lmapPolyUbo;
 
-    // lmapPolyUbo.viewLightmaps = vk_lightmap->value ? 1.f : 0.f;
+    lmapPolyUbo.viewLightmaps = vk_lightmap->value ? 1.f : 0.f;
 
-    // if (modelMatrix)
-    // {
-    // 	memcpy(lmapPolyUbo.model, modelMatrix, sizeof(float) * 16);
-    // }
-    // else
-    // {
-    // 	Mat_Identity(lmapPolyUbo.model);
-    // }
+    if (modelMatrix)
+    {
+        memcpy(lmapPolyUbo.model, modelMatrix, sizeof(float) * 16);
+    }
+    else
+    {
+        Mat_Identity(lmapPolyUbo.model);
+    }
 
-    // QVk_BindPipeline(&vk_drawPolyLmapPipeline);
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawPolyLmapPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix);
+    cmdBindPipeline(pCmd, drawPolyLmapPipeline);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *uboData = QVk_GetUniformBuffer(sizeof(lmapPolyUbo), &uboOffset, &uboDescriptorSet);
-    // memcpy(uboData, &lmapPolyUbo, sizeof(lmapPolyUbo));
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(lmapPolyUbo));
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    // for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
-    // {
-    // 	if (r_newrefdef.lightstyles[surf->styles[map]].white != surf->cached_light[map])
-    // 		goto dynamic;
-    // }
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, &lmapPolyUbo, sizeof(lmapPolyUbo));
+        endUpdateResource(&updateDesc);
+    }
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(lmapPolyUbo)};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
 
-    // // dynamic this frame or dynamic previously
-    // if (surf->dlightframe == r_framecount)
-    // {
-    // dynamic:
-    // 	if (vk_dynamic->value)
-    // 	{
-    // 		if (!(surf->texinfo->flags & (SURF_SKY | SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)))
-    // 		{
-    // 			is_dynamic = true;
-    // 		}
-    // 	}
-    // }
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 
-    // if (is_dynamic)
-    // {
-    // 	unsigned	temp[128 * 128];
-    // 	int			smax, tmax;
+    for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
+    {
+        if (r_newrefdef.lightstyles[surf->styles[map]].white != surf->cached_light[map])
+            goto dynamic;
+    }
 
-    // 	if ((surf->styles[map] >= 32 || surf->styles[map] == 0) && (surf->dlightframe != r_framecount))
-    // 	{
-    // 		smax = (surf->extents[0] >> 4) + 1;
-    // 		tmax = (surf->extents[1] >> 4) + 1;
+    // dynamic this frame or dynamic previously
+    if (surf->dlightframe == r_framecount)
+    {
+    dynamic:
+        if (vk_dynamic->value)
+        {
+            if (!(surf->texinfo->flags & (SURF_SKY | SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)))
+            {
+                is_dynamic = true;
+            }
+        }
+    }
 
-    // 		R_BuildLightMap(surf, (void *)temp, smax * 4);
-    // 		R_SetCacheState(surf);
+    if (is_dynamic)
+    {
+        unsigned temp[128 * 128];
+        int smax, tmax;
 
-    // 		lmtex = surf->lightmaptexturenum;
-    // 		QVk_UpdateTextureData(&vk_state.lightmap_textures[surf->lightmaptexturenum], (unsigned char *)temp,
-    // surf->light_s, surf->light_t, smax, tmax);
-    // 	}
-    // 	else
-    // 	{
-    // 		smax = (surf->extents[0] >> 4) + 1;
-    // 		tmax = (surf->extents[1] >> 4) + 1;
+        if ((surf->styles[map] >= 32 || surf->styles[map] == 0) && (surf->dlightframe != r_framecount))
+        {
+            smax = (surf->extents[0] >> 4) + 1;
+            tmax = (surf->extents[1] >> 4) + 1;
 
-    // 		R_BuildLightMap(surf, (void *)temp, smax * 4);
+            R_BuildLightMap(surf, (byte *)temp, smax * 4);
+            R_SetCacheState(surf);
 
-    // 		lmtex = surf->lightmaptexturenum + DYNLIGHTMAP_OFFSET;
-    // 		QVk_UpdateTextureData(&vk_state.lightmap_textures[lmtex], (unsigned char *)temp, surf->light_s,
-    // surf->light_t, smax, tmax);
-    // 	}
+            lmtex = surf->lightmaptexturenum;
 
-    // 	c_brush_polys++;
+            TextureUpdateDesc updateDesc{
+                .pTexture = vk_state.lightmap_textures[surf->lightmaptexturenum],
+                .mBaseMipLevel = 0,
+                .mMipLevels = 1,
+                .mBaseArrayLayer = 0,
+                .mLayerCount = 1,
+                .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            };
 
-    // 	//==========
-    // 	//PGM
-    // 	if (surf->texinfo->flags & SURF_FLOWING)
-    // 	{
-    // 		float scroll;
+            beginUpdateResource(&updateDesc);
 
-    // 		scroll = -64 * ((r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0));
-    // 		if (scroll == 0.0)
-    // 			scroll = -64.0;
+            TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+            memcpy(subresource.pMappedData, (unsigned char *)temp, sizeof(temp));
+            endUpdateResource(&updateDesc);
+        }
+        else
+        {
+            smax = (surf->extents[0] >> 4) + 1;
+            tmax = (surf->extents[1] >> 4) + 1;
 
-    // 		VkBuffer vbo;
-    // 		VkDeviceSize vboOffset;
-    // 		VkDescriptorSet descriptorSets[] = { image->vk_texture.descriptorSet, uboDescriptorSet,
-    // vk_state.lightmap_textures[lmtex].descriptorSet }; 		vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyLmapPipeline.layout, 0, 3, descriptorSets, 1, &uboOffset);
+            R_BuildLightMap(surf, (byte *)temp, smax * 4);
 
-    // 		for (p = surf->polys; p; p = p->chain)
-    // 		{
-    // 			v = p->verts[0];
-    // 			for (i = 0; i < nv; i++, v += VERTEXSIZE)
-    // 			{
-    // 				verts[i].vertex[0] = v[0];
-    // 				verts[i].vertex[1] = v[1];
-    // 				verts[i].vertex[2] = v[2];
-    // 				verts[i].texCoord[0] = v[3] + scroll;
-    // 				verts[i].texCoord[1] = v[4];
-    // 				verts[i].texCoordLmap[0] = v[5];
-    // 				verts[i].texCoordLmap[1] = v[6];
-    // 			}
+            lmtex = surf->lightmaptexturenum + DYNLIGHTMAP_OFFSET;
+            TextureUpdateDesc updateDesc{
+                .pTexture = vk_state.lightmap_textures[lmtex],
+                .mBaseMipLevel = 0,
+                .mMipLevels = 1,
+                .mBaseArrayLayer = 0,
+                .mLayerCount = 1,
+                .mCurrentState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+            };
 
-    // 			uint8_t *vertData = QVk_GetVertexBuffer(sizeof(lmappolyvert) * nv, &vbo, &vboOffset);
-    // 			memcpy(vertData, verts, sizeof(lmappolyvert) * nv);
+            beginUpdateResource(&updateDesc);
 
-    // 			vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((nv - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-    // 			vkCmdDrawIndexed(vk_activeCmdbuffer, (nv - 2) * 3, 1, 0, 0, 0);
-    // 		}
-    // 	}
-    // 	else
-    // 	{
-    // 		VkBuffer vbo;
-    // 		VkDeviceSize vboOffset;
-    // 		VkDescriptorSet descriptorSets[] = { image->vk_texture.descriptorSet, uboDescriptorSet,
-    // vk_state.lightmap_textures[lmtex].descriptorSet }; 		vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyLmapPipeline.layout, 0, 3, descriptorSets, 1, &uboOffset);
+            TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
+            memcpy(subresource.pMappedData, (unsigned char *)temp, sizeof(temp));
+            endUpdateResource(&updateDesc);
+        }
 
-    // 		for (p = surf->polys; p; p = p->chain)
-    // 		{
-    // 			v = p->verts[0];
-    // 			for (i = 0; i < nv; i++, v += VERTEXSIZE)
-    // 			{
-    // 				verts[i].vertex[0] = v[0];
-    // 				verts[i].vertex[1] = v[1];
-    // 				verts[i].vertex[2] = v[2];
-    // 				verts[i].texCoord[0] = v[3];
-    // 				verts[i].texCoord[1] = v[4];
-    // 				verts[i].texCoordLmap[0] = v[5];
-    // 				verts[i].texCoordLmap[1] = v[6];
-    // 			}
+        c_brush_polys++;
 
-    // 			uint8_t *vertData = QVk_GetVertexBuffer(sizeof(lmappolyvert) * nv, &vbo, &vboOffset);
-    // 			memcpy(vertData, verts, sizeof(lmappolyvert) * nv);
+        //==========
+        // PGM
+        if (surf->texinfo->flags & SURF_FLOWING)
+        {
+            float scroll;
 
-    // 			vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((nv - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-    // 			vkCmdDrawIndexed(vk_activeCmdbuffer, (nv - 2) * 3, 1, 0, 0, 0);
-    // 		}
-    // 	}
-    // 	//PGM
-    // 	//==========
-    // }
-    // else
-    // {
-    // 	c_brush_polys++;
+            scroll = -64 * ((r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0));
+            if (scroll == 0.0)
+                scroll = -64.0;
 
-    // 	//==========
-    // 	//PGM
-    // 	if (surf->texinfo->flags & SURF_FLOWING)
-    // 	{
-    // 		float scroll;
+            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
 
-    // 		scroll = -64 * ((r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0));
-    // 		if (scroll == 0.0)
-    // 			scroll = -64.0;
+            for (p = surf->polys; p; p = p->chain)
+            {
+                v = p->verts[0];
+                for (i = 0; i < nv; i++, v += VERTEXSIZE)
+                {
+                    verts[i].vertex[0] = v[0];
+                    verts[i].vertex[1] = v[1];
+                    verts[i].vertex[2] = v[2];
+                    verts[i].texCoord[0] = v[3] + scroll;
+                    verts[i].texCoord[1] = v[4];
+                    verts[i].texCoordLmap[0] = v[5];
+                    verts[i].texCoordLmap[1] = v[6];
+                }
 
-    // 		for (p = surf->polys; p; p = p->chain)
-    // 		{
-    // 			v = p->verts[0];
-    // 			for (i = 0; i < nv; i++, v += VERTEXSIZE)
-    // 			{
-    // 				verts[i].vertex[0] = v[0];
-    // 				verts[i].vertex[1] = v[1];
-    // 				verts[i].vertex[2] = v[2];
-    // 				verts[i].texCoord[0] = v[3] + scroll;
-    // 				verts[i].texCoord[1] = v[4];
-    // 				verts[i].texCoordLmap[0] = v[5];
-    // 				verts[i].texCoordLmap[1] = v[6];
-    // 			}
-    // 			VkBuffer vbo;
-    // 			VkDeviceSize vboOffset;
-    // 			uint8_t *vertData = QVk_GetVertexBuffer(sizeof(lmappolyvert) * nv, &vbo, &vboOffset);
-    // 			memcpy(vertData, verts, sizeof(lmappolyvert) * nv);
+                GPURingBufferOffset vertexBuffer =
+                    getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lmappolyvert) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
-    // 			VkDescriptorSet descriptorSets[] = { image->vk_texture.descriptorSet, uboDescriptorSet,
-    // vk_state.lightmap_textures[lmtex].descriptorSet }; 			vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyLmapPipeline.layout, 0, 3, descriptorSets, 1, &uboOffset);
-    // 			vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((nv - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-    // 			vkCmdDrawIndexed(vk_activeCmdbuffer, (nv - 2) * 3, 1, 0, 0, 0);
-    // 		}
-    // 	}
-    // 	else
-    // 	{
-    // 		//PGM
-    // 		//==========
-    // 		for (p = surf->polys; p; p = p->chain)
-    // 		{
-    // 			v = p->verts[0];
-    // 			for (i = 0; i < nv; i++, v += VERTEXSIZE)
-    // 			{
-    // 				verts[i].vertex[0] = v[0];
-    // 				verts[i].vertex[1] = v[1];
-    // 				verts[i].vertex[2] = v[2];
-    // 				verts[i].texCoord[0] = v[3];
-    // 				verts[i].texCoord[1] = v[4];
-    // 				verts[i].texCoordLmap[0] = v[5];
-    // 				verts[i].texCoordLmap[1] = v[6];
-    // 			}
-    // 			VkBuffer vbo;
-    // 			VkDeviceSize vboOffset;
-    // 			uint8_t *vertData = QVk_GetVertexBuffer(sizeof(lmappolyvert) * nv, &vbo, &vboOffset);
-    // 			memcpy(vertData, verts, sizeof(lmappolyvert) * nv);
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, verts, sizeof(lmappolyvert) * nv);
+                    endUpdateResource(&updateDesc);
+                }
 
-    // 			VkDescriptorSet descriptorSets[] = { image->vk_texture.descriptorSet, uboDescriptorSet,
-    // vk_state.lightmap_textures[lmtex].descriptorSet }; 			vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyLmapPipeline.layout, 0, 3, descriptorSets, 1, &uboOffset);
-    // 			vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 			vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((nv - 2) * 3), 0, VK_INDEX_TYPE_UINT16);
-    // 			vkCmdDrawIndexed(vk_activeCmdbuffer, (nv - 2) * 3, 1, 0, 0, 0);
-    // 		}
-    // 		//==========
-    // 		//PGM
-    // 	}
-    // 	//PGM
-    // 	//==========
-    // }
+                constexpr uint32_t stride = sizeof(float) * 7;
+                cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
+
+                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+            }
+        }
+        else
+        {
+            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+
+            for (p = surf->polys; p; p = p->chain)
+            {
+                v = p->verts[0];
+                for (i = 0; i < nv; i++, v += VERTEXSIZE)
+                {
+                    verts[i].vertex[0] = v[0];
+                    verts[i].vertex[1] = v[1];
+                    verts[i].vertex[2] = v[2];
+                    verts[i].texCoord[0] = v[3];
+                    verts[i].texCoord[1] = v[4];
+                    verts[i].texCoordLmap[0] = v[5];
+                    verts[i].texCoordLmap[1] = v[6];
+                }
+
+                GPURingBufferOffset vertexBuffer =
+                    getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lmappolyvert) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, verts, sizeof(lmappolyvert) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                constexpr uint32_t stride = sizeof(float) * 7;
+                cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
+
+                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+            }
+        }
+        // PGM
+        //==========
+    }
+    else
+    {
+        c_brush_polys++;
+
+        //==========
+        // PGM
+        if (surf->texinfo->flags & SURF_FLOWING)
+        {
+            float scroll;
+
+            scroll = -64 * ((r_newrefdef.time / 40.0) - (int)(r_newrefdef.time / 40.0));
+            if (scroll == 0.0)
+                scroll = -64.0;
+
+            for (p = surf->polys; p; p = p->chain)
+            {
+                v = p->verts[0];
+                for (i = 0; i < nv; i++, v += VERTEXSIZE)
+                {
+                    verts[i].vertex[0] = v[0];
+                    verts[i].vertex[1] = v[1];
+                    verts[i].vertex[2] = v[2];
+                    verts[i].texCoord[0] = v[3] + scroll;
+                    verts[i].texCoord[1] = v[4];
+                    verts[i].texCoordLmap[0] = v[5];
+                    verts[i].texCoordLmap[1] = v[6];
+                }
+                GPURingBufferOffset vertexBuffer =
+                    getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lmappolyvert) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, verts, sizeof(lmappolyvert) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                constexpr uint32_t stride = sizeof(float) * 7;
+                cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
+
+                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+            }
+        }
+        else
+        {
+            // PGM
+            //==========
+            for (p = surf->polys; p; p = p->chain)
+            {
+                v = p->verts[0];
+                for (i = 0; i < nv; i++, v += VERTEXSIZE)
+                {
+                    verts[i].vertex[0] = v[0];
+                    verts[i].vertex[1] = v[1];
+                    verts[i].vertex[2] = v[2];
+                    verts[i].texCoord[0] = v[3];
+                    verts[i].texCoord[1] = v[4];
+                    verts[i].texCoordLmap[0] = v[5];
+                    verts[i].texCoordLmap[1] = v[6];
+                }
+                GPURingBufferOffset vertexBuffer =
+                    getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lmappolyvert) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    memcpy(updateDesc.pMappedData, verts, sizeof(lmappolyvert) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                constexpr uint32_t stride = sizeof(float) * 7;
+                cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
+                {
+                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+                    beginUpdateResource(&updateDesc);
+                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
+                    endUpdateResource(&updateDesc);
+                }
+
+                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
+
+                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+            }
+            //==========
+            // PGM
+        }
+        // PGM
+        //==========
+    }
 }
 
 /*
@@ -752,15 +884,15 @@ void R_DrawInlineBModel(float *modelMatrix)
     dlight_t *lt;
     float alpha = 1.f;
 
-    //calculate dynamic lighting for bmodel
-    
+    // calculate dynamic lighting for bmodel
+
     if (!vk_flashblend->value)
     {
-    	lt = r_newrefdef.dlights;
-    	for (k = 0; k<r_newrefdef.num_dlights; k++, lt++)
-    	{
-    		R_MarkLights(lt, 1 << k, currentmodel->nodes + currentmodel->firstnode);
-    	}
+        lt = r_newrefdef.dlights;
+        for (k = 0; k < r_newrefdef.num_dlights; k++, lt++)
+        {
+            R_MarkLights(lt, 1 << k, currentmodel->nodes + currentmodel->firstnode);
+        }
     }
 
     psurf = &currentmodel->surfaces[currentmodel->firstmodelsurface];
@@ -1154,10 +1286,7 @@ static void LM_UploadBlock(qboolean dynamic)
         beginUpdateResource(&updateDesc);
 
         TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-        for (uint32_t r = 0; r < subresource.mRowCount; ++r)
-        {
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
-        }
+        memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
         endUpdateResource(&updateDesc);
     }
     else
@@ -1176,10 +1305,7 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            for (uint32_t r = 0; r < subresource.mRowCount; ++r)
-            {
-                memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
-            }
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
         }
         else
@@ -1219,11 +1345,14 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            for (uint32_t r = 0; r < subresource.mRowCount; ++r)
-            {
-                memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
-            }
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
+
+            DescriptorData paramsTex = {
+                .pName = "sLightmap",
+                .ppTextures = &vk_state.lightmap_textures[texture],
+            };
+            updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[texture], 1, &paramsTex);
         }
         if (++vk_lms.current_lightmap_texture == MAX_LIGHTMAPS)
         {
