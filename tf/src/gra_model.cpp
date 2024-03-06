@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 */
 // models.c -- model loading and caching
 
+#include "gra_common.h"
 #include "gra_local.h"
 
 #include <ILog.h>
@@ -1250,6 +1251,8 @@ void R_EndRegistration(void)
 
     GRA_FreeUnusedImages();
     waitForAllResourceLoads();
+    
+    auto index = getDescriptorIndexFromName(pRootSignature, "sTexture");
 
     for (int i = 0; i < numvktextures; i++)
     {
@@ -1259,6 +1262,7 @@ void R_EndRegistration(void)
 
         DescriptorData paramsTex = {
             .pName = "sTexture",
+            .mIndex = index,
             .ppTextures = &tex.texture,
         };
         updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[i], 1, &paramsTex);

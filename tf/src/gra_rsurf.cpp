@@ -1349,6 +1349,7 @@ static void LM_UploadBlock(qboolean dynamic)
 
             DescriptorData paramsTex = {
                 .pName = "sLightmap",
+                .mIndex = getDescriptorIndexFromName(pRootSignature, "sLightmap"),
                 .ppTextures = &vk_state.lightmap_textures[texture],
             };
             updateDescriptorSet(pRenderer, 0, pDescriptorSetsLightMap[texture], 1, &paramsTex);

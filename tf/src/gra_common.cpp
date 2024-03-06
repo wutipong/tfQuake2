@@ -1093,7 +1093,7 @@ bool _addDescriptorSets()
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
-        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, 1};
         addDescriptorSet(pRenderer, &desc, &pDescriptorSetsLightMap[i]);
     }
 
