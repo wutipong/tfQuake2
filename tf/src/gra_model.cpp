@@ -593,7 +593,7 @@ void Mod_LoadFaces(lump_t *l)
 
     currentmodel = loadmodel;
 
-    // Vk_BeginBuildingLightmaps(loadmodel);
+    Vk_BeginBuildingLightmaps(loadmodel);
 
     for (surfnum = 0; surfnum < count; surfnum++, in++, out++)
     {
@@ -652,7 +652,7 @@ void Mod_LoadFaces(lump_t *l)
         }
     }
 
-    // Vk_EndBuildingLightmaps();
+    Vk_EndBuildingLightmaps();
 }
 
 /*
@@ -1253,7 +1253,7 @@ void R_EndRegistration(void)
 
     for (int i = 0; i < numvktextures; i++)
     {
-        image_t& tex = vktextures[i];
+        image_t &tex = vktextures[i];
         if (tex.name.empty())
             continue;
 

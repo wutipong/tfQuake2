@@ -832,7 +832,7 @@ void GRA_FreeUnusedImages(void)
     // never free r_notexture or particle texture
     // FIXME: load these 2 textures
     // r_notexture->registration_sequence = registration_sequence;
-    //r_particletexture->registration_sequence = registration_sequence;
+    // r_particletexture->registration_sequence = registration_sequence;
 
     for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
@@ -954,8 +954,14 @@ void GRA_ShutdownImages(void)
         *image = {};
     }
 
-    // removeResource(rawTexture);
+    if (rawTexture)
+        removeResource(rawTexture);
 
-    // for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
-    //     removeResource(vk_state.lightmap_textures[i]);
+    for (i = 0; i < MAX_LIGHTMAPS * 2; i++)
+    {
+        if (vk_state.lightmap_textures[i])
+        {
+            removeResource(vk_state.lightmap_textures[i]);
+        }
+    }
 }

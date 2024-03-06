@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_common.h"
 #include "gra_local.h"
+#include <format>
 
 extern model_t *currentmodel;
 extern model_t *r_worldmodel;
@@ -332,30 +333,30 @@ R_RenderBrushPoly
 */
 void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha)
 {
-    int			maps;
-    image_t		*image;
+    int maps;
+    image_t *image;
     qboolean is_dynamic = false;
-    float		color[4] = { 1.f, 1.f, 1.f, alpha };
+    float color[4] = {1.f, 1.f, 1.f, alpha};
     c_brush_polys++;
 
     image = R_TextureAnimation(fa->texinfo);
 
     if (fa->flags & SURF_DRAWTURB)
     {
-    	color[0] = color[1] = color[2] = vk_state.inverse_intensity;
-    	color[3] = 1.f;
-    	// warp texture, no lightmaps
-    	EmitWaterPolys(fa, image, modelMatrix, color);
-    	return;
+        color[0] = color[1] = color[2] = vk_state.inverse_intensity;
+        color[3] = 1.f;
+        // warp texture, no lightmaps
+        EmitWaterPolys(fa, image, modelMatrix, color);
+        return;
     }
 
     //======
-    //PGM
+    // PGM
     if (fa->texinfo->flags & SURF_FLOWING)
-    	DrawVkFlowingPoly(fa, image, color);
+        DrawVkFlowingPoly(fa, image, color);
     else
-    	DrawVkPoly(fa->polys, image, color);
-    //PGM
+        DrawVkPoly(fa->polys, image, color);
+    // PGM
     //======
 
     // /*
@@ -423,28 +424,28 @@ of alpha_surfaces will draw back to front, giving proper ordering.
 */
 void R_DrawAlphaSurfaces(void)
 {
-    msurface_t	*s;
-    float		intens;
+    msurface_t *s;
+    float intens;
 
     // the textures are prescaled up for a better lighting range,
     // so scale it back down
     intens = vk_state.inverse_intensity;
-    float color[4] = { intens, intens, intens, 1.f };
+    float color[4] = {intens, intens, intens, 1.f};
 
     for (s = r_alpha_surfaces; s; s = s->texturechain)
     {
-    	c_brush_polys++;
-    	if (s->texinfo->flags & SURF_TRANS33)
-    		color[3] = 0.33f;
-    	else if (s->texinfo->flags & SURF_TRANS66)
-    		color[3] = 0.66f;
+        c_brush_polys++;
+        if (s->texinfo->flags & SURF_TRANS33)
+            color[3] = 0.33f;
+        else if (s->texinfo->flags & SURF_TRANS66)
+            color[3] = 0.66f;
 
-    	if (s->flags & SURF_DRAWTURB)
-    		EmitWaterPolys(s, s->texinfo->image, NULL, color);
-    	else if (s->texinfo->flags & SURF_FLOWING)			// PGM	9/16/98
-    		DrawVkFlowingPoly(s, s->texinfo->image, color);	// PGM
-    	else
-    		DrawVkPoly(s->polys, s->texinfo->image, color);
+        if (s->flags & SURF_DRAWTURB)
+            EmitWaterPolys(s, s->texinfo->image, NULL, color);
+        else if (s->texinfo->flags & SURF_FLOWING)          // PGM	9/16/98
+            DrawVkFlowingPoly(s, s->texinfo->image, color); // PGM
+        else
+            DrawVkPoly(s->polys, s->texinfo->image, color);
     }
 
     r_alpha_surfaces = NULL;
@@ -457,42 +458,42 @@ DrawTextureChains
 */
 void DrawTextureChains(void)
 {
-    int		i;
-    msurface_t	*s;
-    image_t		*image;
+    int i;
+    msurface_t *s;
+    image_t *image;
 
     c_visible_textures = 0;
 
     for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-    	if (!image->registration_sequence)
-    		continue;
-    	if (!image->texturechain)
-    		continue;
-    	c_visible_textures++;
+        if (!image->registration_sequence)
+            continue;
+        if (!image->texturechain)
+            continue;
+        c_visible_textures++;
 
-    	for (s = image->texturechain; s; s = s->texturechain)
-    	{
-    		if (!(s->flags & SURF_DRAWTURB))
-    			R_RenderBrushPoly(s, NULL, 1.f);
-    	}
+        for (s = image->texturechain; s; s = s->texturechain)
+        {
+            if (!(s->flags & SURF_DRAWTURB))
+                R_RenderBrushPoly(s, NULL, 1.f);
+        }
     }
 
     for (i = 0, image = vktextures; i < numvktextures; i++, image++)
     {
-    	if (!image->registration_sequence)
-    		continue;
-    	s = image->texturechain;
-    	if (!s)
-    		continue;
+        if (!image->registration_sequence)
+            continue;
+        s = image->texturechain;
+        if (!s)
+            continue;
 
-    	for (; s; s = s->texturechain)
-    	{
-    		if (s->flags & SURF_DRAWTURB)
-    			R_RenderBrushPoly(s, NULL, 1.f);
-    	}
+        for (; s; s = s->texturechain)
+        {
+            if (s->flags & SURF_DRAWTURB)
+                R_RenderBrushPoly(s, NULL, 1.f);
+        }
 
-    	image->texturechain = NULL;
+        image->texturechain = NULL;
     }
 }
 
@@ -744,12 +745,12 @@ R_DrawInlineBModel
 */
 void R_DrawInlineBModel(float *modelMatrix)
 {
-    int			i, k;
-    cplane_t	*pplane;
-    float		dot;
-    msurface_t	*psurf;
-    dlight_t	*lt;
-    float		alpha = 1.f;
+    int i, k;
+    cplane_t *pplane;
+    float dot;
+    msurface_t *psurf;
+    dlight_t *lt;
+    float alpha = 1.f;
 
     // calculate dynamic lighting for bmodel
     // if (!vk_flashblend->value)
@@ -765,37 +766,37 @@ void R_DrawInlineBModel(float *modelMatrix)
 
     if (currententity->flags & RF_TRANSLUCENT)
     {
-    	alpha = .25f;
+        alpha = .25f;
     }
 
     //
     // draw texture
     //
-    for (i = 0; i<currentmodel->nummodelsurfaces; i++, psurf++)
+    for (i = 0; i < currentmodel->nummodelsurfaces; i++, psurf++)
     {
-    	// find which side of the node we are on
-    	pplane = psurf->plane;
+        // find which side of the node we are on
+        pplane = psurf->plane;
 
-    	dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
+        dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
 
-    	// draw the polygon
-    	if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-    		(!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
-    	{
-    		if (psurf->texinfo->flags & (SURF_TRANS33 | SURF_TRANS66))
-    		{	// add to the translucent chain
-    			psurf->texturechain = r_alpha_surfaces;
-    			r_alpha_surfaces = psurf;
-    		}
-    		else if (!(psurf->flags & SURF_DRAWTURB) && !vk_showtris->value)
-    		{
-    			Vk_RenderLightmappedPoly(psurf, modelMatrix, alpha);
-    		}
-    		else
-    		{
-    			R_RenderBrushPoly(psurf, modelMatrix, alpha);
-    		}
-    	}
+        // draw the polygon
+        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
+            (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
+        {
+            if (psurf->texinfo->flags & (SURF_TRANS33 | SURF_TRANS66))
+            { // add to the translucent chain
+                psurf->texturechain = r_alpha_surfaces;
+                r_alpha_surfaces = psurf;
+            }
+            else if (!(psurf->flags & SURF_DRAWTURB) && !vk_showtris->value)
+            {
+                Vk_RenderLightmappedPoly(psurf, modelMatrix, alpha);
+            }
+            else
+            {
+                R_RenderBrushPoly(psurf, modelMatrix, alpha);
+            }
+        }
     }
 }
 
@@ -806,56 +807,56 @@ R_DrawBrushModel
 */
 void R_DrawBrushModel(entity_t *e)
 {
-    vec3_t		mins, maxs;
-    int			i;
-    qboolean	rotated;
+    vec3_t mins, maxs;
+    int i;
+    qboolean rotated;
 
     if (currentmodel->nummodelsurfaces == 0)
-    	return;
+        return;
 
     currententity = e;
 
     if (e->angles[0] || e->angles[1] || e->angles[2])
     {
-    	rotated = true;
-    	for (i = 0; i<3; i++)
-    	{
-    		mins[i] = e->origin[i] - currentmodel->radius;
-    		maxs[i] = e->origin[i] + currentmodel->radius;
-    	}
+        rotated = true;
+        for (i = 0; i < 3; i++)
+        {
+            mins[i] = e->origin[i] - currentmodel->radius;
+            maxs[i] = e->origin[i] + currentmodel->radius;
+        }
     }
     else
     {
-    	rotated = false;
-    	VectorAdd(e->origin, currentmodel->mins, mins);
-    	VectorAdd(e->origin, currentmodel->maxs, maxs);
+        rotated = false;
+        VectorAdd(e->origin, currentmodel->mins, mins);
+        VectorAdd(e->origin, currentmodel->maxs, maxs);
     }
 
     if (R_CullBox(mins, maxs))
-    	return;
+        return;
 
     memset(vk_lms.lightmap_surfaces, 0, sizeof(vk_lms.lightmap_surfaces));
 
     VectorSubtract(r_newrefdef.vieworg, e->origin, modelorg);
     if (rotated)
     {
-    	vec3_t	temp;
-    	vec3_t	forward, right, up;
+        vec3_t temp;
+        vec3_t forward, right, up;
 
-    	VectorCopy(modelorg, temp);
-    	AngleVectors(e->angles, forward, right, up);
-    	modelorg[0] = DotProduct(temp, forward);
-    	modelorg[1] = -DotProduct(temp, right);
-    	modelorg[2] = DotProduct(temp, up);
+        VectorCopy(modelorg, temp);
+        AngleVectors(e->angles, forward, right, up);
+        modelorg[0] = DotProduct(temp, forward);
+        modelorg[1] = -DotProduct(temp, right);
+        modelorg[2] = DotProduct(temp, up);
     }
 
-    e->angles[0] = -e->angles[0];	// stupid quake bug
-    e->angles[2] = -e->angles[2];	// stupid quake bug
+    e->angles[0] = -e->angles[0]; // stupid quake bug
+    e->angles[2] = -e->angles[2]; // stupid quake bug
     float model[16];
     Mat_Identity(model);
     R_RotateForEntity(e, model);
-    e->angles[0] = -e->angles[0];	// stupid quake bug
-    e->angles[2] = -e->angles[2];	// stupid quake bug
+    e->angles[0] = -e->angles[0]; // stupid quake bug
+    e->angles[2] = -e->angles[2]; // stupid quake bug
 
     R_DrawInlineBModel(model);
 }
@@ -1342,22 +1343,33 @@ void Vk_BeginBuildingLightmaps(model_t *m)
     /*
     ** initialize the dynamic lightmap textures
     */
-    // if (vk_state.lightmap_textures[DYNLIGHTMAP_OFFSET].image == VK_NULL_HANDLE)
-    // {
-    // 	for (i = DYNLIGHTMAP_OFFSET; i < MAX_LIGHTMAPS*2; i++)
-    // 	{
-    // 		QVVKTEXTURE_CLEAR(vk_state.lightmap_textures[i]);
-    // 		QVk_CreateTexture(&vk_state.lightmap_textures[i], (unsigned char*)dummy, BLOCK_WIDTH, BLOCK_HEIGHT,
-    // vk_current_lmap_sampler); 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[i].image,
-    // VK_OBJECT_TYPE_IMAGE, va("Image: dynamic lightmap #%d", i));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[i].imageView, VK_OBJECT_TYPE_IMAGE_VIEW,
-    // va("Image View: dynamic lightmap #%d", i));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[i].descriptorSet, VK_OBJECT_TYPE_DESCRIPTOR_SET,
-    // va("Descriptor Set: dynamic lightmap #%d", i));
-    // 		QVk_DebugSetObjectName((uint64_t)vk_state.lightmap_textures[i].allocInfo.deviceMemory,
-    // VK_OBJECT_TYPE_DEVICE_MEMORY, va("Memory: dynamic lightmap #%d", i));
-    // 	}
-    // }
+    if (vk_state.lightmap_textures[DYNLIGHTMAP_OFFSET] == NULL)
+    {
+        SyncToken token = {};
+        for (i = DYNLIGHTMAP_OFFSET; i < MAX_LIGHTMAPS * 2; i++)
+        {
+            TextureDesc textureDesc = {
+                .pName = std::format("Image: dynamic lightmap #{}", i).c_str(),
+                .mWidth = BLOCK_WIDTH,
+                .mHeight = BLOCK_HEIGHT,
+                .mDepth = 1,
+                .mArraySize = 1,
+                .mMipLevels = 1,
+                .mSampleCount = SAMPLE_COUNT_1,
+                .mFormat = TinyImageFormat_R8G8B8A8_UNORM,
+                .mStartState = RESOURCE_STATE_PIXEL_SHADER_RESOURCE,
+                .mDescriptors = DESCRIPTOR_TYPE_TEXTURE,
+            };
+
+            TextureLoadDesc loadDesc{};
+            loadDesc.pDesc = &textureDesc;
+            loadDesc.ppTexture = &vk_state.lightmap_textures[DYNLIGHTMAP_OFFSET];
+
+            addResource(&loadDesc, &token);
+        }
+
+        waitForToken(&token);
+    }
 }
 
 /*
