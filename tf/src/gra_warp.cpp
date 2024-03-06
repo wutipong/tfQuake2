@@ -19,8 +19,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // vk_warp.c -- sky and water polygons
-#include "gra_local.h"
 #include "gra_common.h"
+#include "gra_local.h"
 
 #include <format>
 
@@ -246,42 +246,54 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float 
         Mat_Identity(polyUbo.model);
     }
 
-    // QVk_BindPipeline(&vk_drawPolyWarpPipeline);
+    cmdBindPipeline(pCmd, drawPolyWarpPipeline);
 
-    // uint32_t uboOffset;
-    // VkDescriptorSet uboDescriptorSet;
-    // uint8_t *uboData = QVk_GetUniformBuffer(sizeof(polyUbo), &uboOffset, &uboDescriptorSet);
-    // memcpy(uboData, &polyUbo, sizeof(polyUbo));
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(polyUbo));
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // VkDescriptorSet descriptorSets[] = {texture->vk_texture.descriptorSet, uboDescriptorSet};
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawPolyWarpPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    //                    sizeof(r_viewproj_matrix), r_viewproj_matrix);
-    // vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPolyWarpPipeline.layout, 0,
-    // 2,
-    //                         descriptorSets, 1, &uboOffset);
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, &polyUbo, sizeof(polyUbo));
+        endUpdateResource(&updateDesc);
+    }
 
-    // for (bp = fa->polys; bp; bp = bp->next)
-    // {
-    //     p = bp;
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
 
-    //     for (i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE)
-    //     {
-    //         verts[i].vertex[0] = v[0];
-    //         verts[i].vertex[1] = v[1];
-    //         verts[i].vertex[2] = v[2];
-    //         verts[i].texCoord[0] = v[3] / 64.f;
-    //         verts[i].texCoord[1] = v[4] / 64.f;
-    //     }
+    for (bp = fa->polys; bp; bp = bp->next)
+    {
+        p = bp;
 
-    //     uint8_t *vertData = QVk_GetVertexBuffer(sizeof(polyvert) * p->numverts, &vbo, &vboOffset);
-    //     memcpy(vertData, verts, sizeof(polyvert) * p->numverts);
+        for (i = 0, v = p->verts[0]; i < p->numverts; i++, v += VERTEXSIZE)
+        {
+            verts[i].vertex[0] = v[0];
+            verts[i].vertex[1] = v[1];
+            verts[i].vertex[2] = v[2];
+            verts[i].texCoord[0] = v[3] / 64.f;
+            verts[i].texCoord[1] = v[4] / 64.f;
+        }
 
-    //     vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    //     vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo((p->numverts - 2) * 3), 0,
-    //     VK_INDEX_TYPE_UINT16); vkCmdDrawIndexed(vk_activeCmdbuffer, (p->numverts - 2) * 3, 1, 0, 0, 0);
-    // }
+        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(polyvert) * p->numverts);
+        {
+            BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+            beginUpdateResource(&updateDesc);
+            memcpy(updateDesc.pMappedData, verts, sizeof(polyvert) * p->numverts);
+            endUpdateResource(&updateDesc);
+        }
+
+        GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(polyvert) * p->numverts);
+        {
+            BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+            beginUpdateResource(&updateDesc);
+            GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * p->numverts);
+            endUpdateResource(&updateDesc);
+        }
+
+        cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
+        cmdDrawIndexed(pCmd, (p->numverts - 2) * 3, 0, 0);
+    }
 }
 
 //===================================================================
@@ -651,7 +663,7 @@ void R_DrawSkyBox(void)
         constexpr uint32_t stride = sizeof(float) * 5;
         cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
 
-		cmdDraw(pCmd, 6, 0);
+        cmdDraw(pCmd, 6, 0);
     }
 }
 

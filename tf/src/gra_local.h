@@ -208,7 +208,7 @@ void R_DrawBeam(entity_t *e);
 void R_DrawWorld(void);
 void R_RenderDlights(void);
 void R_DrawAlphaSurfaces(void);
-// void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha);
+void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha);
 void R_InitParticleTexture(void);
 void Draw_InitLocal(void);
 // void Vk_SubdivideSurface(msurface_t *fa);

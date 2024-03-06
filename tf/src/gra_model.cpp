@@ -648,7 +648,7 @@ void Mod_LoadFaces(lump_t *l)
 
         if (!(out->texinfo->flags & SURF_WARP))
         {
-            // Vk_BuildPolygonFromSurface(out);
+            Vk_BuildPolygonFromSurface(out);
         }
     }
 
