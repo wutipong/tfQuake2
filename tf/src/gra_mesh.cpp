@@ -589,6 +589,8 @@ R_DrawAliasModel
 */
 void R_DrawAliasModel(entity_t *e)
 {
+    return;
+    
     int i;
     int leftHandOffset = 0;
     dmdl_t *paliashdr;

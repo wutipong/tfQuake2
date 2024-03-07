@@ -17,7 +17,9 @@ Queue *pGraphicsQueue = NULL;
 GpuCmdRing gGraphicsCmdRing = {};
 
 SwapChain *pSwapChain = NULL;
+RenderTarget *pRenderTarget = NULL;
 RenderTarget *pDepthBuffer = NULL;
+RenderTarget *pWorldRenderTarget = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
 ProfileToken gGpuProfileToken = PROFILE_INVALID_TOKEN;
 int gFrameIndex = 0;
@@ -100,6 +102,7 @@ static bool _addDescriptorSets();
 static bool _removeDescriptorSets();
 static void _addStaticBuffers();
 static void _removeStaticBuffers();
+static bool _addRenderTarget(IApp *pApp);
 
 bool GRA_InitGraphics(IApp *app)
 {
@@ -229,6 +232,11 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp)
         {
             return false;
         }
+
+        if (!_addRenderTarget(pApp))
+        {
+            return false;
+        }
     }
 
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
@@ -266,14 +274,13 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
     if (pReloadDesc->mType & (RELOAD_TYPE_SHADER | RELOAD_TYPE_RENDERTARGET))
     {
         _removePipelines();
-        // removeResource(pSphereVertexBuffer);
-        // removeResource(pSphereIndexBuffer);
     }
 
     if (pReloadDesc->mType & (RELOAD_TYPE_RESIZE | RELOAD_TYPE_RENDERTARGET))
     {
         removeSwapChain(pRenderer, pSwapChain);
         removeRenderTarget(pRenderer, pDepthBuffer);
+        removeRenderTarget(pRenderer, pWorldRenderTarget);
     }
 
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
@@ -971,6 +978,26 @@ static bool _addDepthBuffer(IApp *pApp)
     return pDepthBuffer != NULL;
 }
 
+static bool _addRenderTarget(IApp *pApp)
+{
+    RenderTargetDesc postProcRTDesc = {};
+    postProcRTDesc.mArraySize = 1;
+    postProcRTDesc.mClearValue = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    postProcRTDesc.mDepth = 1;
+    postProcRTDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+    postProcRTDesc.mFormat = pSwapChain->mFormat;
+    postProcRTDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
+    postProcRTDesc.mHeight = pApp->mSettings.mHeight;
+    postProcRTDesc.mWidth = pApp->mSettings.mWidth;
+    postProcRTDesc.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
+    postProcRTDesc.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
+    postProcRTDesc.pName = "pWorldRenderTarget";
+    postProcRTDesc.mFlags = TEXTURE_CREATION_FLAG_VR_MULTIVIEW;
+    addRenderTarget(pRenderer, &postProcRTDesc, &pWorldRenderTarget);
+
+    return pWorldRenderTarget != NULL;
+}
+
 void GRA_Draw(IApp *pApp)
 {
     if (pSwapChain->mEnableVsync != pApp->mSettings.mVSyncEnabled)
@@ -982,7 +1009,7 @@ void GRA_Draw(IApp *pApp)
     uint32_t swapchainImageIndex;
     acquireNextImage(pRenderer, pSwapChain, pImageAcquiredSemaphore, NULL, &swapchainImageIndex);
 
-    RenderTarget *pRenderTarget = pSwapChain->ppRenderTargets[swapchainImageIndex];
+    pRenderTarget = pSwapChain->ppRenderTargets[swapchainImageIndex];
     GpuCmdRingElement elem = getNextGpuCmdRingElement(&gGraphicsCmdRing, true, 1);
 
     // Stall if CPU is running "gDataBufferCount" frames ahead of GPU
@@ -1000,6 +1027,7 @@ void GRA_Draw(IApp *pApp)
     beginCmd(cmd);
 
     cmdBeginGpuFrameProfile(cmd, gGpuProfileToken);
+    pCmd = cmd;
 
     RenderTargetBarrier barriers[] = {
         {pRenderTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET},
@@ -1015,11 +1043,6 @@ void GRA_Draw(IApp *pApp)
     cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
     cmdSetScissor(cmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
 
-    const uint32_t skyboxVbStride = sizeof(float) * 4;
-
-    pCmd = cmd;
-    cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Drawing Objects");
-
     /************************************************************************/
     // Start drawing objects
     /************************************************************************/
@@ -1028,13 +1051,6 @@ void GRA_Draw(IApp *pApp)
     uint32_t currentframe = getSystemTime();
     Qcommon_Frame(currentframe - lastframe);
     lastframe = currentframe;
-
-    /************************************************************************/
-    // End drawing objects
-    /************************************************************************/
-    cmdEndGpuTimestampQuery(cmd, gGpuProfileToken);
-
-    pCmd = NULL;
 
     cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Draw UI");
 
@@ -1049,7 +1065,11 @@ void GRA_Draw(IApp *pApp)
     cmdBindRenderTargets(cmd, NULL);
     cmdEndGpuTimestampQuery(cmd, gGpuProfileToken);
 
-    barriers[0] = {pRenderTarget, RESOURCE_STATE_RENDER_TARGET, RESOURCE_STATE_PRESENT};
+    barriers[0] = {
+        pRenderTarget,
+        RESOURCE_STATE_RENDER_TARGET,
+        RESOURCE_STATE_PRESENT,
+    };
     cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
 
     cmdEndGpuFrameProfile(cmd, gGpuProfileToken);
@@ -1070,6 +1090,7 @@ void GRA_Draw(IApp *pApp)
     submitDesc.ppWaitSemaphores = waitSemaphores;
     submitDesc.pSignalFence = elem.pFence;
     queueSubmit(pGraphicsQueue, &submitDesc);
+
     QueuePresentDesc presentDesc = {};
     presentDesc.mIndex = swapchainImageIndex;
     presentDesc.mWaitSemaphoreCount = 1;
@@ -1211,7 +1232,7 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
 {
-    uint32_t indexCount = 3 * (count -2);
+    uint32_t indexCount = 3 * (count - 2);
     GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, indexCount * sizeof(uint16_t));
     {
         BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};

@@ -31,6 +31,11 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
 extern Renderer *pRenderer;
 extern Sampler *pSampler;
 extern image_t vktextures[MAX_VKTEXTURES];
+
+extern RenderTarget *pRenderTarget;
+extern RenderTarget *pDepthBuffer;
+extern RenderTarget *pWorldRenderTarget;
+
 // render pipelines
 extern Pipeline *drawTexQuadPipeline;
 extern Pipeline *drawColorQuadPipeline[2];
