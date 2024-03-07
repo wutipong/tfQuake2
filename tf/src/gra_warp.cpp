@@ -282,17 +282,8 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float 
             endUpdateResource(&updateDesc);
         }
 
-        GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(polyvert) * p->numverts);
-        {
-            BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-            beginUpdateResource(&updateDesc);
-            GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * p->numverts);
-            endUpdateResource(&updateDesc);
-        }
-
-        cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
-        cmdDrawIndexed(pCmd, (p->numverts - 2) * 3, 0, 0);
+        auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
+        cmdDrawIndexed(pCmd, indexCount, 0, 0);
     }
 }
 

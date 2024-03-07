@@ -317,13 +317,10 @@ void R_DrawNullModel(void)
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     constexpr uint32_t stride = sizeof(vec3_t);
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-    // vkCmdBindIndexBuffer(vk_activeCmdbuffer, QVk_GetTriangleFanIbo(12), 0, VK_INDEX_TYPE_UINT16);
-
-    // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 0, 0);
-    // vkCmdDrawIndexed(vk_activeCmdbuffer, 12, 1, 0, 6, 0);
-
-    cmdDrawIndexed(pCmd, 12, 1, 0);
-    // cmdDrawIndexed(pCmd, 12, 1, 6);
+    
+    auto indexCount = GRA_BindTriangleFanIBO(pCmd, 12);
+    cmdDrawIndexed(pCmd, indexCount, 0, 0);
+    cmdDrawIndexed(pCmd, indexCount, 0, 6);
 }
 
 /*

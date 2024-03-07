@@ -134,15 +134,6 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
         endUpdateResource(&updateDesc);
     }
 
-    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(polyvert) * p->numverts);
-    {
-        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * p->numverts);
-        endUpdateResource(&updateDesc);
-    }
-
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
     {
         BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
@@ -167,8 +158,8 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
 
     cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 
-    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
-    cmdDrawIndexed(pCmd, (p->numverts - 2) * 3, 0, 0);
+    auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
+    cmdDrawIndexed(pCmd, indexCount, 0, 0);
 }
 
 //============
@@ -218,15 +209,6 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
         endUpdateResource(&updateDesc);
     }
 
-    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(polyvert) * p->numverts);
-    {
-        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * p->numverts);
-        endUpdateResource(&updateDesc);
-    }
-
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
     {
         BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
@@ -250,8 +232,8 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
-    cmdDrawIndexed(pCmd, (p->numverts - 2) * 3, 0, 0);
+    auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
+    cmdDrawIndexed(pCmd, indexCount, 0, 0);
 }
 // PGM
 //============
@@ -697,18 +679,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(float) * 7;
                 cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
 
-                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
-                {
-                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                    beginUpdateResource(&updateDesc);
-                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
-                    endUpdateResource(&updateDesc);
-                }
-
-                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
-
-                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+                auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
+                cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
         }
         else
@@ -743,18 +715,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(float) * 7;
                 cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
 
-                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
-                {
-                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                    beginUpdateResource(&updateDesc);
-                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
-                    endUpdateResource(&updateDesc);
-                }
-
-                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
-
-                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+                auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
+                cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
         }
         // PGM
@@ -800,20 +762,11 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(float) * 7;
                 cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
 
-                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
-                {
-                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                    beginUpdateResource(&updateDesc);
-                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
-                    endUpdateResource(&updateDesc);
-                }
-
-                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
-
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
-                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+                auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
+    
+                cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
         }
         else
@@ -846,20 +799,10 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(float) * 7;
                 cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
 
-                GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, sizeof(uint32_t) * nv);
-                {
-                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                    beginUpdateResource(&updateDesc);
-                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * nv);
-                    endUpdateResource(&updateDesc);
-                }
-
-                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, 0, INDEX_TYPE_UINT32);
-
+                auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
-                cmdDrawIndexed(pCmd, (nv - 2) * 3, 0, 0);
+                cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
             //==========
             // PGM

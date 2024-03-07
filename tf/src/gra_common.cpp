@@ -84,6 +84,8 @@ Buffer *texRectVbo;
 Buffer *colorRectVbo;
 Buffer *rectIbo;
 
+Buffer *pTriangleFanIBO;
+
 uint32_t gPushConstant;
 
 static void _addShaders();
@@ -1207,19 +1209,26 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
 
-void GRA_FillTriangleFanIbo(void *buffer, size_t size)
+uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
 {
-    int idx = 0;
-    VkDeviceSize dstOffset = 0;
-    VkDeviceSize bufferSize = 3 * vk_config.triangle_fan_index_count * sizeof(uint32_t);
-    uint32_t count = size / (sizeof(uint32_t) * 3);
-    uint32_t *fanData = (uint32_t *)buffer;
-
-    // fill the index buffer so that we can emulate triangle fans via triangle lists
-    for (int i = 0; i < count; ++i)
+    uint32_t indexCount = 3 * (count -2);
+    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, indexCount * sizeof(uint16_t));
     {
-        fanData[idx++] = 0;
-        fanData[idx++] = i + 1;
-        fanData[idx++] = i + 2;
+        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        uint16_t *fanData = (uint16_t *)updateDesc.pMappedData;
+
+        for (int i = 0, idx = 0; i < count; i++)
+        {
+            fanData[idx++] = 0;
+            fanData[idx++] = i + 1;
+            fanData[idx++] = i + 2;
+        }
+
+        endUpdateResource(&updateDesc);
     }
+    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT16, indexBuffer.mOffset);
+
+    return indexCount;
 }

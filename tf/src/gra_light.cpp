@@ -39,7 +39,6 @@ DYNAMIC LIGHTS BLEND RENDERING
 
 void R_RenderDlight(dlight_t *light)
 {
-    cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "R_RenderDlight");
     int i, j;
     float a;
     float rad;
@@ -98,20 +97,9 @@ void R_RenderDlight(dlight_t *light)
     params[0].pRanges = &range;
 
     cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
-
-    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, 48 * 3 * sizeof(uint32_t));
-    {
-        BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        GRA_FillTriangleFanIbo(updateDesc.pMappedData, 48 * 3 * sizeof(uint32_t));
-        endUpdateResource(&updateDesc);
-    }
-    cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
-
-    cmdDrawIndexed(pCmd, 48, 0, 0);
-
-    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
+    
+    auto indexCount = GRA_BindTriangleFanIBO(pCmd, 18);
+    cmdDrawIndexed(pCmd, indexCount, 0, 0);
 }
 
 /*

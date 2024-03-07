@@ -317,20 +317,11 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         }
         else
         {
-            GPURingBufferOffset indexBuffer =
-                getGPURingBufferOffset(&dynamicIndexBuffer, 3 * sizeof(uint32_t) * maxTriangleFanIdxCnt);
-            {
-                BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                beginUpdateResource(&updateDesc);
-                GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * maxTriangleFanIdxCnt);
-                endUpdateResource(&updateDesc);
-            }
-            cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
+			auto indexCount = GRA_BindTriangleFanIBO(pCmd, drawInfo[p][i].vertexCount);
 
             for (i = 0; i < pipeCounters[p]; i++)
             {
-                cmdDrawIndexed(pCmd, (drawInfo[p][i].vertexCount - 2) * 3, 0, drawInfo[p][i].firstVertex);
+                cmdDrawIndexed(pCmd, indexCount, 0, drawInfo[p][i].firstVertex);
             }
         }
     }
@@ -444,18 +435,8 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             }
             else
             {
-                GPURingBufferOffset indexBuffer =
-                    getGPURingBufferOffset(&dynamicIndexBuffer, 3 * sizeof(uint32_t) * (i - 2) * 3);
-                {
-                    BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
-
-                    beginUpdateResource(&updateDesc);
-                    GRA_FillTriangleFanIbo(updateDesc.pMappedData, 3 * sizeof(uint32_t) * (i - 2) * 3);
-                    endUpdateResource(&updateDesc);
-                }
-                cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT32, indexBuffer.mOffset);
-
-                cmdDrawIndexed(pCmd, (i - 2) * 3, 0, 0);
+                uint32_t indexCount = GRA_BindTriangleFanIBO(pCmd, i);
+                cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
         }
     }
