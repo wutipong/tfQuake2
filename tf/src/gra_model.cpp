@@ -1157,6 +1157,9 @@ Specifies the model that will be used as the world
 */
 void R_BeginRegistration(char *model)
 {
+    resetGPURingBuffer(&dynamicIndexBuffer);
+    resetGPURingBuffer(&dynamicUniformBuffer);
+    resetGPURingBuffer(&dynamicVertexBuffer);
     cvar_t *flushmap;
 
     registration_sequence++;

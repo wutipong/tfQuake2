@@ -234,17 +234,6 @@ void R_DrawSpriteModel(entity_t *e)
     memcpy(updateDesc.pMappedData, &alpha, sizeof(alpha));
     endUpdateResource(&updateDesc);
 
-    /*
-
-    VkDescriptorSet descriptorSets[] = {currentmodel->skins[e->frame]->vk_texture.descriptorSet, uboDescriptorSet};
-    vkCmdPushConstants(vk_activeCmdbuffer, vk_drawSpritePipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-                       sizeof(r_viewproj_matrix), r_viewproj_matrix);
-    vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawSpritePipeline.layout, 0, 2,
-                            descriptorSets, 1, &uboOffset);
-    vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    vkCmdDraw(vk_activeCmdbuffer, 6, 1, 0, 0);
-*/
-
     cmdBindPipeline(pCmd, drawSpritePipeline);
     cmdBindDescriptorSet(pCmd, 1, pDescriptorSetUniforms);
 
@@ -432,86 +421,91 @@ void R_DrawEntitiesOnList(void)
 */
 void Vk_DrawParticles(int num_particles, const particle_t particles[], const unsigned *colortable)
 {
-    // const particle_t *p;
-    // int				i;
-    // vec3_t			up, right;
-    // float			scale;
-    // byte			color[4];
+    const particle_t *p;
+    int i;
+    vec3_t up, right;
+    float scale;
+    byte color[4];
 
-    // if (!num_particles)
-    // 	return;
+    if (!num_particles)
+        return;
 
-    // VectorScale(vup, 1.5, up);
-    // VectorScale(vright, 1.5, right);
+    VectorScale(vup, 1.5, up);
+    VectorScale(vright, 1.5, right);
 
-    // typedef struct {
-    // 	float x,y,z,r,g,b,a,u,v;
-    // } pvertex;
+    typedef struct
+    {
+        float x, y, z, r, g, b, a, u, v;
+    } pvertex;
 
-    // static pvertex visibleParticles[MAX_PARTICLES*3];
+    static pvertex visibleParticles[MAX_PARTICLES * 3];
 
-    // for (p = particles, i = 0; i < num_particles; i++, p++)
-    // {
-    // 	// hack a scale up to keep particles from disapearing
-    // 	scale = (p->origin[0] - r_origin[0]) * vpn[0] +
-    // 			(p->origin[1] - r_origin[1]) * vpn[1] +
-    // 			(p->origin[2] - r_origin[2]) * vpn[2];
+    for (p = particles, i = 0; i < num_particles; i++, p++)
+    {
+        // hack a scale up to keep particles from disapearing
+        scale = (p->origin[0] - r_origin[0]) * vpn[0] + (p->origin[1] - r_origin[1]) * vpn[1] +
+                (p->origin[2] - r_origin[2]) * vpn[2];
 
-    // 	if (scale < 20)
-    // 		scale = 1;
-    // 	else
-    // 		scale = 1 + scale * 0.004;
+        if (scale < 20)
+            scale = 1;
+        else
+            scale = 1 + scale * 0.004;
 
-    // 	*(int *)color = colortable[p->color];
+        *(int *)color = colortable[p->color];
 
-    // 	int idx = i * 3;
-    // 	float r = color[0] / 255.f;
-    // 	float g = color[1] / 255.f;
-    // 	float b = color[2] / 255.f;
+        int idx = i * 3;
+        float r = color[0] / 255.f;
+        float g = color[1] / 255.f;
+        float b = color[2] / 255.f;
 
-    // 	visibleParticles[idx].x = p->origin[0];
-    // 	visibleParticles[idx].y = p->origin[1];
-    // 	visibleParticles[idx].z = p->origin[2];
-    // 	visibleParticles[idx].r = r;
-    // 	visibleParticles[idx].g = g;
-    // 	visibleParticles[idx].b = b;
-    // 	visibleParticles[idx].a = p->alpha;
-    // 	visibleParticles[idx].u = 0.0625;
-    // 	visibleParticles[idx].v = 0.0625;
+        visibleParticles[idx].x = p->origin[0];
+        visibleParticles[idx].y = p->origin[1];
+        visibleParticles[idx].z = p->origin[2];
+        visibleParticles[idx].r = r;
+        visibleParticles[idx].g = g;
+        visibleParticles[idx].b = b;
+        visibleParticles[idx].a = p->alpha;
+        visibleParticles[idx].u = 0.0625;
+        visibleParticles[idx].v = 0.0625;
 
-    // 	visibleParticles[idx + 1].x = p->origin[0] + up[0] * scale;
-    // 	visibleParticles[idx + 1].y = p->origin[1] + up[1] * scale;
-    // 	visibleParticles[idx + 1].z = p->origin[2] + up[2] * scale;
-    // 	visibleParticles[idx + 1].r = r;
-    // 	visibleParticles[idx + 1].g = g;
-    // 	visibleParticles[idx + 1].b = b;
-    // 	visibleParticles[idx + 1].a = p->alpha;
-    // 	visibleParticles[idx + 1].u = 1.0625;
-    // 	visibleParticles[idx + 1].v = 0.0625;
+        visibleParticles[idx + 1].x = p->origin[0] + up[0] * scale;
+        visibleParticles[idx + 1].y = p->origin[1] + up[1] * scale;
+        visibleParticles[idx + 1].z = p->origin[2] + up[2] * scale;
+        visibleParticles[idx + 1].r = r;
+        visibleParticles[idx + 1].g = g;
+        visibleParticles[idx + 1].b = b;
+        visibleParticles[idx + 1].a = p->alpha;
+        visibleParticles[idx + 1].u = 1.0625;
+        visibleParticles[idx + 1].v = 0.0625;
 
-    // 	visibleParticles[idx + 2].x = p->origin[0] + right[0] * scale;
-    // 	visibleParticles[idx + 2].y = p->origin[1] + right[1] * scale;
-    // 	visibleParticles[idx + 2].z = p->origin[2] + right[2] * scale;
-    // 	visibleParticles[idx + 2].r = r;
-    // 	visibleParticles[idx + 2].g = g;
-    // 	visibleParticles[idx + 2].b = b;
-    // 	visibleParticles[idx + 2].a = p->alpha;
-    // 	visibleParticles[idx + 2].u = 0.0625;
-    // 	visibleParticles[idx + 2].v = 1.0625;
-    // }
+        visibleParticles[idx + 2].x = p->origin[0] + right[0] * scale;
+        visibleParticles[idx + 2].y = p->origin[1] + right[1] * scale;
+        visibleParticles[idx + 2].z = p->origin[2] + right[2] * scale;
+        visibleParticles[idx + 2].r = r;
+        visibleParticles[idx + 2].g = g;
+        visibleParticles[idx + 2].b = b;
+        visibleParticles[idx + 2].a = p->alpha;
+        visibleParticles[idx + 2].u = 0.0625;
+        visibleParticles[idx + 2].v = 1.0625;
+    }
 
-    // QVk_BindPipeline(&vk_drawParticlesPipeline);
+    cmdBindPipeline(pCmd, drawParticlesPipeline);
+    uint32_t vaoSize = 3 * sizeof(pvertex) * num_particles;
 
-    // VkBuffer vbo;
-    // VkDeviceSize vboOffset;
-    // uint8_t *vertData = QVk_GetVertexBuffer(3 * sizeof(pvertex) * num_particles, &vbo, &vboOffset);
-    // memcpy(vertData, &visibleParticles, 3 * sizeof(pvertex) * num_particles);
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(float) * 17);
+    {
+        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
-    // vkCmdPushConstants(vk_activeCmdbuffer, vk_drawParticlesPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawParticlesPipeline.layout, 0, 1,
-    // &r_particletexture->vk_texture.descriptorSet, 0, NULL); vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo,
-    // &vboOffset); vkCmdDraw(vk_activeCmdbuffer, 3 * num_particles, 1, 0, 0);
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, &visibleParticles, vaoSize);
+        endUpdateResource(&updateDesc);
+    }
+
+    constexpr uint32_t stride = sizeof(pvertex);
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[r_particletexture->index]);
+    cmdDraw(pCmd, 3 * num_particles, 0);
 }
 
 /*
@@ -521,76 +515,96 @@ R_DrawParticles
 */
 void R_DrawParticles(void)
 {
-    // if (vk_point_particles->value)
-    // {
-    // 	int i;
-    // 	unsigned char color[4];
-    // 	const particle_t *p;
+    if (vk_point_particles->value)
+    {
+        int i;
+        unsigned char color[4];
+        const particle_t *p;
 
-    // 	if (!r_newrefdef.num_particles)
-    // 		return;
+        if (!r_newrefdef.num_particles)
+            return;
 
-    // 	typedef struct {
-    // 		float x, y, z, r, g, b, a;
-    // 	} ppoint;
+        typedef struct
+        {
+            float x, y, z, r, g, b, a;
+        } ppoint;
 
-    // 	struct {
-    // 		float particleSize;
-    // 		float particleScale;
-    // 		float minPointSize;
-    // 		float maxPointSize;
-    // 		float att_a;
-    // 		float att_b;
-    // 		float att_c;
-    // 	} particleUbo;
+        struct
+        {
+            float particleSize;
+            float particleScale;
+            float minPointSize;
+            float maxPointSize;
+            float att_a;
+            float att_b;
+            float att_c;
+        } particleUbo;
 
-    // 	particleUbo.particleSize = vk_particle_size->value;
-    // 	particleUbo.particleScale = vid.width * Cvar_Get("viewsize", "100", CVAR_ARCHIVE)->value / 102400;
-    // 	particleUbo.minPointSize = vk_particle_min_size->value;
-    // 	particleUbo.maxPointSize = vk_particle_max_size->value;
-    // 	particleUbo.att_a = vk_particle_att_a->value;
-    // 	particleUbo.att_b = vk_particle_att_b->value;
-    // 	particleUbo.att_c = vk_particle_att_c->value;
+        particleUbo.particleSize = vk_particle_size->value;
+        particleUbo.particleScale = vid.width * Cvar_Get("viewsize", "100", CVAR_ARCHIVE)->value / 102400;
+        particleUbo.minPointSize = vk_particle_min_size->value;
+        particleUbo.maxPointSize = vk_particle_max_size->value;
+        particleUbo.att_a = vk_particle_att_a->value;
+        particleUbo.att_b = vk_particle_att_b->value;
+        particleUbo.att_c = vk_particle_att_c->value;
 
-    // 	static ppoint visibleParticles[MAX_PARTICLES];
+        static ppoint visibleParticles[MAX_PARTICLES];
 
-    // 	for (i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++)
-    // 	{
-    // 		*(int *)color = d_8to24table[p->color];
+        for (i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++)
+        {
+            *(int *)color = d_8to24table[p->color];
 
-    // 		float r = color[0] / 255.f;
-    // 		float g = color[1] / 255.f;
-    // 		float b = color[2] / 255.f;
+            float r = color[0] / 255.f;
+            float g = color[1] / 255.f;
+            float b = color[2] / 255.f;
 
-    // 		visibleParticles[i].x = p->origin[0];
-    // 		visibleParticles[i].y = p->origin[1];
-    // 		visibleParticles[i].z = p->origin[2];
-    // 		visibleParticles[i].r = r;
-    // 		visibleParticles[i].g = g;
-    // 		visibleParticles[i].b = b;
-    // 		visibleParticles[i].a = p->alpha;
-    // 	}
+            visibleParticles[i].x = p->origin[0];
+            visibleParticles[i].y = p->origin[1];
+            visibleParticles[i].z = p->origin[2];
+            visibleParticles[i].r = r;
+            visibleParticles[i].g = g;
+            visibleParticles[i].b = b;
+            visibleParticles[i].a = p->alpha;
+        }
 
-    // 	QVk_BindPipeline(&vk_drawPointParticlesPipeline);
+        cmdBindPipeline(pCmd, drawPointParticlesPipeline);
 
-    // 	VkBuffer vbo;
-    // 	VkDeviceSize vboOffset;
-    // 	uint32_t uboOffset;
-    // 	VkDescriptorSet uboDescriptorSet;
-    // 	uint8_t *vertData = QVk_GetVertexBuffer(sizeof(ppoint) * r_newrefdef.num_particles, &vbo, &vboOffset);
-    // 	uint8_t *uboData  = QVk_GetUniformBuffer(sizeof(particleUbo), &uboOffset, &uboDescriptorSet);
-    // 	memcpy(vertData, &visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles);
-    // 	memcpy(uboData,  &particleUbo, sizeof(particleUbo));
-    // 	vkCmdPushConstants(vk_activeCmdbuffer, vk_drawPointParticlesPipeline.layout, VK_SHADER_STAGE_VERTEX_BIT, 0,
-    // sizeof(r_viewproj_matrix), r_viewproj_matrix); 	vkCmdBindDescriptorSets(vk_activeCmdbuffer,
-    // VK_PIPELINE_BIND_POINT_GRAPHICS, vk_drawPointParticlesPipeline.layout, 0, 1, &uboDescriptorSet, 1, &uboOffset);
-    // 	vkCmdBindVertexBuffers(vk_activeCmdbuffer, 0, 1, &vbo, &vboOffset);
-    // 	vkCmdDraw(vk_activeCmdbuffer, r_newrefdef.num_particles, 1, 0, 0);
-    // }
-    // else
-    // {
-    // 	Vk_DrawParticles(r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table);
-    // }
+        GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(particleUbo));
+        {
+            BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+            beginUpdateResource(&updateDesc);
+            memcpy(updateDesc.pMappedData, &particleUbo, sizeof(particleUbo));
+            endUpdateResource(&updateDesc);
+        }
+        DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+        DescriptorData params[1] = {};
+        params[0].pName = "UniformBufferObject_rootcbv";
+        params[0].ppBuffers = &uniformBlock.pBuffer;
+        params[0].pRanges = &range;
+        cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+
+        GPURingBufferOffset vertexBuffer =
+            getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(ppoint) * r_newrefdef.num_particles);
+        {
+            BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+            beginUpdateResource(&updateDesc);
+            memcpy(updateDesc.pMappedData, &visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles);
+            endUpdateResource(&updateDesc);
+        }
+
+        constexpr uint32_t stride = sizeof(ppoint);
+        cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+
+        cmdDraw(pCmd, r_newrefdef.num_particles, 0);
+    }
+    else
+    {
+        Vk_DrawParticles(r_newrefdef.num_particles, r_newrefdef.particles, d_8to24table);
+    }
 }
 
 /*

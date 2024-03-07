@@ -134,7 +134,7 @@ bool GRA_InitGraphics(IApp *app)
     BufferDesc vbDesc = {};
     vbDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     vbDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-    vbDesc.mSize = 65536;
+    vbDesc.mSize = 4 * 1024 * 1024;
     vbDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
     addGPURingBuffer(pRenderer, &vbDesc, &dynamicVertexBuffer);
 
