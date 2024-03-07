@@ -105,16 +105,17 @@ typedef enum
 
 //====================================================
 
-extern std::map<std::string, image_t> textures;
-extern int numvktextures;
+extern	image_t		vktextures[MAX_VKTEXTURES];
+extern	int			numvktextures;
 
-extern image_t *r_notexture;
-extern image_t *r_particletexture;
-extern entity_t *currententity;
-extern int r_visframecount;
-extern int r_framecount;
-extern cplane_t frustum[4];
-extern int c_brush_polys, c_alias_polys;
+extern	image_t		*r_notexture;
+extern	image_t		*r_particletexture;
+extern	entity_t	*currententity;
+extern	model_t		*currentmodel;
+extern	int			r_visframecount;
+extern	int			r_framecount;
+extern	cplane_t	frustum[4];
+extern	int			c_brush_polys, c_alias_polys;
 //
 // view origin
 //

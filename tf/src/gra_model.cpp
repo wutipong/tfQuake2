@@ -30,7 +30,6 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
 extern image_t vktextures[MAX_VKTEXTURES];
-extern Renderer *pRenderer;
 
 model_t *loadmodel;
 int modfilelen;
