@@ -775,6 +775,7 @@ void R_RenderView(refdef_t *fd)
 
 void R_EndWorldRenderpass(void)
 {
+    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
     RenderTargetBarrier barriers[2]{
         {
             pWorldRenderTarget,
@@ -801,12 +802,16 @@ void R_EndWorldRenderpass(void)
 
      float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
      0.f,
-                           viewsize->value / 100, vid.width, vid.height};
+                           viewsize->value / 100, (float) vid.width, (float) vid.height};
+
+    cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldTexture);
     cmdBindPipeline(pCmd, worldWarpPipeline);
     cmdDraw(pCmd, 3, 0);
+
+    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
 
     barriers[0] = {
         pWorldWarpRenderTarget,
@@ -827,6 +832,7 @@ void R_EndWorldRenderpass(void)
     bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
     cmdBindRenderTargets(pCmd, &bindRenderTargets);
 
+    cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game UI Pass");
     // // start drawing UI
     // QVk_BeginRenderpass(RP_UI);
 }
@@ -1136,6 +1142,7 @@ void R_BeginFrame(float camera_separation)
     beginCmd(cmd);
 
     cmdBeginGpuFrameProfile(cmd, gGpuProfileToken);
+    cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Game World Pass");
     pCmd = cmd;
 
     RenderTargetBarrier barriers[] = {
@@ -1234,6 +1241,8 @@ R_EndFrame
 */
 void R_EndFrame(void)
 {
+    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
+
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Draw UI");
     uint32_t gFontID = 0;
     FontDrawDesc gFrameTimeDraw = {};
