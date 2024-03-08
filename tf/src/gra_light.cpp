@@ -69,19 +69,9 @@ void R_RenderDlight(dlight_t *light)
     }
 
     cmdBindPipeline(pCmd, drawDLightPipeline);
-
-    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(lightVerts));
-    {
-        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, lightVerts, sizeof(lightVerts));
-        endUpdateResource(&updateDesc);
-    }
     uint32_t stride = sizeof(float) * 6;
-    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    GRA_BindVertexBuffer(pCmd, lightVerts, sizeof(lightVerts), stride);
     GRA_BindUniformBuffer(pCmd, &r_viewproj_matrix, sizeof(r_viewproj_matrix));
-    
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, 18);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
 }

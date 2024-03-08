@@ -220,21 +220,12 @@ void R_DrawSpriteModel(entity_t *e)
         spriteQuad[3][0], spriteQuad[3][1], spriteQuad[3][2], 1.f, 1.f,
     };
 
-    GPURingBufferOffset vertexBlock = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(quadVerts));
-    BufferUpdateDesc updateDesc = {vertexBlock.pBuffer, vertexBlock.mOffset};
-
-    beginUpdateResource(&updateDesc);
-    memcpy(updateDesc.pMappedData, quadVerts, sizeof(quadVerts));
-    endUpdateResource(&updateDesc);
-
     cmdBindPipeline(pCmd, drawSpritePipeline);
-    cmdBindDescriptorSet(pCmd, 1, pDescriptorSetUniforms);
-
     GRA_BindUniformBuffer(pCmd, &alpha, sizeof(alpha));
-
     constexpr uint32_t stride = sizeof(float) * 5;
+    GRA_BindVertexBuffer(pCmd, quadVerts, sizeof(quadVerts), stride);
+
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-    cmdBindVertexBuffer(pCmd, 1, &vertexBlock.pBuffer, &stride, &vertexBlock.mOffset);
     cmdDraw(pCmd, 6, 0);
 }
 
@@ -294,19 +285,12 @@ void R_DrawNullModel(void)
         verts[i][2] = shadelight[2];
     }
 
-    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(verts));
-    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-    beginUpdateResource(&updateDesc);
-    memcpy(updateDesc.pMappedData, verts, sizeof(verts));
-    endUpdateResource(&updateDesc);
-
     cmdBindPipeline(pCmd, drawNullModelPipeline);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     GRA_BindUniformBuffer(pCmd, &model, sizeof(model));
 
     constexpr uint32_t stride = sizeof(vec3_t);
-    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    GRA_BindVertexBuffer(pCmd, verts, sizeof(verts), stride);
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, 12);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -479,17 +463,8 @@ void Vk_DrawParticles(int num_particles, const particle_t particles[], const uns
     cmdBindPipeline(pCmd, drawParticlesPipeline);
     uint32_t vaoSize = 3 * sizeof(pvertex) * num_particles;
 
-    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(float) * 17);
-    {
-        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, &visibleParticles, vaoSize);
-        endUpdateResource(&updateDesc);
-    }
-
     constexpr uint32_t stride = sizeof(pvertex);
-    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+    GRA_BindVertexBuffer(pCmd, &visibleParticles, vaoSize, stride);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[r_particletexture->index]);
     cmdDraw(pCmd, 3 * num_particles, 0);
@@ -556,20 +531,9 @@ void R_DrawParticles(void)
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
         GRA_BindUniformBuffer(pCmd,  &particleUbo, sizeof(particleUbo));
-       
-        GPURingBufferOffset vertexBuffer =
-            getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(ppoint) * r_newrefdef.num_particles);
-        {
-            BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-            beginUpdateResource(&updateDesc);
-            memcpy(updateDesc.pMappedData, &visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles);
-            endUpdateResource(&updateDesc);
-        }
 
         constexpr uint32_t stride = sizeof(ppoint);
-        cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-
+        GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint)*r_newrefdef.num_particles, stride);
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
         cmdDraw(pCmd, r_newrefdef.num_particles, 0);
@@ -1349,19 +1313,10 @@ void R_DrawBeam(entity_t *e)
 
     cmdBindPipeline(pCmd, drawBeamPipeline);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-
-    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(beamvertex));
-    {
-        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, beamvertex, sizeof(beamvertex));
-        endUpdateResource(&updateDesc);
-    }
+    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
 
     constexpr uint32_t stride = sizeof(float) * 3;
-    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
+    GRA_BindVertexBuffer(pCmd, beamvertex, sizeof(beamvertex), stride);
     cmdDraw(pCmd, NUM_BEAM_SEGS * 4, 0);
 }
 

@@ -265,15 +265,7 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float 
             verts[i].texCoord[1] = v[4] / 64.f;
         }
 
-        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(polyvert) * p->numverts);
-        {
-            BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-            beginUpdateResource(&updateDesc);
-            memcpy(updateDesc.pMappedData, verts, sizeof(polyvert) * p->numverts);
-            endUpdateResource(&updateDesc);
-        }
-
+        GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, sizeof(polyvert));
         auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
         cmdDrawIndexed(pCmd, indexCount, 0, 0);
     }
@@ -619,20 +611,14 @@ void R_DrawSkyBox(void)
             skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
             skyVerts[3].data[0], skyVerts[3].data[1], skyVerts[3].data[2], skyVerts[3].data[3], skyVerts[3].data[4]};
 
-        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(verts));
-        BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, verts, sizeof(verts));
-        endUpdateResource(&updateDesc);
-
+        
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
         cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[sky_images[skytexorder[i]]->index]);
 
         GRA_BindUniformBuffer(pCmd, model, sizeof(model));
 
         constexpr uint32_t stride = sizeof(float) * 5;
-        cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+        GRA_BindVertexBuffer(pCmd, verts, sizeof(verts), stride);
 
         cmdDraw(pCmd, 6, 0);
     }

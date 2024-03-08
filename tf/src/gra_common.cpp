@@ -1247,3 +1247,16 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
 
     cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 }
+
+void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride)
+{
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, size);
+
+    BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
+
+    beginUpdateResource(&updateDesc);
+    memcpy(updateDesc.pMappedData, data, size);
+    endUpdateResource(&updateDesc);
+
+    cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+}

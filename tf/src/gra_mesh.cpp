@@ -277,21 +277,11 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
     };
     for (int p = 0; p < 2; p++)
     {
+        cmdBindPipeline(pCmd, pipelines[translucentIdx][p + leftHandOffset]);
         uint32_t vaoSize = sizeof(modelvert) * vertCounts[p];
 
-        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(float) * 17);
-        {
-            BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-            beginUpdateResource(&updateDesc);
-            memcpy(updateDesc.pMappedData, vertList[p], vaoSize);
-            endUpdateResource(&updateDesc);
-        }
-
         constexpr uint32_t stride = sizeof(float) * 9;
-        cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-
-        cmdBindPipeline(pCmd, pipelines[translucentIdx][p + leftHandOffset]);
+        GRA_BindVertexBuffer(pCmd, vertList[p], vaoSize, stride);
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
         cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
 
@@ -389,20 +379,11 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
         if (i > 0)
         {
             cmdBindPipeline(pCmd, pipelines[pipelineIdx]);
-            VkDeviceSize vaoSize = sizeof(vec3_t) * i;
-            GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(float) * 17);
-            {
-                BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
-
-                beginUpdateResource(&updateDesc);
-                memcpy(updateDesc.pMappedData, shadowverts, vaoSize);
-                endUpdateResource(&updateDesc);
-            }
-
+            uint32_t vaoSize = sizeof(vec3_t) * i;
             constexpr uint32_t stride = sizeof(float) * 3;
-            cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
+            GRA_BindVertexBuffer(pCmd, shadowverts, vaoSize, stride);
             cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-            
+
             if (pipelineIdx == TRIANGLE_STRIP)
             {
                 cmdDraw(pCmd, i, 0);

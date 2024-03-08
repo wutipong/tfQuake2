@@ -25,6 +25,7 @@ void GRA_Draw(IApp *pApp);
 
 void GRA_BindUniformBuffer(Cmd *pCmd, void* uniform, uint32_t size);
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count);
+void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride);
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
 void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
