@@ -790,24 +790,23 @@ void R_EndWorldRenderpass(void)
     };
     cmdResourceBarrier(pCmd, 0, NULL, 0, NULL, 2, barriers);
 
-    // FIXME: (ww) the implementation here is not complete yet.
+    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets.mRenderTargetCount = 1;
+    bindRenderTargets.mRenderTargets[0] = {pWorldWarpRenderTarget, LOAD_ACTION_CLEAR};
+    bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
+    cmdBindRenderTargets(pCmd, &bindRenderTargets);
+    
+    cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
+    cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
 
-    // BindRenderTargetsDesc bindRenderTargets = {};
-    // bindRenderTargets.mRenderTargetCount = 1;
-    // bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
-    // bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
-    // cmdBindRenderTargets(pCmd, &bindRenderTargets);
-    // cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
-    // cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+     float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
+     0.f,
+                           viewsize->value / 100, vid.width, vid.height};
 
-    //  float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
-    //  0.f,
-    //                        viewsize->value / 100, vid.width, vid.height};
-
-    // cmdBindPushConstants(pCmd, pRootSignature, 0, pushConsts);
-    // cmdBindDescriptorSet(pCmd, 0, &vk_colorbuffer.descriptorSet);
-    // cmdBindPipeline(pCmd, worldWarpPipeline);
-    // cmdDraw(pCmd, 3, 0);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
+    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldTexture);
+    cmdBindPipeline(pCmd, worldWarpPipeline);
+    cmdDraw(pCmd, 3, 0);
 
     barriers[0] = {
         pWorldWarpRenderTarget,
@@ -822,7 +821,7 @@ void R_EndWorldRenderpass(void)
 
     cmdResourceBarrier(pCmd, 0, NULL, 0, NULL, 2, barriers);
 
-    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets = {};
     bindRenderTargets.mRenderTargetCount = 1;
     bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
     bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
@@ -841,15 +840,14 @@ void R_SetVulkan2D(void)
     cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
     cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
 
-    //FIXME: (ww) same as R_EndWorldRenderPass
-    // if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
-    // {
-    //     float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
-    //     cmdBindPushConstants(pCmd, pRootSignature, 0, pushConsts);
-    //     cmdBindDescriptorSets(pCmd, 0, vk_colorbufferWarp.descriptorSet);
-    //     cmdBindPipeline(pCmd, postprocessPipeline);
-    //     cmdDraw(pCmd, 3, 0);
-    // }
+    if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
+    {
+        float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
+        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldWarpTexture);
+        cmdBindPipeline(pCmd, postprocessPipeline);
+        cmdDraw(pCmd, 3, 0);
+    }
 }
 
 /*

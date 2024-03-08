@@ -83,6 +83,8 @@ Cmd *pCmd;
 DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES] = {NULL};
 DescriptorSet *pDescriptorSetUniforms = {NULL};
 DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2] = {NULL};
+DescriptorSet *pDescriptorSetWorldTexture{NULL};
+DescriptorSet *pDescriptorSetWorldWarpTexture{NULL};
 
 Buffer *texRectVbo;
 Buffer *colorRectVbo;
@@ -1011,6 +1013,18 @@ static bool _addRenderTarget(IApp *pApp)
         return false;
     }
 
+    DescriptorData paramsTex = {
+        .pName = "sTexture",
+        .ppTextures = &pWorldRenderTarget->pTexture,
+    };
+    updateDescriptorSet(pRenderer, 0, pDescriptorSetWorldTexture, 1, &paramsTex);
+
+    paramsTex = {
+        .pName = "sTexture",
+        .ppTextures = &pWorldWarpRenderTarget->pTexture,
+    };
+    updateDescriptorSet(pRenderer, 0, pDescriptorSetWorldWarpTexture, 1, &paramsTex);
+
     return true;
 }
 
@@ -1044,6 +1058,10 @@ bool _addDescriptorSets()
         addDescriptorSet(pRenderer, &desc, &pDescriptorSetsLightMap[i]);
     }
 
+    desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
+    addDescriptorSet(pRenderer, &desc, &pDescriptorSetWorldTexture);
+    addDescriptorSet(pRenderer, &desc, &pDescriptorSetWorldWarpTexture);
+
     return true;
 }
 
@@ -1054,12 +1072,15 @@ bool _removeDescriptorSets()
         removeDescriptorSet(pRenderer, pDescriptorSetsTexture[i]);
     }
 
-    removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
-
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
         removeDescriptorSet(pRenderer, pDescriptorSetsLightMap[i]);
     }
+
+    removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
+    removeDescriptorSet(pRenderer, pDescriptorSetWorldTexture);
+    removeDescriptorSet(pRenderer, pDescriptorSetWorldWarpTexture);
+
     return true;
 }
 

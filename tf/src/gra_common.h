@@ -83,6 +83,8 @@ extern Cmd *pCmd;
 extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
 extern DescriptorSet *pDescriptorSetUniforms;
 extern DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2];
+extern DescriptorSet *pDescriptorSetWorldTexture;
+extern DescriptorSet *pDescriptorSetWorldWarpTexture;
 
 extern Buffer *texRectVbo;
 extern Buffer *colorRectVbo;
