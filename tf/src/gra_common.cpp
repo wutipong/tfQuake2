@@ -11,6 +11,8 @@
 
 const uint32_t gDataBufferCount = 2;
 
+IApp* pApp;
+
 Renderer *pRenderer = NULL;
 
 Queue *pGraphicsQueue = NULL;
@@ -23,8 +25,7 @@ RenderTarget *pWorldRenderTarget = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
 ProfileToken gGpuProfileToken = PROFILE_INVALID_TOKEN;
 int gFrameIndex = 0;
-FontDrawDesc gFrameTimeDraw = {};
-uint32_t gFontID = 0;
+
 extern Sampler *pSampler = NULL;
 extern image_t vktextures[MAX_VKTEXTURES];
 // render pipelines
@@ -998,50 +999,9 @@ static bool _addRenderTarget(IApp *pApp)
     return pWorldRenderTarget != NULL;
 }
 
-void GRA_Draw(IApp *pApp)
+void GRA_Draw(IApp *_pApp)
 {
-    if (pSwapChain->mEnableVsync != pApp->mSettings.mVSyncEnabled)
-    {
-        waitQueueIdle(pGraphicsQueue);
-        ::toggleVSync(pRenderer, &pSwapChain);
-    }
-
-    uint32_t swapchainImageIndex;
-    acquireNextImage(pRenderer, pSwapChain, pImageAcquiredSemaphore, NULL, &swapchainImageIndex);
-
-    pRenderTarget = pSwapChain->ppRenderTargets[swapchainImageIndex];
-    GpuCmdRingElement elem = getNextGpuCmdRingElement(&gGraphicsCmdRing, true, 1);
-
-    // Stall if CPU is running "gDataBufferCount" frames ahead of GPU
-    FenceStatus fenceStatus;
-    getFenceStatus(pRenderer, elem.pFence, &fenceStatus);
-    if (fenceStatus == FENCE_STATUS_INCOMPLETE)
-    {
-        waitForFences(pRenderer, 1, &elem.pFence);
-    }
-
-    // Reset cmd pool for this frame
-    resetCmdPool(pRenderer, elem.pCmdPool);
-
-    Cmd *cmd = elem.pCmds[0];
-    beginCmd(cmd);
-
-    cmdBeginGpuFrameProfile(cmd, gGpuProfileToken);
-    pCmd = cmd;
-
-    RenderTargetBarrier barriers[] = {
-        {pRenderTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET},
-    };
-    cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
-
-    // simply record the screen cleaning command
-    BindRenderTargetsDesc bindRenderTargets = {};
-    bindRenderTargets.mRenderTargetCount = 1;
-    bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
-    bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
-    cmdBindRenderTargets(cmd, &bindRenderTargets);
-    cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
-    cmdSetScissor(cmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+    pApp = _pApp;
 
     /************************************************************************/
     // Start drawing objects
@@ -1052,56 +1012,7 @@ void GRA_Draw(IApp *pApp)
     Qcommon_Frame(currentframe - lastframe);
     lastframe = currentframe;
 
-    cmdBeginGpuTimestampQuery(cmd, gGpuProfileToken, "Draw UI");
-
-    gFrameTimeDraw.mFontColor = 0xff00ffff;
-    gFrameTimeDraw.mFontSize = 18.0f;
-    gFrameTimeDraw.mFontID = gFontID;
-    float2 txtSizePx = cmdDrawCpuProfile(cmd, float2(8.f, 15.f), &gFrameTimeDraw);
-    cmdDrawGpuProfile(cmd, float2(8.f, txtSizePx.y + 75.f), gGpuProfileToken, &gFrameTimeDraw);
-
-    cmdDrawUserInterface(cmd);
-
-    cmdBindRenderTargets(cmd, NULL);
-    cmdEndGpuTimestampQuery(cmd, gGpuProfileToken);
-
-    barriers[0] = {
-        pRenderTarget,
-        RESOURCE_STATE_RENDER_TARGET,
-        RESOURCE_STATE_PRESENT,
-    };
-    cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
-
-    cmdEndGpuFrameProfile(cmd, gGpuProfileToken);
-
-    endCmd(cmd);
-
-    FlushResourceUpdateDesc flushUpdateDesc = {};
-    flushUpdateDesc.mNodeIndex = 0;
-    flushResourceUpdates(&flushUpdateDesc);
-    Semaphore *waitSemaphores[2] = {flushUpdateDesc.pOutSubmittedSemaphore, pImageAcquiredSemaphore};
-
-    QueueSubmitDesc submitDesc = {};
-    submitDesc.mCmdCount = 1;
-    submitDesc.mSignalSemaphoreCount = 1;
-    submitDesc.mWaitSemaphoreCount = TF_ARRAY_COUNT(waitSemaphores);
-    submitDesc.ppCmds = &cmd;
-    submitDesc.ppSignalSemaphores = &elem.pSemaphore;
-    submitDesc.ppWaitSemaphores = waitSemaphores;
-    submitDesc.pSignalFence = elem.pFence;
-    queueSubmit(pGraphicsQueue, &submitDesc);
-
-    QueuePresentDesc presentDesc = {};
-    presentDesc.mIndex = swapchainImageIndex;
-    presentDesc.mWaitSemaphoreCount = 1;
-    presentDesc.pSwapChain = pSwapChain;
-    presentDesc.ppWaitSemaphores = &elem.pSemaphore;
-    presentDesc.mSubmitDone = true;
-
-    queuePresent(pGraphicsQueue, &presentDesc);
-    flipProfiler();
-
-    gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
+    
 }
 
 bool _addDescriptorSets()

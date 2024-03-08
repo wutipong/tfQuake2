@@ -34,6 +34,14 @@ extern Renderer *pRenderer;
 extern Sampler *pSampler;
 extern image_t vktextures[MAX_VKTEXTURES];
 
+extern Queue *pGraphicsQueue;
+extern GpuCmdRing gGraphicsCmdRing;
+
+extern SwapChain *pSwapChain ;
+extern Semaphore *pImageAcquiredSemaphore;
+extern ProfileToken gGpuProfileToken;
+extern int gFrameIndex;
+
 extern RenderTarget *pRenderTarget;
 extern RenderTarget *pDepthBuffer;
 extern RenderTarget *pWorldRenderTarget;
@@ -82,5 +90,9 @@ extern Buffer *rectIbo;
 extern uint32_t gPushConstant;
 
 extern ProfileToken gGpuProfileToken;
+
+extern IApp* pApp;
+
+extern const uint32_t gDataBufferCount;
 
 #endif

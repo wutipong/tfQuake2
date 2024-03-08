@@ -28,6 +28,8 @@ extern "C"
 }
 
 #include "common.h"
+#include <IUI.h>
+#include <IFont.h>
 
 extern viddef_t vid;
 
@@ -1071,6 +1073,8 @@ void R_Shutdown(void)
     // Vkimp_Shutdown();
 }
 
+static GpuCmdRingElement elem;
+static uint32_t swapchainImageIndex;
 /*
 @@@@@@@@@@@@@@@@@@@@@
 R_BeginFrame
@@ -1078,6 +1082,48 @@ R_BeginFrame
 */
 void R_BeginFrame(float camera_separation)
 {
+    if (pSwapChain->mEnableVsync != pApp->mSettings.mVSyncEnabled)
+    {
+        waitQueueIdle(pGraphicsQueue);
+        ::toggleVSync(pRenderer, &pSwapChain);
+    }
+
+    acquireNextImage(pRenderer, pSwapChain, pImageAcquiredSemaphore, NULL, &swapchainImageIndex);
+
+    pRenderTarget = pSwapChain->ppRenderTargets[swapchainImageIndex];
+    elem = getNextGpuCmdRingElement(&gGraphicsCmdRing, true, 1);
+
+    // Stall if CPU is running "gDataBufferCount" frames ahead of GPU
+    FenceStatus fenceStatus;
+    getFenceStatus(pRenderer, elem.pFence, &fenceStatus);
+    if (fenceStatus == FENCE_STATUS_INCOMPLETE)
+    {
+        waitForFences(pRenderer, 1, &elem.pFence);
+    }
+
+    // Reset cmd pool for this frame
+    resetCmdPool(pRenderer, elem.pCmdPool);
+
+    Cmd *cmd = elem.pCmds[0];
+    beginCmd(cmd);
+
+    cmdBeginGpuFrameProfile(cmd, gGpuProfileToken);
+    pCmd = cmd;
+
+    RenderTargetBarrier barriers[] = {
+        {pRenderTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET},
+    };
+    cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
+
+    // simply record the screen cleaning command
+    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets.mRenderTargetCount = 1;
+    bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+    bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
+    cmdBindRenderTargets(cmd, &bindRenderTargets);
+    cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
+    cmdSetScissor(cmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+
     // // if Sys_Error() had been issued mid-frame, we might end up here without properly submitting the image, so
     // call QVk_EndFrame to be safe if (QVk_EndFrame(true) != VK_SUCCESS)
     // {
@@ -1156,6 +1202,58 @@ R_EndFrame
 */
 void R_EndFrame(void)
 {
+    cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Draw UI");
+    uint32_t gFontID = 0;
+    FontDrawDesc gFrameTimeDraw = {};
+    gFrameTimeDraw.mFontColor = 0xff00ffff;
+    gFrameTimeDraw.mFontSize = 18.0f;
+    gFrameTimeDraw.mFontID = gFontID;
+    float2 txtSizePx = cmdDrawCpuProfile(pCmd, float2(8.f, 15.f), &gFrameTimeDraw);
+    cmdDrawGpuProfile(pCmd, float2(8.f, txtSizePx.y + 75.f), gGpuProfileToken, &gFrameTimeDraw);
+
+    cmdDrawUserInterface(pCmd);
+
+    cmdBindRenderTargets(pCmd, NULL);
+    cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
+
+    RenderTargetBarrier barriers[1] {{
+        pRenderTarget,
+        RESOURCE_STATE_RENDER_TARGET,
+        RESOURCE_STATE_PRESENT,
+    }};
+    cmdResourceBarrier(pCmd, 0, NULL, 0, NULL, 1, barriers);
+
+    cmdEndGpuFrameProfile(pCmd, gGpuProfileToken);
+
+    endCmd(pCmd);
+
+    FlushResourceUpdateDesc flushUpdateDesc = {};
+    flushUpdateDesc.mNodeIndex = 0;
+    flushResourceUpdates(&flushUpdateDesc);
+    Semaphore *waitSemaphores[2] = {flushUpdateDesc.pOutSubmittedSemaphore, pImageAcquiredSemaphore};
+
+    QueueSubmitDesc submitDesc = {};
+    submitDesc.mCmdCount = 1;
+    submitDesc.mSignalSemaphoreCount = 1;
+    submitDesc.mWaitSemaphoreCount = TF_ARRAY_COUNT(waitSemaphores);
+    submitDesc.ppCmds = &pCmd;
+    submitDesc.ppSignalSemaphores = &elem.pSemaphore;
+    submitDesc.ppWaitSemaphores = waitSemaphores;
+    submitDesc.pSignalFence = elem.pFence;
+    queueSubmit(pGraphicsQueue, &submitDesc);
+
+    QueuePresentDesc presentDesc = {};
+    presentDesc.mIndex = swapchainImageIndex;
+    presentDesc.mWaitSemaphoreCount = 1;
+    presentDesc.pSwapChain = pSwapChain;
+    presentDesc.ppWaitSemaphores = &elem.pSemaphore;
+    presentDesc.mSubmitDone = true;
+
+    queuePresent(pGraphicsQueue, &presentDesc);
+    flipProfiler();
+
+    gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
+
     // if (QVk_EndFrame(false) != VK_SUCCESS)
     // 	Vk_PollRestart_f();
 
