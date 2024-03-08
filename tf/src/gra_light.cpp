@@ -80,23 +80,7 @@ void R_RenderDlight(dlight_t *light)
     }
     uint32_t stride = sizeof(float) * 6;
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-    
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(r_viewproj_matrix));
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, r_viewproj_matrix, sizeof(r_viewproj_matrix));
-        endUpdateResource(&updateDesc);
-    }
-
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
-
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd, &r_viewproj_matrix, sizeof(r_viewproj_matrix));
     
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, 18);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);

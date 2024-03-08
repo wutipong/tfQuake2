@@ -256,19 +256,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         drawInfo[pipelineIdx][pipeCounters[pipelineIdx]].firstVertex = vertCounts[pipelineIdx];
     }
 
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, &meshUbo, sizeof(meshUbo));
-        endUpdateResource(&updateDesc);
-    }
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
+    GRA_BindUniformBuffer(pCmd, &meshUbo, sizeof(meshUbo));
 
     // player configuration screen model is using the UI renderpass
     int pidx = (int)(r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RenderPass::UI : RenderPass::WORLD);
@@ -306,7 +294,6 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         cmdBindPipeline(pCmd, pipelines[translucentIdx][p + leftHandOffset]);
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
         cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
-        cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 
         if (p == TRIANGLE_STRIP)
         {
@@ -317,7 +304,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         }
         else
         {
-			auto indexCount = GRA_BindTriangleFanIBO(pCmd, drawInfo[p][i].vertexCount);
+            auto indexCount = GRA_BindTriangleFanIBO(pCmd, drawInfo[p][i].vertexCount);
 
             for (i = 0; i < pipeCounters[p]; i++)
             {
@@ -362,19 +349,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
 
     height = -lheight + 1.0;
 
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 16);
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, &modelMatrix, sizeof(float) * 16);
-        endUpdateResource(&updateDesc);
-    }
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
+    GRA_BindUniformBuffer(pCmd, &modelMatrix, sizeof(float) * 16);
 
     static vec3_t shadowverts[MAX_VERTS];
     while (1)
@@ -427,8 +402,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             constexpr uint32_t stride = sizeof(float) * 3;
             cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
             cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-            cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
-
+            
             if (pipelineIdx == TRIANGLE_STRIP)
             {
                 cmdDraw(pCmd, i, 0);
@@ -590,7 +564,7 @@ R_DrawAliasModel
 void R_DrawAliasModel(entity_t *e)
 {
     return;
-    
+
     int i;
     int leftHandOffset = 0;
     dmdl_t *paliashdr;

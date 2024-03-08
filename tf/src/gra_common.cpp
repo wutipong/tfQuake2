@@ -1181,23 +1181,10 @@ static void _removeStaticBuffers()
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
 {
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, uboSize);
-    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-    beginUpdateResource(&updateDesc);
-    memcpy(updateDesc.pMappedData, ubo, uboSize);
-    endUpdateResource(&updateDesc);
-
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
-    DescriptorData params[1] = {};
-    params[0].pName = "imageTransform_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
-
     const uint32_t stride = sizeof(float) * 2;
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
     cmdBindVertexBuffer(pCmd, 1, &colorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
 
@@ -1206,23 +1193,10 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
 
 void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 {
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, uboSize);
-    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-    beginUpdateResource(&updateDesc);
-    memcpy(updateDesc.pMappedData, ubo, uboSize);
-    endUpdateResource(&updateDesc);
-
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, uboSize};
-    DescriptorData params[1] = {};
-    params[0].pName = "imageTransform_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
-
     const uint32_t stride = sizeof(float) * 4;
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &texRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
@@ -1252,4 +1226,24 @@ uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
     cmdBindIndexBuffer(pCmd, indexBuffer.pBuffer, INDEX_TYPE_UINT16, indexBuffer.mOffset);
 
     return indexCount;
+}
+
+void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
+{
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, size);
+    {
+        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
+
+        beginUpdateResource(&updateDesc);
+        memcpy(updateDesc.pMappedData, uniform, size);
+        endUpdateResource(&updateDesc);
+    }
+
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].ppBuffers = &uniformBlock.pBuffer;
+    params[0].pRanges = &range;
+
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
 }

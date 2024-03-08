@@ -134,29 +134,14 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
         endUpdateResource(&updateDesc);
     }
 
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
-        endUpdateResource(&updateDesc);
-    }
-
     cmdBindPipeline(pCmd, drawPolyPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
     uint32_t stride = sizeof(polyvert);
-
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
 
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -209,26 +194,11 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
         endUpdateResource(&updateDesc);
     }
 
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
-        endUpdateResource(&updateDesc);
-    }
-
     cmdBindPipeline(pCmd, drawPolyPipeline);
-
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
+    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
 
     uint32_t stride = sizeof(polyvert);
 
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
@@ -259,23 +229,7 @@ void R_DrawTriangleOutlines(void)
     } triVert[4];
 
     cmdBindPipeline(pCmd, showTrisPipeline);
-
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(float) * 4);
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, color, sizeof(float) * 4);
-        endUpdateResource(&updateDesc);
-    }
-
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
-
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd,  color, sizeof(float) * 4);
 
     for (i = 0; i < MAX_LIGHTMAPS; i++)
     {
@@ -547,22 +501,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(lmapPolyUbo));
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, &lmapPolyUbo, sizeof(lmapPolyUbo));
-        endUpdateResource(&updateDesc);
-    }
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(lmapPolyUbo)};
-    DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
-    params[0].ppBuffers = &uniformBlock.pBuffer;
-    params[0].pRanges = &range;
-
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    GRA_BindUniformBuffer(pCmd, &lmapPolyUbo, sizeof(lmapPolyUbo));
 
     for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
     {

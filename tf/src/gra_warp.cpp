@@ -248,17 +248,9 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, float 
 
     cmdBindPipeline(pCmd, drawPolyWarpPipeline);
 
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(polyUbo));
-    {
-        BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-        beginUpdateResource(&updateDesc);
-        memcpy(updateDesc.pMappedData, &polyUbo, sizeof(polyUbo));
-        endUpdateResource(&updateDesc);
-    }
-
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
+    GRA_BindUniformBuffer(pCmd, &polyUbo, sizeof(polyUbo));
 
     for (bp = fa->polys; bp; bp = bp->next)
     {
@@ -600,12 +592,6 @@ void R_DrawSkyBox(void)
     } skyVerts[4];
 
     cmdBindPipeline(pCmd, drawSkyboxPipeline);
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, sizeof(model));
-    BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
-
-    beginUpdateResource(&updateDesc);
-    memcpy(updateDesc.pMappedData, model, sizeof(model));
-    endUpdateResource(&updateDesc);
 
     for (i = 0; i < 6; i++)
     {
@@ -633,7 +619,7 @@ void R_DrawSkyBox(void)
             skyVerts[2].data[0], skyVerts[2].data[1], skyVerts[2].data[2], skyVerts[2].data[3], skyVerts[2].data[4],
             skyVerts[3].data[0], skyVerts[3].data[1], skyVerts[3].data[2], skyVerts[3].data[3], skyVerts[3].data[4]};
 
-        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(model));
+        GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, sizeof(verts));
         BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
         beginUpdateResource(&updateDesc);
@@ -643,13 +629,7 @@ void R_DrawSkyBox(void)
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
         cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[sky_images[skytexorder[i]]->index]);
 
-        DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(model)};
-        DescriptorData params[1] = {};
-        params[0].pName = "UniformBufferObject_rootcbv";
-        params[0].ppBuffers = &uniformBlock.pBuffer;
-        params[0].pRanges = &range;
-
-        cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+        GRA_BindUniformBuffer(pCmd, model, sizeof(model));
 
         constexpr uint32_t stride = sizeof(float) * 5;
         cmdBindVertexBuffer(pCmd, 1, &vertexBuffer.pBuffer, &stride, &vertexBuffer.mOffset);
