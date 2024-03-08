@@ -544,6 +544,7 @@ R_DrawAliasModel
 */
 void R_DrawAliasModel(entity_t *e)
 {
+    //TODO: (ww) remove me when ready to work on alias models
     return;
 
     int i;
