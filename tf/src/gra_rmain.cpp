@@ -28,8 +28,8 @@ extern "C"
 }
 
 #include "common.h"
-#include <IUI.h>
 #include <IFont.h>
+#include <IUI.h>
 
 extern viddef_t vid;
 
@@ -532,10 +532,10 @@ void R_DrawParticles(void)
         }
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
-        GRA_BindUniformBuffer(pCmd,  &particleUbo, sizeof(particleUbo));
+        GRA_BindUniformBuffer(pCmd, &particleUbo, sizeof(particleUbo));
 
         constexpr uint32_t stride = sizeof(ppoint);
-        GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint)*r_newrefdef.num_particles, stride);
+        GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
         cmdDraw(pCmd, r_newrefdef.num_particles, 0);
@@ -775,21 +775,58 @@ void R_RenderView(refdef_t *fd)
 
 void R_EndWorldRenderpass(void)
 {
-    // // this may happen if swapchain image acquisition fails
-    // if (!vk_frameStarted)
-    // 	return;
+    RenderTargetBarrier barriers[2]{
+        {
+            pWorldRenderTarget,
+            RESOURCE_STATE_RENDER_TARGET,
+            RESOURCE_STATE_PRESENT,
+        },
+        {
+            pWorldWarpRenderTarget,
+            RESOURCE_STATE_SHADER_RESOURCE,
+            RESOURCE_STATE_RENDER_TARGET,
 
-    // // finish rendering world view to offsceen buffer
-    // vkCmdEndRenderPass(vk_activeCmdbuffer);
+        },
+    };
+    cmdResourceBarrier(pCmd, 0, NULL, 0, NULL, 2, barriers);
 
-    // // apply postprocessing effects (underwater view warp if the player is submerged in liquid) to offscreen buffer
-    // QVk_BeginRenderpass(RP_WORLD_WARP);
-    // float pushConsts[] = { (r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
-    // 0.f, viewsize->value / 100, vid.width, vid.height }; vkCmdPushConstants(vk_activeCmdbuffer,
-    // vk_worldWarpPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConsts), pushConsts);
-    // vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_worldWarpPipeline.layout, 0, 1,
-    // &vk_colorbuffer.descriptorSet, 0, NULL); QVk_BindPipeline(&vk_worldWarpPipeline); vkCmdDraw(vk_activeCmdbuffer,
-    // 3, 1, 0, 0); vkCmdEndRenderPass(vk_activeCmdbuffer);
+    // FIXME: (ww) the implementation here is not complete yet.
+
+    // BindRenderTargetsDesc bindRenderTargets = {};
+    // bindRenderTargets.mRenderTargetCount = 1;
+    // bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+    // bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
+    // cmdBindRenderTargets(pCmd, &bindRenderTargets);
+    // cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
+    // cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+
+    //  float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
+    //  0.f,
+    //                        viewsize->value / 100, vid.width, vid.height};
+
+    // cmdBindPushConstants(pCmd, pRootSignature, 0, pushConsts);
+    // cmdBindDescriptorSet(pCmd, 0, &vk_colorbuffer.descriptorSet);
+    // cmdBindPipeline(pCmd, worldWarpPipeline);
+    // cmdDraw(pCmd, 3, 0);
+
+    barriers[0] = {
+        pWorldWarpRenderTarget,
+        RESOURCE_STATE_RENDER_TARGET,
+        RESOURCE_STATE_SHADER_RESOURCE,
+    };
+    barriers[1] = {
+        pRenderTarget,
+        RESOURCE_STATE_PRESENT,
+        RESOURCE_STATE_RENDER_TARGET,
+    };
+
+    cmdResourceBarrier(pCmd, 0, NULL, 0, NULL, 2, barriers);
+
+    BindRenderTargetsDesc bindRenderTargets = {};
+    bindRenderTargets.mRenderTargetCount = 1;
+    bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+    bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
+    cmdBindRenderTargets(pCmd, &bindRenderTargets);
 
     // // start drawing UI
     // QVk_BeginRenderpass(RP_UI);
@@ -801,24 +838,17 @@ void R_SetVulkan2D(void)
     if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
         R_EndWorldRenderpass();
 
-    // extern VkViewport vk_viewport;
-    // extern VkRect2D vk_scissor;
-    // cmdSetViewport(pCmd, vk_viewport.x, vk_viewport.y, vk_viewport.width, vk_viewport.height, vk_viewport.minDepth,
-    //                vk_viewport.maxDepth);
-    // cmdSetScissor(pCmd, vk_scissor.offset.x, vk_scissor.offset.y, vk_scissor.extent.width, vk_scissor.extent.height);
+    cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
+    cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
 
-    // first, blit offscreen color buffer with warped/postprocessed world view
-    // skip this step if we're in player config screen since it uses RP_UI and draws directly to swapchain
+    //FIXME: (ww) same as R_EndWorldRenderPass
     // if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
     // {
     //     float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
-    //     vkCmdPushConstants(vk_activeCmdbuffer, vk_postprocessPipeline.layout, VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-    //                        sizeof(pushConsts), pushConsts);
-    //     vkCmdBindDescriptorSets(vk_activeCmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vk_postprocessPipeline.layout,
-    //     0,
-    //                             1, &vk_colorbufferWarp.descriptorSet, 0, NULL);
-    //     QVk_BindPipeline(&vk_postprocessPipeline);
-    //     vkCmdDraw(vk_activeCmdbuffer, 3, 1, 0, 0);
+    //     cmdBindPushConstants(pCmd, pRootSignature, 0, pushConsts);
+    //     cmdBindDescriptorSets(pCmd, 0, vk_colorbufferWarp.descriptorSet);
+    //     cmdBindPipeline(pCmd, postprocessPipeline);
+    //     cmdDraw(pCmd, 3, 0);
     // }
 }
 
@@ -1111,18 +1141,22 @@ void R_BeginFrame(float camera_separation)
     pCmd = cmd;
 
     RenderTargetBarrier barriers[] = {
-        {pRenderTarget, RESOURCE_STATE_PRESENT, RESOURCE_STATE_RENDER_TARGET},
+        {
+            pWorldRenderTarget,
+            RESOURCE_STATE_SHADER_RESOURCE,
+            RESOURCE_STATE_RENDER_TARGET,
+        },
     };
     cmdResourceBarrier(cmd, 0, NULL, 0, NULL, 1, barriers);
 
     // simply record the screen cleaning command
     BindRenderTargetsDesc bindRenderTargets = {};
     bindRenderTargets.mRenderTargetCount = 1;
-    bindRenderTargets.mRenderTargets[0] = {pRenderTarget, LOAD_ACTION_CLEAR};
+    bindRenderTargets.mRenderTargets[0] = {pWorldRenderTarget, LOAD_ACTION_CLEAR};
     bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
     cmdBindRenderTargets(cmd, &bindRenderTargets);
-    cmdSetViewport(cmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
-    cmdSetScissor(cmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
+    cmdSetViewport(cmd, 0.0f, 0.0f, (float)pWorldRenderTarget->mWidth, (float)pWorldRenderTarget->mHeight, 0.0f, 1.0f);
+    cmdSetScissor(cmd, 0, 0, pWorldRenderTarget->mWidth, pWorldRenderTarget->mHeight);
 
     // // if Sys_Error() had been issued mid-frame, we might end up here without properly submitting the image, so
     // call QVk_EndFrame to be safe if (QVk_EndFrame(true) != VK_SUCCESS)
@@ -1216,7 +1250,7 @@ void R_EndFrame(void)
     cmdBindRenderTargets(pCmd, NULL);
     cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
 
-    RenderTargetBarrier barriers[1] {{
+    RenderTargetBarrier barriers[1]{{
         pRenderTarget,
         RESOURCE_STATE_RENDER_TARGET,
         RESOURCE_STATE_PRESENT,

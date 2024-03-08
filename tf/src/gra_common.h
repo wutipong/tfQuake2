@@ -45,6 +45,7 @@ extern int gFrameIndex;
 extern RenderTarget *pRenderTarget;
 extern RenderTarget *pDepthBuffer;
 extern RenderTarget *pWorldRenderTarget;
+extern RenderTarget *pWorldWarpRenderTarget;
 
 // render pipelines
 extern Pipeline *drawTexQuadPipeline;

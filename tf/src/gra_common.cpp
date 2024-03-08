@@ -11,7 +11,7 @@
 
 const uint32_t gDataBufferCount = 2;
 
-IApp* pApp;
+IApp *pApp;
 
 Renderer *pRenderer = NULL;
 
@@ -22,6 +22,7 @@ SwapChain *pSwapChain = NULL;
 RenderTarget *pRenderTarget = NULL;
 RenderTarget *pDepthBuffer = NULL;
 RenderTarget *pWorldRenderTarget = NULL;
+RenderTarget *pWorldWarpRenderTarget = NULL;
 Semaphore *pImageAcquiredSemaphore = NULL;
 ProfileToken gGpuProfileToken = PROFILE_INVALID_TOKEN;
 int gFrameIndex = 0;
@@ -282,6 +283,7 @@ void GRA_Unload(ReloadDesc *pReloadDesc)
         removeSwapChain(pRenderer, pSwapChain);
         removeRenderTarget(pRenderer, pDepthBuffer);
         removeRenderTarget(pRenderer, pWorldRenderTarget);
+        removeRenderTarget(pRenderer, pWorldWarpRenderTarget);
     }
 
     if (pReloadDesc->mType & RELOAD_TYPE_SHADER)
@@ -981,22 +983,35 @@ static bool _addDepthBuffer(IApp *pApp)
 
 static bool _addRenderTarget(IApp *pApp)
 {
-    RenderTargetDesc postProcRTDesc = {};
-    postProcRTDesc.mArraySize = 1;
-    postProcRTDesc.mClearValue = {{0.0f, 0.0f, 0.0f, 0.0f}};
-    postProcRTDesc.mDepth = 1;
-    postProcRTDesc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
-    postProcRTDesc.mFormat = pSwapChain->mFormat;
-    postProcRTDesc.mStartState = RESOURCE_STATE_SHADER_RESOURCE;
-    postProcRTDesc.mHeight = pApp->mSettings.mHeight;
-    postProcRTDesc.mWidth = pApp->mSettings.mWidth;
-    postProcRTDesc.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
-    postProcRTDesc.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
-    postProcRTDesc.pName = "pWorldRenderTarget";
-    postProcRTDesc.mFlags = TEXTURE_CREATION_FLAG_VR_MULTIVIEW;
-    addRenderTarget(pRenderer, &postProcRTDesc, &pWorldRenderTarget);
+    RenderTargetDesc desc = {};
+    desc.mArraySize = 1;
+    desc.mClearValue = {{0.0f, 0.0f, 0.0f, 0.0f}};
+    desc.mDepth = 1;
+    desc.mDescriptors = DESCRIPTOR_TYPE_TEXTURE;
+    desc.mFormat = pSwapChain->mFormat;
+    desc.mStartState = RESOURCE_STATE_PRESENT;
+    desc.mHeight = pApp->mSettings.mHeight;
+    desc.mWidth = pApp->mSettings.mWidth;
+    desc.mSampleCount = pSwapChain->ppRenderTargets[0]->mSampleCount;
+    desc.mSampleQuality = pSwapChain->ppRenderTargets[0]->mSampleQuality;
+    desc.pName = "pWorldRenderTarget";
+    desc.mFlags = TEXTURE_CREATION_FLAG_VR_MULTIVIEW;
 
-    return pWorldRenderTarget != NULL;
+    addRenderTarget(pRenderer, &desc, &pWorldRenderTarget);
+    if (!pWorldRenderTarget)
+    {
+        return false;
+    }
+
+    desc.pName = "pWorldWarpRenderTarget";
+
+    addRenderTarget(pRenderer, &desc, &pWorldWarpRenderTarget);
+    if (!pWorldWarpRenderTarget)
+    {
+        return false;
+    }
+
+    return true;
 }
 
 void GRA_Draw(IApp *_pApp)
@@ -1011,8 +1026,6 @@ void GRA_Draw(IApp *_pApp)
     uint32_t currentframe = getSystemTime();
     Qcommon_Frame(currentframe - lastframe);
     lastframe = currentframe;
-
-    
 }
 
 bool _addDescriptorSets()
