@@ -158,9 +158,9 @@ bool GRA_InitGraphics(IApp *app)
         .mMinFilter = FILTER_NEAREST,
         .mMagFilter = FILTER_NEAREST,
         .mMipMapMode = MIPMAP_MODE_NEAREST,
-        .mAddressU = ADDRESS_MODE_CLAMP_TO_EDGE,
-        .mAddressV = ADDRESS_MODE_CLAMP_TO_EDGE,
-        .mAddressW = ADDRESS_MODE_CLAMP_TO_EDGE,
+        .mAddressU = ADDRESS_MODE_REPEAT,
+        .mAddressV = ADDRESS_MODE_REPEAT,
+        .mAddressW = ADDRESS_MODE_REPEAT,
     };
     addSampler(pRenderer, &samplerDesc, &pSampler);
 
