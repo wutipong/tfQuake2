@@ -681,7 +681,7 @@ static void _addPipelines()
     DepthStateDesc depthStateDesc = {
         .mDepthTest = true,
         .mDepthWrite = true,
-        .mDepthFunc = CMP_GEQUAL,
+        .mDepthFunc = CMP_LESS,
     };
 
     BlendStateDesc blendStateDesc = {
@@ -968,7 +968,7 @@ static bool _addDepthBuffer(IApp *pApp)
     // Add depth buffer
     RenderTargetDesc depthRT = {};
     depthRT.mArraySize = 1;
-    depthRT.mClearValue.depth = 0.0f;
+    depthRT.mClearValue.depth = 1.0f;
     depthRT.mClearValue.stencil = 0;
     depthRT.mDepth = 1;
     depthRT.mFormat = TinyImageFormat_D32_SFLOAT;
