@@ -183,6 +183,8 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         float textured;
     } meshUbo;
 
+    memcpy(meshUbo.model, modelMatrix, sizeof(meshUbo.model));
+
     while (1)
     {
         // get the vertex count and primitive type
@@ -544,9 +546,6 @@ R_DrawAliasModel
 */
 void R_DrawAliasModel(entity_t *e)
 {
-    //TODO: (ww) remove me when ready to work on alias models
-    return;
-
     int i;
     int leftHandOffset = 0;
     dmdl_t *paliashdr;
