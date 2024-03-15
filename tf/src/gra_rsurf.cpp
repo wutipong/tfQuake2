@@ -665,9 +665,9 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                     verts[i].texCoordLmap[0] = v[5];
                     verts[i].texCoordLmap[1] = v[6];
                 }
-                
+
                 constexpr uint32_t stride = sizeof(float) * 7;
-                GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert)*nv, stride);
+                GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);

@@ -296,10 +296,9 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         }
         else
         {
-            auto indexCount = GRA_BindTriangleFanIBO(pCmd, drawInfo[p][i].vertexCount);
-
             for (i = 0; i < pipeCounters[p]; i++)
             {
+                auto indexCount = GRA_BindTriangleFanIBO(pCmd, drawInfo[p][i].vertexCount);
                 cmdDrawIndexed(pCmd, indexCount, 0, drawInfo[p][i].firstVertex);
             }
         }
