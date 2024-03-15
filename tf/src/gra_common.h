@@ -98,4 +98,5 @@ extern IApp* pApp;
 
 extern const uint32_t gDataBufferCount;
 
+extern bool vk_frameStarted;
 #endif

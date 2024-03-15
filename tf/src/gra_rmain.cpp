@@ -775,6 +775,9 @@ void R_RenderView(refdef_t *fd)
 
 void R_EndWorldRenderpass(void)
 {
+    if (!vk_frameStarted)
+        return;
+
     cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
     RenderTargetBarrier barriers[2]{
         {
@@ -796,13 +799,12 @@ void R_EndWorldRenderpass(void)
     bindRenderTargets.mRenderTargets[0] = {pWorldWarpRenderTarget, LOAD_ACTION_CLEAR};
     bindRenderTargets.mDepthStencil = {pDepthBuffer, LOAD_ACTION_CLEAR};
     cmdBindRenderTargets(pCmd, &bindRenderTargets);
-    
+
     cmdSetViewport(pCmd, 0.0f, 0.0f, (float)pRenderTarget->mWidth, (float)pRenderTarget->mHeight, 0.0f, 1.0f);
     cmdSetScissor(pCmd, 0, 0, pRenderTarget->mWidth, pRenderTarget->mHeight);
 
-     float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time :
-     0.f,
-                           viewsize->value / 100, (float) vid.width, (float) vid.height};
+    float pushConsts[] = {(r_newrefdef.rdflags & RDF_UNDERWATER) && vk_underwater->value > 0 ? r_newrefdef.time : 0.f,
+                          viewsize->value / 100, (float)vid.width, (float)vid.height};
 
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
@@ -899,8 +901,8 @@ R_RenderFrame
 */
 void R_RenderFrame(refdef_t *fd)
 {
-    // if (!vk_frameStarted)
-    // 	return;
+    if (!vk_frameStarted)
+        return;
 
     R_RenderView(fd);
     R_SetLightLevel();
@@ -1220,6 +1222,8 @@ void R_BeginFrame(float camera_separation)
     // {
     // 	QVk_BeginRenderpass(RP_WORLD);
     // }
+
+    vk_frameStarted = true;
 }
 
 static qboolean R_ShouldRestart()
@@ -1241,6 +1245,9 @@ R_EndFrame
 */
 void R_EndFrame(void)
 {
+    if (!vk_frameStarted)
+	    return;
+        
     cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
 
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Draw UI");
@@ -1338,6 +1345,8 @@ void R_EndFrame(void)
     // 	extern cvar_t *vid_refresh;
     // 	vid_refresh->modified = true;
     // }
+
+    vk_frameStarted = false;
 }
 
 /*
