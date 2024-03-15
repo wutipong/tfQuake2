@@ -20,6 +20,7 @@ CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float, att_c, None);
 };
 
+//FIXME: SV_PointSize only works on GLSL (and posibly others). May need to change to quads.
 STRUCT(VSOutput)
 {
 	DATA(float4, position, SV_Position);

@@ -9,8 +9,10 @@ float4 PS_MAIN( VSOutput In )
     INIT_MAIN;
 
     float2 cxy = 2.0 * In.position.xy - 1.0;
+
+    /* 
     if(dot(cxy, cxy) > 1.0)
         discard;
-
+    */
     RETURN(In.color);
 }
