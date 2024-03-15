@@ -22,8 +22,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // draw.c
 
 #include "../../client/vid.h"
-#include "gra_local.h"
 #include "gra_common.h"
+#include "gra_local.h"
 #include <format>
 
 image_t *draw_chars;
@@ -156,8 +156,9 @@ void Draw_StretchPic(int x, int y, int w, int h, char *pic)
         return;
     }
 
+    // FIXME (ww) uv scale-offset might need correction.
     float imgTransform[] = {
-        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0, 1, 0, 0,
+        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0, 0, 1, 1,
     };
     GRA_DrawTexRect(imgTransform, sizeof(imgTransform), vk);
 }
