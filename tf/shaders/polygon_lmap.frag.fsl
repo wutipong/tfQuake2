@@ -15,11 +15,6 @@ float4 PS_MAIN( VSOutput In )
     INIT_MAIN;
     float4 color = SampleTex2D(Get(sTexture), Get(textureSampler), In.texCoord);
     float4 light = SampleTex2D(Get(sLightmap), Get(textureSampler), In.texCoordLmap);
-
-    float4 position = In.position;
-    // float4 fragmentColor = float4(color.x, In.texCoordLmap.x, light.x, 1.0);
     
-    float4 fragmentColor = (1.0 - In.viewLightmaps) * color * light + In.viewLightmaps * light;
-    
-    RETURN(fragmentColor);
+    RETURN((1.0 - In.viewLightmaps) * color * light + In.viewLightmaps * light);
 }
