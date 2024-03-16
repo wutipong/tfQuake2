@@ -96,7 +96,7 @@ extern ProfileToken gGpuProfileToken;
 
 extern IApp* pApp;
 
-extern const uint32_t gDataBufferCount;
+constexpr uint32_t gDataBufferCount = 2;
 
 extern bool vk_frameStarted;
 #endif

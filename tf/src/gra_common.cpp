@@ -9,8 +9,6 @@
 #include <ITime.h>
 #include <IUI.h>
 
-const uint32_t gDataBufferCount = 2;
-
 IApp *pApp;
 
 Renderer *pRenderer = NULL;
