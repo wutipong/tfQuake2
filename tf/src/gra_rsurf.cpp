@@ -455,7 +455,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
     struct
     {
-        float model[16];
+        mat4 model;
         float viewLightmaps;
     } lmapPolyUbo;
 
@@ -463,11 +463,16 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
     if (modelMatrix)
     {
-        memcpy(lmapPolyUbo.model, modelMatrix, sizeof(float) * 16);
+        lmapPolyUbo.model = {
+            {modelMatrix[0], modelMatrix[1], modelMatrix[2], modelMatrix[3]},
+            {modelMatrix[4], modelMatrix[5], modelMatrix[6], modelMatrix[7]},
+            {modelMatrix[8], modelMatrix[9], modelMatrix[10], modelMatrix[11]},
+            {modelMatrix[12], modelMatrix[13], modelMatrix[14], modelMatrix[15]},
+        };
     }
     else
     {
-        Mat_Identity(lmapPolyUbo.model);
+        lmapPolyUbo.model = mat4::identity();
     }
 
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
