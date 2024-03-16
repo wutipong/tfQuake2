@@ -612,9 +612,9 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosTexcoordTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
-                {.mStride = sizeof(float2)},
-                {.mStride = sizeof(float2)},
+                {.mStride = sizeof(vec3)},
+                {.mStride = sizeof(vec2)},
+                {.mStride = sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -630,14 +630,14 @@ static void _addPipelines()
                     .mFormat = TinyImageFormat_R32G32_SFLOAT,
                     .mBinding = 0,
                     .mLocation = 1,
-                    .mOffset = sizeof(float3),
+                    .mOffset = sizeof(vec4),
                 },
                 {
                     .mSemantic = SEMANTIC_TEXCOORD1,
                     .mFormat = TinyImageFormat_R32G32_SFLOAT,
                     .mBinding = 0,
                     .mLocation = 2,
-                    .mOffset = sizeof(float3) + sizeof(float2),
+                    .mOffset = sizeof(vec4) + sizeof(vec2),
                 },
             },
         .mBindingCount = 1,
@@ -1165,7 +1165,8 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
 {
     uint32_t indexCount = 3 * (count - 2);
-    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffers[gFrameIndex], indexCount * sizeof(uint16_t));
+    GPURingBufferOffset indexBuffer =
+        getGPURingBufferOffset(&dynamicIndexBuffers[gFrameIndex], indexCount * sizeof(uint16_t));
     {
         BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
 

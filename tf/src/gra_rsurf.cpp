@@ -444,12 +444,12 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
     unsigned lmtex = surf->lightmaptexturenum;
     vkpoly_t *p;
 
-    typedef struct
+    struct lmappolyvert
     {
-        float vertex[3];
-        float texCoord[2];
-        float texCoordLmap[2];
-    } lmappolyvert;
+        alignas(vec4) vec3 vertex;
+        vec2 texCoord;
+        vec2 texCoordLmap;
+    };
 
     static lmappolyvert verts[MAX_VERTS];
 
@@ -567,16 +567,12 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 v = p->verts[0];
                 for (i = 0; i < nv; i++, v += VERTEXSIZE)
                 {
-                    verts[i].vertex[0] = v[0];
-                    verts[i].vertex[1] = v[1];
-                    verts[i].vertex[2] = v[2];
-                    verts[i].texCoord[0] = v[3] + scroll;
-                    verts[i].texCoord[1] = v[4];
-                    verts[i].texCoordLmap[0] = v[5];
-                    verts[i].texCoordLmap[1] = v[6];
+                    verts[i].vertex = {v[0], v[1], v[2]};
+                    verts[i].texCoord = {v[3] + scroll, v[4]};
+                    verts[i].texCoordLmap = {v[5], v[6]};
                 }
 
-                constexpr uint32_t stride = sizeof(float) * 7;
+                constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
 
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
@@ -593,16 +589,12 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 v = p->verts[0];
                 for (i = 0; i < nv; i++, v += VERTEXSIZE)
                 {
-                    verts[i].vertex[0] = v[0];
-                    verts[i].vertex[1] = v[1];
-                    verts[i].vertex[2] = v[2];
-                    verts[i].texCoord[0] = v[3];
-                    verts[i].texCoord[1] = v[4];
-                    verts[i].texCoordLmap[0] = v[5];
-                    verts[i].texCoordLmap[1] = v[6];
+                    verts[i].vertex = {v[0], v[1], v[2]};
+                    verts[i].texCoord = {v[3], v[4]};
+                    verts[i].texCoordLmap = {v[5], v[6]};
                 }
 
-                constexpr uint32_t stride = sizeof(float) * 7;
+                constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
                 cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -630,16 +622,12 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 v = p->verts[0];
                 for (i = 0; i < nv; i++, v += VERTEXSIZE)
                 {
-                    verts[i].vertex[0] = v[0];
-                    verts[i].vertex[1] = v[1];
-                    verts[i].vertex[2] = v[2];
-                    verts[i].texCoord[0] = v[3] + scroll;
-                    verts[i].texCoord[1] = v[4];
-                    verts[i].texCoordLmap[0] = v[5];
-                    verts[i].texCoordLmap[1] = v[6];
+                    verts[i].vertex = {v[0], v[1], v[2]};
+                    verts[i].texCoord = {v[3] + scroll, v[4]};
+                    verts[i].texCoordLmap = {v[5], v[6]};
                 }
 
-                constexpr uint32_t stride = sizeof(float) * 7;
+                constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
@@ -657,16 +645,12 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 v = p->verts[0];
                 for (i = 0; i < nv; i++, v += VERTEXSIZE)
                 {
-                    verts[i].vertex[0] = v[0];
-                    verts[i].vertex[1] = v[1];
-                    verts[i].vertex[2] = v[2];
-                    verts[i].texCoord[0] = v[3];
-                    verts[i].texCoord[1] = v[4];
-                    verts[i].texCoordLmap[0] = v[5];
-                    verts[i].texCoordLmap[1] = v[6];
+                    verts[i].vertex = {v[0], v[1], v[2]};
+                    verts[i].texCoord = {v[3], v[4]};
+                    verts[i].texCoordLmap = {v[5], v[6]};
                 }
 
-                constexpr uint32_t stride = sizeof(float) * 7;
+                constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
                 cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
