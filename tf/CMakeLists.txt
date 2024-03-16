@@ -266,9 +266,6 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/client/keys.c"
     "${CMAKE_SOURCE_DIR}/client/menu.c"
     "${CMAKE_SOURCE_DIR}/client/qmenu.c"
-    # "${CMAKE_SOURCE_DIR}/client/snd_dma.c"
-    # "${CMAKE_SOURCE_DIR}/client/snd_mem.c"
-    # "${CMAKE_SOURCE_DIR}/client/snd_mix.c"
     "${CMAKE_SOURCE_DIR}/game/m_flash.c"
     "${CMAKE_SOURCE_DIR}/game/q_shared.c"
     "${CMAKE_SOURCE_DIR}/qcommon/cmd.c"
@@ -288,15 +285,9 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    # "${CMAKE_SOURCE_DIR}/null/snddma_null.c"
     "${CMAKE_SOURCE_DIR}/win32/conproc.c"
-    # "${CMAKE_SOURCE_DIR}/win32/in_win.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
     "${CMAKE_SOURCE_DIR}/win32/q_shwin.c"
-
-    # "${CMAKE_SOURCE_DIR}/win32/snd_win.c"
-    # "${CMAKE_SOURCE_DIR}/win32/sys_win.c"
-    # "${CMAKE_SOURCE_DIR}/win32/vid_dll.c"
     "${CMAKE_SOURCE_DIR}/win32/vid_menu.c"
     "${CMAKE_SOURCE_DIR}/client/anorms.h"
     "${CMAKE_SOURCE_DIR}/client/cdaudio.h"
@@ -315,8 +306,6 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/qcommon/qcommon.h"
     "${CMAKE_SOURCE_DIR}/qcommon/qfiles.h"
     "${CMAKE_SOURCE_DIR}/server/server.h"
-    # "${CMAKE_SOURCE_DIR}/win32/conproc.h"
-    # "${CMAKE_SOURCE_DIR}/win32/winquake.h"
 )
 
 target_compile_features(tf-quake2-main PRIVATE cxx_std_20)

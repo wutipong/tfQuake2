@@ -19,6 +19,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 
+#include "gra_common.h"
 #include "gra_local.h"
 #include <IResourceLoader.h>
 
@@ -802,6 +803,15 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
         free(pic);
     if (palette)
         free(palette);
+
+    if (pDescriptorSetsTexture[image->index] != NULL)
+    {
+        DescriptorData paramsTex = {
+            .pName = "sTexture",
+            .ppTextures = &image->texture,
+        };
+        updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[image->index], 1, &paramsTex);
+    }
 
     return image;
 }

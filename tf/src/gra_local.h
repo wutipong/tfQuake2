@@ -238,17 +238,13 @@ void R_BeginFrame(float camera_separation);
 void R_EndFrame(void);
 void R_SetPalette(const unsigned char *palette);
 
-int Draw_LoadPalette(void);
-
-void Vk_ResampleTexture(unsigned *in, int inwidth, int inheight, unsigned *out, int outwidth, int outheight);
-
 struct image_s *R_RegisterSkin(char *name);
 
 void LoadPCX(std::string filename, byte **pic, byte **palette, int *width, int *height);
 
 image_t *GRA_LoadPic(const std::string &name, byte *pic, int width, int height, imagetype_t type, int bits);
 image_t *GRA_FindImage(std::string name, imagetype_t type);
-void Vk_LmapTextureMode(char *string);
+
 void GRA_ImageList_f(void);
 
 void GRA_InitImages(void);
@@ -256,53 +252,13 @@ void GRA_ShutdownImages(void);
 void GRA_FreeUnusedImages(void);
 void Vk_DrawParticles(int n, const particle_t particles[], const unsigned *colortable);
 
-typedef struct
-{
-    uint32_t vk_version;
-    const char *vendor_name;
-    const char *device_type;
-    const char *present_mode;
-    const char *supported_present_modes[256];
-    const char *extensions[256];
-    const char *layers[256];
-    uint32_t vertex_buffer_usage;
-    uint32_t vertex_buffer_max_usage;
-    uint32_t vertex_buffer_size;
-    uint32_t index_buffer_usage;
-    uint32_t index_buffer_max_usage;
-    uint32_t index_buffer_size;
-    uint32_t uniform_buffer_usage;
-    uint32_t uniform_buffer_max_usage;
-    uint32_t uniform_buffer_size;
-    uint32_t triangle_fan_index_usage;
-    uint32_t triangle_fan_index_max_usage;
-    uint32_t triangle_fan_index_count;
-    uint32_t allocated_ubo_descriptor_set_count;
-    uint32_t allocated_sampler_descriptor_set_count;
-    uint32_t ubo_descriptor_set_count;
-    uint32_t sampler_descriptor_set_count;
-    int swapchain_image_count;
-    qboolean vk_khr_portability_subset_available; // this extension must be enabled according to the specs if the device
-                                                  // supports it
-    qboolean vk_khr_get_physical_device_properties2_available; // required by VK_KHR_portability_subset and
-                                                               // VK_EXT_full_screen_exclusive
-    qboolean vk_khr_get_surface_capabilities2_available;       // required by VK_EXT_full_screen_exclusive
-    qboolean vk_khr_portability_enumeration_available;         // required by MoltenVK
-    qboolean vk_ext_debug_utils_supported;
-    qboolean vk_ext_debug_report_supported;
-    qboolean vk_ext_full_screen_exclusive_available; // the extension is available
-    qboolean vk_ext_full_screen_exclusive_possible;  // extension dependencies are available
-    qboolean vk_full_screen_exclusive_enabled;
-    qboolean vk_full_screen_exclusive_acquired;
-} vkconfig_t;
-
 #define MAX_LIGHTMAPS 128
 #define DYNLIGHTMAP_OFFSET MAX_LIGHTMAPS
 
 typedef struct
 {
     float inverse_intensity;
-    qboolean fullscreen;
+    bool fullscreen;
 
     int prev_mode;
 
@@ -314,36 +270,10 @@ typedef struct
     int currenttmu;
 
     float camera_separation;
-    qboolean stereo_enabled;
-
-    VkPipeline current_pipeline;
-#ifdef _WIN32
-    VkSurfaceFullScreenExclusiveInfoEXT full_screen_exclusive_info;
-#endif
+    bool stereo_enabled;
 } vkstate_t;
 
-extern vkconfig_t vk_config;
 extern vkstate_t vk_state;
-
-/*
-====================================================================
-
-IMPLEMENTATION SPECIFIC FUNCTIONS
-
-====================================================================
-*/
-
-void Vkimp_BeginFrame(float camera_separation);
-void Vkimp_EndFrame(void);
-int Vkimp_Init(void *hinstance, void *hWnd);
-void Vkimp_Shutdown(void);
-int Vkimp_SetMode(int *pwidth, int *pheight, int mode, qboolean fullscreen);
-void Vkimp_AppActivate(qboolean active);
-void Vkimp_EnableLogging(qboolean enable);
-void Vkimp_LogNewFrame(void);
-void Vkimp_GetInstanceExtensions(char **extensions, uint32_t *extCount);
-VkResult Vkimp_CreateSurface(void);
-VkSurfaceCapabilitiesKHR Vkimp_SetupFullScreenExclusive(void);
 
 void Mat_Identity(float *matrix);
 void Mat_Mul(float *m1, float *m2, float *res);

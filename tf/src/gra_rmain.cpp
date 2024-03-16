@@ -38,7 +38,6 @@ refexport_t re;
 
 model_t *r_worldmodel;
 
-vkconfig_t vk_config;
 vkstate_t vk_state;
 
 image_t *r_notexture;       // use for bad textures
