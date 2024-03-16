@@ -531,8 +531,8 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
-                {.mStride = sizeof(float2)},
+                {.mStride = sizeof(vec3)},
+                {.mStride = sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -548,7 +548,7 @@ static void _addPipelines()
                     .mFormat = TinyImageFormat_R32G32_SFLOAT,
                     .mBinding = 0,
                     .mLocation = 1,
-                    .mOffset = sizeof(float3),
+                    .mOffset = sizeof(vec4),
                 },
             },
         .mBindingCount = 1,

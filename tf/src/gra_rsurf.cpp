@@ -102,15 +102,15 @@ image_t *R_TextureAnimation(mtexinfo_t *tex)
 DrawVkPoly
 ================
 */
-void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
+void DrawVkPoly(vkpoly_t *p, image_t *texture, vec4 color)
 {
     int i;
     float *v;
 
     typedef struct
     {
-        float vertex[3];
-        float texCoord[2];
+        vec3 vertex;
+        vec2 texCoord;
     } polyvert;
 
     static polyvert verts[MAX_VERTS];
@@ -118,11 +118,8 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
     v = p->verts[0];
     for (i = 0; i < p->numverts; i++, v += VERTEXSIZE)
     {
-        verts[i].vertex[0] = v[0];
-        verts[i].vertex[1] = v[1];
-        verts[i].vertex[2] = v[2];
-        verts[i].texCoord[0] = v[3];
-        verts[i].texCoord[1] = v[4];
+        verts[i].vertex = {v[0], v[1], v[2]};
+        verts[i].texCoord = {v[3], v[4]};
     }
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
@@ -131,7 +128,7 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
-    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
+    GRA_BindUniformBuffer(pCmd, &color, sizeof(vec4));
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -144,7 +141,7 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, float *color)
 DrawVkFlowingPoly -- version of DrawVkPoly that handles scrolling texture
 ================
 */
-void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
+void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, vec4 color)
 {
     int i;
     float *v;
@@ -153,8 +150,8 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
 
     typedef struct
     {
-        float vertex[3];
-        float texCoord[2];
+        vec3 vertex;
+        vec2 texCoord;
     } polyvert;
 
     static polyvert verts[MAX_VERTS];
@@ -168,15 +165,12 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, float *color)
     v = p->verts[0];
     for (i = 0; i < p->numverts; i++, v += VERTEXSIZE)
     {
-        verts[i].vertex[0] = v[0];
-        verts[i].vertex[1] = v[1];
-        verts[i].vertex[2] = v[2];
-        verts[i].texCoord[0] = v[3] + scroll;
-        verts[i].texCoord[1] = v[4];
+        verts[i].vertex = {v[0], v[1], v[2]};
+        verts[i].texCoord = {v[3] + scroll, v[4]};
     }
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
-    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
+    GRA_BindUniformBuffer(pCmd, &color, sizeof(vec4));
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
@@ -261,7 +255,7 @@ void R_RenderBrushPoly(msurface_t *fa, float *modelMatrix, float alpha)
     int maps;
     image_t *image;
     qboolean is_dynamic = false;
-    float color[4] = {1.f, 1.f, 1.f, alpha};
+    vec4 color = {1.f, 1.f, 1.f, alpha};
     c_brush_polys++;
 
     image = R_TextureAnimation(fa->texinfo);
@@ -367,7 +361,7 @@ void R_DrawAlphaSurfaces(void)
     // the textures are prescaled up for a better lighting range,
     // so scale it back down
     intens = vk_state.inverse_intensity;
-    float color[4] = {intens, intens, intens, 1.f};
+    vec4 color = {intens, intens, intens, 1.f};
 
     for (s = r_alpha_surfaces; s; s = s->texturechain)
     {
