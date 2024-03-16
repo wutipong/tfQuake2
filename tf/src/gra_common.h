@@ -8,6 +8,10 @@
 #include <RingBuffer.h>
 #include <IProfiler.h>
 
+#include <array>
+
+constexpr uint32_t gDataBufferCount = 2;
+
 enum class RenderPass
 {
 	WORLD = 0,      // renders game world to offscreen buffer
@@ -74,9 +78,9 @@ extern Pipeline *postprocessPipeline;
 
 extern RootSignature *pRootSignature;
 
-extern GPURingBuffer dynamicUniformBuffer;
-extern GPURingBuffer dynamicVertexBuffer;
-extern GPURingBuffer dynamicIndexBuffer;
+extern std::array<GPURingBuffer, gDataBufferCount> dynamicUniformBuffers;
+extern std::array<GPURingBuffer, gDataBufferCount> dynamicVertexBuffers;
+extern std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 extern Cmd *pCmd;
 
@@ -95,8 +99,6 @@ extern uint32_t gPushConstant;
 extern ProfileToken gGpuProfileToken;
 
 extern IApp* pApp;
-
-constexpr uint32_t gDataBufferCount = 2;
 
 extern bool vk_frameStarted;
 #endif

@@ -1223,6 +1223,12 @@ void R_BeginFrame(float camera_separation)
     // 	QVk_BeginRenderpass(RP_WORLD);
     // }
 
+    gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
+
+    resetGPURingBuffer(&dynamicIndexBuffers[gFrameIndex]);
+    resetGPURingBuffer(&dynamicUniformBuffers[gFrameIndex]);
+    resetGPURingBuffer(&dynamicVertexBuffers[gFrameIndex]);
+
     vk_frameStarted = true;
 }
 
@@ -1299,8 +1305,6 @@ void R_EndFrame(void)
 
     queuePresent(pGraphicsQueue, &presentDesc);
     flipProfiler();
-
-    gFrameIndex = (gFrameIndex + 1) % gDataBufferCount;
 
     // if (QVk_EndFrame(false) != VK_SUCCESS)
     // 	Vk_PollRestart_f();

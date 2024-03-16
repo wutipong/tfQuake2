@@ -72,9 +72,9 @@ Shader *postprocessShader;
 
 RootSignature *pRootSignature = NULL;
 
-GPURingBuffer dynamicUniformBuffer;
-GPURingBuffer dynamicVertexBuffer;
-GPURingBuffer dynamicIndexBuffer;
+std::array<GPURingBuffer, gDataBufferCount> dynamicUniformBuffers;
+std::array<GPURingBuffer, gDataBufferCount> dynamicVertexBuffers;
+std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 Cmd *pCmd;
 
@@ -136,21 +136,31 @@ bool GRA_InitGraphics(IApp *app)
     addSemaphore(pRenderer, &pImageAcquiredSemaphore);
 
     initResourceLoaderInterface(pRenderer);
-    addUniformGPURingBuffer(pRenderer, 65536, &dynamicUniformBuffer, true);
+
+    for (auto &buffer : dynamicUniformBuffers)
+    {
+        addUniformGPURingBuffer(pRenderer, 65536, &buffer, true);
+    }
 
     BufferDesc vbDesc = {};
     vbDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     vbDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
     vbDesc.mSize = 4 * 1024 * 1024;
     vbDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-    addGPURingBuffer(pRenderer, &vbDesc, &dynamicVertexBuffer);
+    for (auto &buffer : dynamicVertexBuffers)
+    {
+        addGPURingBuffer(pRenderer, &vbDesc, &buffer);
+    }
 
     BufferDesc ibDesc = {};
     ibDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
     ibDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
     ibDesc.mSize = 65536;
     ibDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
-    addGPURingBuffer(pRenderer, &vbDesc, &dynamicIndexBuffer);
+    for (auto &buffer : dynamicIndexBuffers)
+    {
+        addGPURingBuffer(pRenderer, &ibDesc, &buffer);
+    }
 
     SamplerDesc samplerDesc = {
         .mMinFilter = FILTER_NEAREST,
@@ -195,9 +205,14 @@ bool GRA_ExitGraphics()
 
     removeSampler(pRenderer, pSampler);
     removeGpuCmdRing(pRenderer, &gGraphicsCmdRing);
-    removeGPURingBuffer(&dynamicUniformBuffer);
-    removeGPURingBuffer(&dynamicVertexBuffer);
-    removeGPURingBuffer(&dynamicIndexBuffer);
+
+    for (int i = 0; i < gDataBufferCount; i++)
+    {
+        removeGPURingBuffer(&dynamicUniformBuffers[i]);
+        removeGPURingBuffer(&dynamicVertexBuffers[i]);
+        removeGPURingBuffer(&dynamicIndexBuffers[i]);
+    }
+
     removeSemaphore(pRenderer, pImageAcquiredSemaphore);
     _removeStaticBuffers();
 
@@ -1150,7 +1165,7 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
 {
     uint32_t indexCount = 3 * (count - 2);
-    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffer, indexCount * sizeof(uint16_t));
+    GPURingBufferOffset indexBuffer = getGPURingBufferOffset(&dynamicIndexBuffers[gFrameIndex], indexCount * sizeof(uint16_t));
     {
         BufferUpdateDesc updateDesc = {indexBuffer.pBuffer, indexBuffer.mOffset};
 
@@ -1173,7 +1188,7 @@ uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
 
 void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
 {
-    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffer, size);
+    GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffers[gFrameIndex], size);
     {
         BufferUpdateDesc updateDesc = {uniformBlock.pBuffer, uniformBlock.mOffset};
 
@@ -1193,7 +1208,7 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
 
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride)
 {
-    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffer, size);
+    GPURingBufferOffset vertexBuffer = getGPURingBufferOffset(&dynamicVertexBuffers[gFrameIndex], size);
 
     BufferUpdateDesc updateDesc = {vertexBuffer.pBuffer, vertexBuffer.mOffset};
 
