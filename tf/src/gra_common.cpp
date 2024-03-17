@@ -1198,7 +1198,7 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
         endUpdateResource(&updateDesc);
     }
 
-    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, sizeof(float) * 4};
+    DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, size};
     DescriptorData params[1] = {};
     params[0].pName = "UniformBufferObject_rootcbv";
     params[0].ppBuffers = &uniformBlock.pBuffer;
