@@ -29,7 +29,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 extern model_t *currentmodel;
 extern model_t *r_worldmodel;
 
-static vec3_t modelorg; // relative to viewpoint
+static vec3 modelorg; // relative to viewpoint
 
 msurface_t *r_alpha_surfaces;
 
@@ -673,8 +673,6 @@ R_DrawInlineBModel
 void R_DrawInlineBModel(float *modelMatrix)
 {
     int i, k;
-    cplane_t *pplane;
-    float dot;
     msurface_t *psurf;
     dlight_t *lt;
     float alpha = 1.f;
@@ -703,13 +701,13 @@ void R_DrawInlineBModel(float *modelMatrix)
     for (i = 0; i < currentmodel->nummodelsurfaces; i++, psurf++)
     {
         // find which side of the node we are on
-        pplane = psurf->plane;
-
-        dot = DotProduct(modelorg, pplane->normal) - pplane->dist;
-
+        cplane_t *pplane = psurf->plane;
+        vec3 normal = {pplane->normal[0], pplane->normal[1], pplane->normal[2]};
+        float d  = dot(modelorg, normal) - pplane->dist;
+        
         // draw the polygon
-        if (((psurf->flags & SURF_PLANEBACK) && (dot < -BACKFACE_EPSILON)) ||
-            (!(psurf->flags & SURF_PLANEBACK) && (dot > BACKFACE_EPSILON)))
+        if (((psurf->flags & SURF_PLANEBACK) && (d < -BACKFACE_EPSILON)) ||
+            (!(psurf->flags & SURF_PLANEBACK) && (d > BACKFACE_EPSILON)))
         {
             if (psurf->texinfo->flags & (SURF_TRANS33 | SURF_TRANS66))
             { // add to the translucent chain
