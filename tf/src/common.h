@@ -13,4 +13,9 @@ static cvar_t *Cvar_Set(std::string var_name, std::string value)
     return Cvar_Set(var_name.data(), value.data());
 }
 
+static void Cvar_SetValue(std::string var_name, float value)
+{
+    return Cvar_SetValue(var_name.data(), value);
+}
+
 #endif
