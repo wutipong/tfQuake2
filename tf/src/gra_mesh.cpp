@@ -22,6 +22,10 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_common.h"
 #include "gra_local.h"
+
+#include "anorms.h"
+#include "anormtab.h"
+
 /*
 =============================================================
 
@@ -30,9 +34,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 =============================================================
 */
 
-float r_avertexnormals[NUMVERTEXNORMALS][3] = {
-#include "anorms.h"
-};
+std::array<std::array<float, 3>, NUMVERTEXNORMALS> r_avertexnormals = createVertTexNormal();
 
 typedef float vec4_t[4];
 
@@ -42,12 +44,8 @@ vec3_t shadevector;
 float shadelight[3];
 
 // precalculated dot products for quantized angles
-#define SHADEDOT_QUANT 16
-float r_avertexnormal_dots[SHADEDOT_QUANT][256] =
-#include "anormtab.h"
-    ;
-
-float *shadedots = r_avertexnormal_dots[0];
+auto r_avertexnormal_dots = createAVertexNormalDots();
+auto &shadedots = r_avertexnormal_dots[0];
 
 extern float r_view_matrix[16];
 extern float r_projection_matrix[16];
@@ -67,7 +65,7 @@ void Vk_LerpVerts(int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *vert
     {
         for (i = 0; i < nverts; i++, v++, ov++, lerp += 4)
         {
-            float *normal = r_avertexnormals[verts[i].lightnormalindex];
+            auto &normal = r_avertexnormals[verts[i].lightnormalindex];
 
             lerp[0] = move[0] + ov->v[0] * backv[0] + v->v[0] * frontv[0] + normal[0] * POWERSUIT_SCALE;
             lerp[1] = move[1] + ov->v[1] * backv[1] + v->v[1] * frontv[1] + normal[1] * POWERSUIT_SCALE;
