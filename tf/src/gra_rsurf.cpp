@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "gra_common.h"
 #include "gra_local.h"
+#include <array>
 #include <format>
 
 extern model_t *currentmodel;
@@ -32,13 +33,13 @@ static vec3_t modelorg; // relative to viewpoint
 
 msurface_t *r_alpha_surfaces;
 
-#define DYNAMIC_LIGHT_WIDTH 128
-#define DYNAMIC_LIGHT_HEIGHT 128
+constexpr int DYNAMIC_LIGHT_WIDTH = 128;
+constexpr int DYNAMIC_LIGHT_HEIGHT = 128;
 
-#define LIGHTMAP_BYTES 4
+constexpr int LIGHTMAP_BYTES = 4;
 
-#define BLOCK_WIDTH 128
-#define BLOCK_HEIGHT 128
+constexpr int BLOCK_WIDTH = 128;
+constexpr int BLOCK_HEIGHT = 128;
 
 int c_visible_lightmaps;
 int c_visible_textures;
@@ -47,13 +48,13 @@ typedef struct
 {
     int current_lightmap_texture;
 
-    msurface_t *lightmap_surfaces[MAX_LIGHTMAPS];
+    std::array<msurface_t *, MAX_LIGHTMAPS> lightmap_surfaces;
 
-    int allocated[BLOCK_WIDTH];
+    std::array<int, BLOCK_WIDTH> allocated;
 
     // the lightmap texture data needs to be kept in
     // main memory so texsubimage can update properly
-    byte lightmap_buffer[4 * BLOCK_WIDTH * BLOCK_HEIGHT];
+    std::array<byte, 4 * BLOCK_WIDTH * BLOCK_HEIGHT> lightmap_buffer;
 } vklightmapstate_t;
 
 static vklightmapstate_t vk_lms;
@@ -762,7 +763,7 @@ void R_DrawBrushModel(entity_t *e)
     if (R_CullBox(mins, maxs))
         return;
 
-    memset(vk_lms.lightmap_surfaces, 0, sizeof(vk_lms.lightmap_surfaces));
+    vk_lms.lightmap_surfaces.fill(0);
 
     VectorSubtract(r_newrefdef.vieworg, e->origin, modelorg);
     if (rotated)
@@ -944,7 +945,7 @@ void R_DrawWorld(void)
     ent.frame = (int)(r_newrefdef.time * 2);
     currententity = &ent;
 
-    memset(vk_lms.lightmap_surfaces, 0, sizeof(vk_lms.lightmap_surfaces));
+    vk_lms.lightmap_surfaces.fill(0);
     R_ClearSkyBox();
 
     R_RecursiveWorldNode(r_worldmodel->nodes);
@@ -1041,7 +1042,7 @@ void R_MarkLeaves(void)
 
 static void LM_InitBlock(void)
 {
-    memset(vk_lms.allocated, 0, sizeof(vk_lms.allocated));
+    vk_lms.allocated.fill(0);
 }
 
 static void LM_UploadBlock(qboolean dynamic)
@@ -1080,7 +1081,7 @@ static void LM_UploadBlock(qboolean dynamic)
         beginUpdateResource(&updateDesc);
 
         TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-        memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * height * sizeof(uint32_t));
+        memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(), BLOCK_WIDTH * height * sizeof(uint32_t));
         endUpdateResource(&updateDesc);
     }
     else
@@ -1099,7 +1100,7 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(), BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
         }
         else
@@ -1139,7 +1140,7 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer, BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(), BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
 
             DescriptorData paramsTex = {
@@ -1294,7 +1295,7 @@ void Vk_CreateSurfaceLightmap(msurface_t *surf)
 
     surf->lightmaptexturenum = vk_lms.current_lightmap_texture;
 
-    base = vk_lms.lightmap_buffer;
+    base = vk_lms.lightmap_buffer.data();
     base += (surf->light_t * BLOCK_WIDTH + surf->light_s) * LIGHTMAP_BYTES;
 
     R_SetCacheState(surf);
@@ -1313,7 +1314,7 @@ void Vk_BeginBuildingLightmaps(model_t *m)
     int i;
     unsigned dummy[BLOCK_WIDTH * BLOCK_HEIGHT];
 
-    memset(vk_lms.allocated, 0, sizeof(vk_lms.allocated));
+    vk_lms.allocated.fill(0);
 
     r_framecount = 1; // no dlightcache
 
