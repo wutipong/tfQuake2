@@ -286,7 +286,6 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_send.c"
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
-    "${CMAKE_SOURCE_DIR}/win32/conproc.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
     "${CMAKE_SOURCE_DIR}/win32/q_shwin.c"
     "${CMAKE_SOURCE_DIR}/client/anorms.h"
