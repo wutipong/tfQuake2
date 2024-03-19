@@ -250,6 +250,7 @@ add_executable(tf-quake2-main
     "src/gra_rsurf.cpp"
     "src/gra_rmisc.cpp"
     "src/vid_menu.cpp"
+    "src/q_shwin.cpp"
 
     "${CMAKE_SOURCE_DIR}/client/cl_cin.c"
     "${CMAKE_SOURCE_DIR}/client/cl_ents.c"
@@ -287,7 +288,6 @@ add_executable(tf-quake2-main
     "${CMAKE_SOURCE_DIR}/server/sv_user.c"
     "${CMAKE_SOURCE_DIR}/server/sv_world.c"
     "${CMAKE_SOURCE_DIR}/win32/net_wins.c"
-    "${CMAKE_SOURCE_DIR}/win32/q_shwin.c"
     "${CMAKE_SOURCE_DIR}/client/anorms.h"
     "${CMAKE_SOURCE_DIR}/client/cdaudio.h"
     "${CMAKE_SOURCE_DIR}/client/client.h"
