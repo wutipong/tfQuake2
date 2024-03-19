@@ -67,15 +67,19 @@ vec3_t vpn;
 vec3_t vright;
 vec3_t r_origin;
 
-float r_projection_matrix[16];
+mat4 r_projection_matrix;
 float r_proj_aspect;
 float r_proj_fovx;
 float r_proj_fovy;
-float r_view_matrix[16];
-float r_viewproj_matrix[16];
+mat4 r_view_matrix;
+mat4 r_viewproj_matrix;
 // correction matrix for perspective in Vulkan
-static float r_vulkan_correction[16] = {1.f, 0.f, 0.f, 0.f, 0.f, -1.f, 0.f, 0.f,
-                                        0.f, 0.f, .5f, 0.f, 0.f, 0.f,  .5f, 1.f};
+static mat4 r_vulkan_correction = {
+    {1.f, 0.f, 0.f, 0.f},
+    {0.f, -1.f, 0.f, 0.f},
+    {0.f, 0.f, .5f, 0.f},
+    {0.f, 0.f, .5f, 1.f},
+};
 //
 // screen size info
 //
@@ -226,7 +230,7 @@ void R_DrawSpriteModel(entity_t *e)
     constexpr uint32_t stride = sizeof(float) * 5;
     GRA_BindVertexBuffer(pCmd, quadVerts, sizeof(quadVerts), stride);
 
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
     cmdDraw(pCmd, 6, 0);
 }
 
@@ -287,7 +291,7 @@ void R_DrawNullModel(void)
     }
 
     cmdBindPipeline(pCmd, drawNullModelPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
     GRA_BindUniformBuffer(pCmd, &model, sizeof(model));
 
     constexpr uint32_t stride = sizeof(vec3_t);
@@ -466,7 +470,7 @@ void Vk_DrawParticles(int num_particles, const particle_t particles[], const uns
 
     constexpr uint32_t stride = sizeof(pvertex);
     GRA_BindVertexBuffer(pCmd, &visibleParticles, vaoSize, stride);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[r_particletexture->index]);
     cmdDraw(pCmd, 3 * num_particles, 0);
 }
@@ -535,7 +539,7 @@ void R_DrawParticles(void)
 
         constexpr uint32_t stride = sizeof(ppoint);
         GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
 
         cmdDraw(pCmd, r_newrefdef.num_particles, 0);
     }
@@ -695,22 +699,29 @@ void R_SetupVulkan(void)
     r_proj_fovx = r_newrefdef.fov_x;
     r_proj_fovy = r_newrefdef.fov_y;
     r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
-    Mat_Perspective(r_projection_matrix, r_vulkan_correction, r_proj_fovy, r_proj_aspect, 4, 4096);
+
+    //Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4, 4096);
+    r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1/r_proj_aspect, 4, 4096);
+    //r_projection_matrix = r_vulkan_correction * r_projection_matrix;
 
     R_SetFrustum(r_proj_fovx, r_proj_fovy);
 
     // set up view matrix
-    Mat_Identity(r_view_matrix);
+    r_view_matrix = mat4::identity();
     // put Z going up
-    Mat_Translate(r_view_matrix, -r_newrefdef.vieworg[0], -r_newrefdef.vieworg[1], -r_newrefdef.vieworg[2]);
-    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[1], 0.f, 0.f, 1.f);
-    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[0], 0.f, 1.f, 0.f);
-    Mat_Rotate(r_view_matrix, -r_newrefdef.viewangles[2], 1.f, 0.f, 0.f);
-    Mat_Rotate(r_view_matrix, 90.f, 0.f, 0.f, 1.f);
-    Mat_Rotate(r_view_matrix, -90.f, 1.f, 0.f, 0.f);
+    r_view_matrix =
+        mat4::translation({-r_newrefdef.vieworg[0], -r_newrefdef.vieworg[1], -r_newrefdef.vieworg[2]}) * r_view_matrix;
+
+    r_view_matrix = mat4::rotation(degToRad(-r_newrefdef.viewangles[1]), {0.f, 0.f, 1.f}) * r_view_matrix;
+    r_view_matrix = mat4::rotation(degToRad(-r_newrefdef.viewangles[0]), {0.f, 1.f, 0.f}) * r_view_matrix;
+    r_view_matrix = mat4::rotation(degToRad(-r_newrefdef.viewangles[2]), {1.f, 0.f, 0.f}) * r_view_matrix;
+
+    r_view_matrix = mat4::rotation(degToRad(90), {0.f, 0.f, 1.f}) * r_view_matrix;
+    r_view_matrix = mat4::rotation(degToRad(-90), {1.f, 0.f, 0.f}) * r_view_matrix;
 
     // precalculate view-projection matrix
-    Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
+    r_viewproj_matrix = r_projection_matrix * r_view_matrix;
+    // Mat_Mul(toFloatPtr(r_view_matrix), r_projection_matrix, toFloatPtr(r_viewproj_matrix));
 }
 
 void R_Flash(void)
@@ -1251,8 +1262,8 @@ R_EndFrame
 void R_EndFrame(void)
 {
     if (!vk_frameStarted)
-	    return;
-        
+        return;
+
     cmdEndGpuTimestampQuery(pCmd, gGpuProfileToken);
 
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Draw UI");
@@ -1463,7 +1474,7 @@ void R_DrawBeam(entity_t *e)
     }
 
     cmdBindPipeline(pCmd, drawBeamPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
     GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
 
     constexpr uint32_t stride = sizeof(float) * 3;
@@ -1660,5 +1671,5 @@ void Mat_Ortho(float *matrix, float left, float right, float bottom, float top, 
 
     // Convert projection matrix to Vulkan coordinate system
     // (https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/)
-    Mat_Mul(proj, r_vulkan_correction, matrix);
+    Mat_Mul(proj, toFloatPtr(r_vulkan_correction), matrix);
 }

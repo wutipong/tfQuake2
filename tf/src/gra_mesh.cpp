@@ -47,13 +47,17 @@ float shadelight[3];
 auto r_avertexnormal_dots = createAVertexNormalDots();
 auto &shadedots = r_avertexnormal_dots[0];
 
-extern float r_view_matrix[16];
-extern float r_projection_matrix[16];
-extern float r_viewproj_matrix[16];
+extern mat4 r_view_matrix;
+extern mat4 r_projection_matrix;
+extern mat4 r_viewproj_matrix;
 
 // correction matrix with "hacked depth" for models with RF_DEPTHHACK flag set
-static float r_vulkan_correction_dh[16] = {1.f, 0.f, 0.f, 0.f, 0.f, -1.f, 0.f, 0.f,
-                                           0.f, 0.f, .3f, 0.f, 0.f, 0.f,  .3f, 1.f};
+static mat4 r_vulkan_correction_dh = {
+    {1.f, 0.f, 0.f, 0.f},
+    {0.f, -1.f, 0.f, 0.f},
+    {0.f, 0.f, .3f, 0.f},
+    {0.f, 0.f, .3f, 1.f},
+};
 
 void Vk_LerpVerts(int nverts, dtrivertx_t *v, dtrivertx_t *ov, dtrivertx_t *verts, float *lerp, float move[3],
                   float frontv[3], float backv[3])
@@ -282,7 +286,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
 
         constexpr uint32_t stride = sizeof(float) * 9;
         GRA_BindVertexBuffer(pCmd, vertList[p], vaoSize, stride);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
         cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
 
         if (p == TRIANGLE_STRIP)
@@ -381,7 +385,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             uint32_t vaoSize = sizeof(vec3_t) * i;
             constexpr uint32_t stride = sizeof(float) * 3;
             GRA_BindVertexBuffer(pCmd, shadowverts, vaoSize, stride);
-            cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
+            cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
 
             if (pipelineIdx == TRIANGLE_STRIP)
             {
@@ -549,7 +553,7 @@ void R_DrawAliasModel(entity_t *e)
     float an;
     vec3_t bbox[8];
     image_t *skin;
-    float prev_viewproj[16];
+    mat4 prev_viewproj;
 
     if (!(e->flags & RF_WEAPONMODEL))
     {
@@ -683,19 +687,28 @@ void R_DrawAliasModel(entity_t *e)
     //
     if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL)
     { // hack the depth range to prevent view model from poking into walls
-        extern float r_proj_aspect, r_proj_fovy;
+        extern float r_proj_aspect, r_proj_fovx;
         // use different range for player setup screen so it doesn't collide with the viewmodel
-        r_vulkan_correction_dh[10] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
-        r_vulkan_correction_dh[14] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
+        r_vulkan_correction_dh[2][2] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
+        r_vulkan_correction_dh[3][2] = 0.3f - (r_newrefdef.rdflags & RDF_NOWORLDMODEL) * 0.1f;
 
-        memcpy(prev_viewproj, r_viewproj_matrix, sizeof(r_viewproj_matrix));
-        Mat_Perspective(r_projection_matrix, r_vulkan_correction_dh, r_proj_fovy, r_proj_aspect, 4, 4096);
-        Mat_Mul(r_view_matrix, r_projection_matrix, r_viewproj_matrix);
+        prev_viewproj = r_viewproj_matrix;
+
+        // FIXME: r_vulkan_correction_dh
+        // Mat_Perspective(r_projection_matrix, r_vulkan_correction_dh, r_proj_fovy, r_proj_aspect, 4, 4096);
+
+        r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1/r_proj_aspect, 4, 4096);
+    //r_projection_matrix = r_vulkan_correction_dh * r_projection_matrix;
+
+        r_viewproj_matrix =  r_projection_matrix * r_view_matrix;
+        // Mat_Mul(toFloatPtr(r_view_matrix), r_projection_matrix, toFloatPtr(r_viewproj_matrix));
     }
 
     if ((currententity->flags & RF_WEAPONMODEL) && (r_lefthand->value == 1.0F))
     {
-        Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
+        // Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
+
+        r_viewproj_matrix = mat4::scale({-1.f, 1.f, 1.f}) * r_viewproj_matrix;
         leftHandOffset = 2;
     }
 
@@ -744,12 +757,12 @@ void R_DrawAliasModel(entity_t *e)
 
     if ((currententity->flags & RF_WEAPONMODEL) && (r_lefthand->value == 1.0F))
     {
-        Mat_Scale(r_viewproj_matrix, -1.f, 1.f, 1.f);
+        Mat_Scale(toFloatPtr(r_viewproj_matrix), -1.f, 1.f, 1.f);
     }
 
     if (currententity->flags & RF_DEPTHHACK || r_newrefdef.rdflags & RDF_NOWORLDMODEL)
     {
-        memcpy(r_viewproj_matrix, prev_viewproj, sizeof(prev_viewproj));
+        r_viewproj_matrix = prev_viewproj;
     }
 
     if (vk_shadows->value && !(currententity->flags & (RF_TRANSLUCENT | RF_WEAPONMODEL)))

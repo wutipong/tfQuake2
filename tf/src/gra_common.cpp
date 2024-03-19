@@ -679,12 +679,13 @@ static void _addPipelines()
         .mAttribCount = 3,
     };
 
+    //FIXME: cull mode is still not working perfectly. Need to investigate more.
     RasterizerStateDesc rasterizerStateCullBackDesc = {
-        .mCullMode = CULL_MODE_BACK,
+        .mCullMode = CULL_MODE_NONE,
     };
 
     RasterizerStateDesc rasterizerStateCullFrontDesc = {
-        .mCullMode = CULL_MODE_FRONT,
+        .mCullMode = CULL_MODE_BACK,
     };
 
     RasterizerStateDesc rasterizerStateCullNoneDesc = {
