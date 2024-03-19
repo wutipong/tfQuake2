@@ -31,8 +31,8 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void* uniform, uint32_t size);
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count);
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride);
 
-void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType);
-void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *texture);
+void GRA_DrawColorRect(vec2 offset, vec2 scale, vec4 color, RenderPass rpType);
+void GRA_DrawTexRect(vec2 offset, vec2 scale, vec2 uvOffset, vec2 uvScale, image_t *texture);
 
 extern Renderer *pRenderer;
 extern Sampler *pSampler;

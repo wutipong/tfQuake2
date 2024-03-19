@@ -561,8 +561,8 @@ void R_PolyBlend(void)
     if (!v_blend[3])
         return;
 
-    float polyTransform[] = {0.f, 0.f, vid.width, vid.height, v_blend[0], v_blend[1], v_blend[2], v_blend[3]};
-    GRA_DrawColorRect(polyTransform, sizeof(polyTransform), RenderPass::WORLD);
+    GRA_DrawColorRect({0.f, 0.f}, {static_cast<float>(vid.width), static_cast<float>(vid.height)},
+                      {v_blend[0], v_blend[1], v_blend[2], v_blend[3]}, RenderPass::WORLD);
 }
 
 //=======================================================================
@@ -661,15 +661,9 @@ void R_SetupFrame(void)
     // unlike OpenGL, draw a rectangle in proper location - it's easier to do in Vulkan
     if (r_newrefdef.rdflags & RDF_NOWORLDMODEL)
     {
-        float clearArea[] = {(float)r_newrefdef.x / vid.width,
-                             (float)r_newrefdef.y / vid.height,
-                             (float)r_newrefdef.width / vid.width,
-                             (float)r_newrefdef.height / vid.height,
-                             .3f,
-                             .3f,
-                             .3f,
-                             1.f};
-        GRA_DrawColorRect(clearArea, sizeof(clearArea), RenderPass::UI);
+        GRA_DrawColorRect({(float)r_newrefdef.x / vid.width, (float)r_newrefdef.y / vid.height},
+                          {(float)r_newrefdef.width / vid.width, (float)r_newrefdef.height / vid.height},
+                          {.3f, .3f, .3f, 1.f}, RenderPass::UI);
     }
 }
 
@@ -700,9 +694,10 @@ void R_SetupVulkan(void)
     r_proj_fovy = r_newrefdef.fov_y;
     r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
 
-    //Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4, 4096);
-    r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1/r_proj_aspect, 4, 4096);
-    //r_projection_matrix = r_vulkan_correction * r_projection_matrix;
+    // Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4,
+    // 4096);
+    r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1 / r_proj_aspect, 4, 4096);
+    // r_projection_matrix = r_vulkan_correction * r_projection_matrix;
 
     R_SetFrustum(r_proj_fovx, r_proj_fovy);
 

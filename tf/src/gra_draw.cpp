@@ -83,15 +83,9 @@ void Draw_Char(int x, int y, int num)
     fcol = col * 0.0625;
     size = 0.0625;
 
-    float imgTransform[] = {(float)x / vid.width,
-                            (float)y / vid.height,
-                            8.f * scale->value / vid.width,
-                            8.f * scale->value / vid.height,
-                            fcol,
-                            frow,
-                            size,
-                            size};
-    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), draw_chars);
+    GRA_DrawTexRect({(float)x / vid.width, (float)y / vid.height},
+                    {8.f * scale->value / vid.width, 8.f * scale->value / vid.height}, {fcol, frow}, {size, size},
+                    draw_chars);
 }
 
 /*
@@ -157,10 +151,8 @@ void Draw_StretchPic(int x, int y, int w, int h, char *pic)
     }
 
     // FIXME (ww) uv scale-offset might need correction.
-    float imgTransform[] = {
-        (float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height, 0, 0, 1, 1,
-    };
-    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), vk);
+    GRA_DrawTexRect({(float)x / vid.width, (float)y / vid.height}, {(float)w / vid.width, (float)h / vid.height},
+                    {0, 0}, {1, 1}, vk);
 }
 
 /*
@@ -202,9 +194,8 @@ void Draw_TileClear(int x, int y, int w, int h, char *pic)
         return;
     }
 
-    float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
-                            (float)x / 64.0f,     (float)y / 64.0f,      (float)w / 64.0f,     (float)h / 64.0f};
-    GRA_DrawTexRect(imgTransform, sizeof(imgTransform), image);
+    GRA_DrawTexRect({(float)x / vid.width, (float)y / vid.height}, {(float)w / vid.width, (float)h / vid.height},
+                    {(float)x / 64.0f, (float)y / 64.0f}, {(float)w / 64.0f, (float)h / 64.0f}, image);
 }
 
 /*
@@ -231,9 +222,8 @@ void Draw_Fill(int x, int y, int w, int h, int c)
 
     color.c = d_8to24table[c];
 
-    float imgTransform[] = {(float)x / vid.width, (float)y / vid.height, (float)w / vid.width, (float)h / vid.height,
-                            color.v[0] / 255.f,   color.v[1] / 255.f,    color.v[2] / 255.f,   1.f};
-    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
+    GRA_DrawColorRect({(float)x / vid.width, (float)y / vid.height}, {(float)w / vid.width, (float)h / vid.height},
+                      {color.v[0] / 255.f, color.v[1] / 255.f, color.v[2] / 255.f, 1.f}, RenderPass::UI);
 }
 
 //=============================================================================
@@ -246,15 +236,13 @@ Draw_FadeScreen
 */
 void Draw_FadeScreen(void)
 {
-    float imgTransform[] = {0.f, 0.f, static_cast<float>(vid.width), static_cast<float>(vid.height), 0.f, 0.f,
-                            0.f, .8f};
-
     if (!vk_frameStarted)
     {
         return;
     }
 
-    GRA_DrawColorRect(imgTransform, sizeof(imgTransform), RenderPass::UI);
+    GRA_DrawColorRect({0.f, 0.f}, {static_cast<float>(vid.width), static_cast<float>(vid.height)}, {0.f, 0.f, 0.f, .8f},
+                      RenderPass::UI);
 }
 
 //====================================================================

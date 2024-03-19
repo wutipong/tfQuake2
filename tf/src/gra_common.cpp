@@ -1154,24 +1154,50 @@ static void _removeStaticBuffers()
     removeResource(rectIbo);
 }
 
-void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
+void GRA_DrawColorRect(vec2 offset, vec2 scale, vec4 color, RenderPass rpType)
 {
-    const uint32_t stride = sizeof(float) * 2;
+    const uint32_t stride = sizeof(vec2);
+
+    struct ubo_t
+    {
+        vec2 offset;
+        vec2 scale;
+        vec4 color;
+    };
+
+    ubo_t ubo{
+        offset,
+        scale,
+        color,
+    };
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
+    GRA_BindUniformBuffer(pCmd, &ubo, sizeof(ubo_t));
     cmdBindVertexBuffer(pCmd, 1, &colorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
 
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
 
-void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
+void GRA_DrawTexRect(vec2 offset, vec2 scale, vec2 uvOffset, vec2 uvScale, image_t *image)
 {
-    const uint32_t stride = sizeof(float) * 4;
+    struct ubo_t
+    {
+        vec2 offset;
+        vec2 scale;
+        vec2 uvOffset;
+        vec2 uvScale;
+    };
+    ubo_t ubo = {
+        offset,
+        scale,
+        uvOffset,
+        uvScale,
+    };
+    const uint32_t stride = sizeof(vec4);
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
-    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
+    GRA_BindUniformBuffer(pCmd, &ubo, sizeof(ubo_t));
     cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &texRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
