@@ -14,6 +14,7 @@ VSOutput VS_MAIN( SV_VertexID(uint) VertexID )
 
     Out.texCoord = float2((VertexID << 1) & 2, VertexID & 2);
 	Out.position = float4(Out.texCoord * 2.0f + -1.0f, 0.0f, 1.0f);
-
+    Out.texCoord.y = 2 - Out.texCoord.y;
+    
     RETURN(Out);
 }
