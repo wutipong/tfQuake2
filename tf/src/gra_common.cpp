@@ -166,12 +166,14 @@ bool GRA_InitGraphics(IApp *app)
     }
 
     SamplerDesc samplerDesc = {
-        .mMinFilter = FILTER_NEAREST,
-        .mMagFilter = FILTER_NEAREST,
-        .mMipMapMode = MIPMAP_MODE_NEAREST,
+        .mMinFilter = FILTER_LINEAR,
+        .mMagFilter = FILTER_LINEAR,
+        .mMipMapMode = MIPMAP_MODE_LINEAR,
         .mAddressU = ADDRESS_MODE_REPEAT,
         .mAddressV = ADDRESS_MODE_REPEAT,
         .mAddressW = ADDRESS_MODE_REPEAT,
+        .mMipLodBias = 0.0f,
+        .mMaxAnisotropy = 8.0f,
     };
     addSampler(pRenderer, &samplerDesc, &pSampler);
 
