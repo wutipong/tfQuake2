@@ -97,6 +97,7 @@ extern Buffer *pBufferRectIbo;
 extern Buffer *pBufferUniform;
 
 extern uint32_t gPushConstant;
+extern uint32_t gPushConstantModel;
 
 extern ProfileToken gGpuProfileToken;
 

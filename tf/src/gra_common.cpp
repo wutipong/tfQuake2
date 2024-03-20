@@ -92,6 +92,7 @@ Buffer *pBufferTriangleFanIBO;
 Buffer *pBufferUniform;
 
 uint32_t gPushConstant;
+uint32_t gPushConstantModel;
 
 static void _addShaders();
 static void _removeShaders();
@@ -453,7 +454,7 @@ bool _addRootSignatures()
 
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
     gPushConstant = getDescriptorIndexFromName(pRootSignature, "uRootConstants");
-
+    gPushConstantModel = getDescriptorIndexFromName(pRootSignature, "rootconstant_model");
     return pRootSignature != NULL;
 }
 

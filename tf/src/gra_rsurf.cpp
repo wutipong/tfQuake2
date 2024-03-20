@@ -472,7 +472,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &lmapPolyUbo);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantModel, &lmapPolyUbo);
 
     for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
     {

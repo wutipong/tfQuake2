@@ -292,7 +292,7 @@ void R_DrawNullModel(void)
 
     cmdBindPipeline(pCmd, drawNullModelPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &model);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantModel, &model);
 
     constexpr uint32_t stride = sizeof(vec3_t);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(verts), stride);

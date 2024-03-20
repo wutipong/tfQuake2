@@ -609,7 +609,7 @@ void R_DrawSkyBox(void)
         cmdBindDescriptorSet(pCmd, 0, pDSUniform);
         cmdBindDescriptorSet(pCmd, 0, pDSTexture[sky_images[skytexorder[i]]->index]);
 
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, model);
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstantModel, model);
 
         constexpr uint32_t stride = sizeof(polyvert);
         GRA_BindVertexBuffer(pCmd, verts.data(), sizeof(verts), stride);

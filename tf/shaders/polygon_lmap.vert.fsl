@@ -10,7 +10,7 @@ CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
     DATA(float4x4, vpMatrix, None);
 };
 
-PUSH_CONSTANT(uRootConstants, b0)
+PUSH_CONSTANT(rootconstant_model, b2)
 {
     DATA(float4x4, model, None);
     DATA(float, viewLightmaps, None);
