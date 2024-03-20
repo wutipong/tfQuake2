@@ -1,9 +1,9 @@
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, vpMatrix, None);
 };
 
-CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_DRAW, b0, binding = 0)
+PUSH_CONSTANT(rootconstant_large, b2)
 {
     DATA(float4x4, model, None);
     DATA(float, textured, None);

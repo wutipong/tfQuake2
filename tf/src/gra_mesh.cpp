@@ -260,8 +260,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         drawInfo[pipelineIdx][pipeCounters[pipelineIdx]].firstVertex = vertCounts[pipelineIdx];
     }
 
-    GRA_BindUniformBuffer(pCmd, &meshUbo, sizeof(meshUbo));
-
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &meshUbo);
     // player configuration screen model is using the UI renderpass
     int pidx = (int)(r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RenderPass::UI : RenderPass::WORLD);
     // non-depth write alias models don't occur with RF_WEAPONMODEL set, so no need for additional left-handed pipelines
@@ -342,7 +341,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
 
     height = -lheight + 1.0;
 
-    GRA_BindUniformBuffer(pCmd, &modelMatrix, sizeof(float) * 16);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &modelMatrix);
 
     static vec3_t shadowverts[MAX_VERTS];
     while (1)

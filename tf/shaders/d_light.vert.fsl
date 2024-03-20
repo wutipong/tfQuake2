@@ -4,9 +4,9 @@ STRUCT(VSInput)
     DATA(float3, inColor, COLOR);
 };
 
-CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_DRAW, b0, binding = 0)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
-    DATA(float4x4, mvpMatrix, None);
+    DATA(float4x4, vpMatrix, None);
 };
 
 STRUCT(VSOutput)
@@ -20,7 +20,7 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     INIT_MAIN;
     VSOutput Out;
 
-    Out.position = mul(Get(mvpMatrix), float4(In.inVertex, 1.0));
+    Out.position = mul(Get(vpMatrix), float4(In.inVertex, 1.0));
     Out.color = float4(In.inColor, 1.0);
 
     RETURN(Out);
