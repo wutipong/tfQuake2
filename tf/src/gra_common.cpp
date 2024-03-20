@@ -1076,7 +1076,7 @@ bool _addDescriptorSets()
 
     DescriptorSetDesc desc = {
         .pRootSignature = pRootSignature,
-        .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+        .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_DRAW,
         .mMaxSets = gDataBufferCount * 2,
     };
 
