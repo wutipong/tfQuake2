@@ -1,4 +1,4 @@
-PUSH_CONSTANT(PushConstant, b1)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
 {
     DATA(float4x4, vpMatrix, None);
 };

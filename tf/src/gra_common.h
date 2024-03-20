@@ -89,10 +89,12 @@ extern DescriptorSet *pDSDynamicUniforms;
 extern DescriptorSet *pDSLightMap[MAX_LIGHTMAPS * 2];
 extern DescriptorSet *pDSWorldTexture;
 extern DescriptorSet *pDSWorldWarpTexture;
+extern DescriptorSet *pDSUniform;
 
 extern Buffer *pBufferTexRectVbo;
 extern Buffer *pBufferColorRectVbo;
 extern Buffer *pBufferRectIbo;
+extern Buffer *pBufferUniform;
 
 extern uint32_t gPushConstant;
 

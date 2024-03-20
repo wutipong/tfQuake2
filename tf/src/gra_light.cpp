@@ -71,7 +71,7 @@ void R_RenderDlight(dlight_t *light)
     cmdBindPipeline(pCmd, drawDLightPipeline);
     uint32_t stride = sizeof(float) * 6;
     GRA_BindVertexBuffer(pCmd, lightVerts, sizeof(lightVerts), stride);
-    GRA_BindUniformBuffer(pCmd, &r_viewproj_matrix, sizeof(r_viewproj_matrix));
+    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, 18);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
 }
