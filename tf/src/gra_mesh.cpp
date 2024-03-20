@@ -260,8 +260,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         drawInfo[pipelineIdx][pipeCounters[pipelineIdx]].firstVertex = vertCounts[pipelineIdx];
     }
 
-    GRA_BindUniformBuffer(pCmd, &meshUbo, sizeof(meshUbo));
-
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &meshUbo);
     // player configuration screen model is using the UI renderpass
     int pidx = (int)(r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RenderPass::UI : RenderPass::WORLD);
     // non-depth write alias models don't occur with RF_WEAPONMODEL set, so no need for additional left-handed pipelines
@@ -286,8 +285,8 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
 
         constexpr uint32_t stride = sizeof(float) * 9;
         GRA_BindVertexBuffer(pCmd, vertList[p], vaoSize, stride);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
+        cmdBindDescriptorSet(pCmd, 0, pDSUniform);
+        cmdBindDescriptorSet(pCmd, 0, pDSTexture[skin->index]);
 
         if (p == TRIANGLE_STRIP)
         {
@@ -342,7 +341,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
 
     height = -lheight + 1.0;
 
-    GRA_BindUniformBuffer(pCmd, &modelMatrix, sizeof(float) * 16);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &modelMatrix);
 
     static vec3_t shadowverts[MAX_VERTS];
     while (1)
@@ -385,7 +384,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             uint32_t vaoSize = sizeof(vec3_t) * i;
             constexpr uint32_t stride = sizeof(float) * 3;
             GRA_BindVertexBuffer(pCmd, shadowverts, vaoSize, stride);
-            cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+            cmdBindDescriptorSet(pCmd, 0, pDSUniform);
 
             if (pipelineIdx == TRIANGLE_STRIP)
             {

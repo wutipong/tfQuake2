@@ -1,11 +1,12 @@
 // Underwater screen warp effect similar to what software renderer provides
 
-PUSH_CONSTANT(PushConstant, b1)
+PUSH_CONSTANT(rootconstant_small, b1)
 {
 	DATA(float, time, None);
 	DATA(float, scale, None);
 	DATA(float, scrWidth, None);
 	DATA(float, scrHeight, None);
+	DATA(float4, pad, None);
 };
 
 RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 1);
