@@ -286,8 +286,8 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
 
         constexpr uint32_t stride = sizeof(float) * 9;
         GRA_BindVertexBuffer(pCmd, vertList[p], vaoSize, stride);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
+        cmdBindDescriptorSet(pCmd, 0, pDSUniform);
+        cmdBindDescriptorSet(pCmd, 0, pDSTexture[skin->index]);
 
         if (p == TRIANGLE_STRIP)
         {
@@ -385,7 +385,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             uint32_t vaoSize = sizeof(vec3_t) * i;
             constexpr uint32_t stride = sizeof(float) * 3;
             GRA_BindVertexBuffer(pCmd, shadowverts, vaoSize, stride);
-            cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+            cmdBindDescriptorSet(pCmd, 0, pDSUniform);
 
             if (pipelineIdx == TRIANGLE_STRIP)
             {

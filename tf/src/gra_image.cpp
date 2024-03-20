@@ -804,13 +804,13 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
     if (palette)
         free(palette);
 
-    if (pDescriptorSetsTexture[image->index] != NULL)
+    if (pDSTexture[image->index] != NULL)
     {
         DescriptorData paramsTex = {
             .pName = "sTexture",
             .ppTextures = &image->texture,
         };
-        updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[image->index], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTexture[image->index], 1, &paramsTex);
     }
 
     return image;

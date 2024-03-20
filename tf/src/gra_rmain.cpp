@@ -230,7 +230,7 @@ void R_DrawSpriteModel(entity_t *e)
     constexpr uint32_t stride = sizeof(float) * 5;
     GRA_BindVertexBuffer(pCmd, quadVerts, sizeof(quadVerts), stride);
 
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     cmdDraw(pCmd, 6, 0);
 }
 
@@ -291,7 +291,7 @@ void R_DrawNullModel(void)
     }
 
     cmdBindPipeline(pCmd, drawNullModelPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     GRA_BindUniformBuffer(pCmd, &model, sizeof(model));
 
     constexpr uint32_t stride = sizeof(vec3_t);
@@ -470,8 +470,8 @@ void Vk_DrawParticles(int num_particles, const particle_t particles[], const uns
 
     constexpr uint32_t stride = sizeof(pvertex);
     GRA_BindVertexBuffer(pCmd, &visibleParticles, vaoSize, stride);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[r_particletexture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[r_particletexture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     cmdDraw(pCmd, 3 * num_particles, 0);
 }
 
@@ -539,7 +539,7 @@ void R_DrawParticles(void)
 
         constexpr uint32_t stride = sizeof(ppoint);
         GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+        cmdBindDescriptorSet(pCmd, 0, pDSUniform);
 
         cmdDraw(pCmd, r_newrefdef.num_particles, 0);
     }
@@ -700,9 +700,10 @@ void R_SetupVulkan(void)
     r_proj_fovy = r_newrefdef.fov_y;
     r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
 
-    //Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4, 4096);
-    r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1/r_proj_aspect, 4, 4096);
-    //r_projection_matrix = r_vulkan_correction * r_projection_matrix;
+    // Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4,
+    // 4096);
+    r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1 / r_proj_aspect, 4, 4096);
+    // r_projection_matrix = r_vulkan_correction * r_projection_matrix;
 
     R_SetFrustum(r_proj_fovx, r_proj_fovy);
 
@@ -722,6 +723,12 @@ void R_SetupVulkan(void)
     // precalculate view-projection matrix
     r_viewproj_matrix = r_projection_matrix * r_view_matrix;
     // Mat_Mul(toFloatPtr(r_view_matrix), r_projection_matrix, toFloatPtr(r_viewproj_matrix));
+
+    // Update uniform buffers
+    BufferUpdateDesc viewProjCbv = {pBufferUniform};
+    beginUpdateResource(&viewProjCbv);
+    memcpy(viewProjCbv.pMappedData, &r_viewproj_matrix, sizeof(r_viewproj_matrix));
+    endUpdateResource(&viewProjCbv);
 }
 
 void R_Flash(void)
@@ -819,7 +826,7 @@ void R_EndWorldRenderpass(void)
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldTexture);
+    cmdBindDescriptorSet(pCmd, 0, pDSWorldTexture);
     cmdBindPipeline(pCmd, worldWarpPipeline);
     cmdDraw(pCmd, 3, 0);
 
@@ -862,7 +869,7 @@ void R_SetVulkan2D(void)
     {
         float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldWarpTexture);
+        cmdBindDescriptorSet(pCmd, 0, pDSWorldWarpTexture);
         cmdBindPipeline(pCmd, postprocessPipeline);
         cmdDraw(pCmd, 3, 0);
     }
@@ -1474,7 +1481,7 @@ void R_DrawBeam(entity_t *e)
     }
 
     cmdBindPipeline(pCmd, drawBeamPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &r_viewproj_matrix);
+    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
 
     constexpr uint32_t stride = sizeof(float) * 3;

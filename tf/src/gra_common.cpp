@@ -78,17 +78,18 @@ std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 Cmd *pCmd;
 
-DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES] = {NULL};
-DescriptorSet *pDescriptorSetUniforms = {NULL};
-DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2] = {NULL};
-DescriptorSet *pDescriptorSetWorldTexture{NULL};
-DescriptorSet *pDescriptorSetWorldWarpTexture{NULL};
+DescriptorSet *pDSTexture[MAX_VKTEXTURES]{NULL};
+DescriptorSet *pDSDynamicUniforms{NULL};
+DescriptorSet *pDSLightMap[MAX_LIGHTMAPS * 2]{NULL};
+DescriptorSet *pDSWorldTexture{NULL};
+DescriptorSet *pDSWorldWarpTexture{NULL};
+DescriptorSet *pDSUniform{NULL};
 
-Buffer *texRectVbo;
-Buffer *colorRectVbo;
-Buffer *rectIbo;
-
-Buffer *pTriangleFanIBO;
+Buffer *pBufferTexRectVbo;
+Buffer *pBufferColorRectVbo;
+Buffer *pBufferRectIbo;
+Buffer *pBufferTriangleFanIBO;
+Buffer *pBufferUniform;
 
 uint32_t gPushConstant;
 
@@ -1031,13 +1032,18 @@ static bool _addRenderTarget(IApp *pApp)
         .pName = "sTexture",
         .ppTextures = &pWorldRenderTarget->pTexture,
     };
-    updateDescriptorSet(pRenderer, 0, pDescriptorSetWorldTexture, 1, &paramsTex);
+    updateDescriptorSet(pRenderer, 0, pDSWorldTexture, 1, &paramsTex);
 
     paramsTex = {
         .pName = "sTexture",
         .ppTextures = &pWorldWarpRenderTarget->pTexture,
     };
-    updateDescriptorSet(pRenderer, 0, pDescriptorSetWorldWarpTexture, 1, &paramsTex);
+    updateDescriptorSet(pRenderer, 0, pDSWorldWarpTexture, 1, &paramsTex);
+
+    DescriptorData params[1] = {};
+    params[0].pName = "UniformBufferObject";
+    params[0].ppBuffers = &pBufferUniform;
+    updateDescriptorSet(pRenderer, 0, pDSUniform, 1, params);
 
     return true;
 }
@@ -1060,22 +1066,48 @@ bool _addDescriptorSets()
 {
     for (int i = 0; i < MAX_VKTEXTURES; i++)
     {
-        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
-        addDescriptorSet(pRenderer, &desc, &pDescriptorSetsTexture[i]);
+        DescriptorSetDesc desc = {
+            .pRootSignature = pRootSignature,
+            .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_NONE,
+            .mMaxSets = gDataBufferCount * 2,
+        };
+        addDescriptorSet(pRenderer, &desc, &pDSTexture[i]);
     }
-    DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_FRAME, gDataBufferCount * 2};
-    addDescriptorSet(pRenderer, &desc, &pDescriptorSetUniforms);
+
+    DescriptorSetDesc desc = {
+        .pRootSignature = pRootSignature,
+        .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_DRAW,
+        .mMaxSets = gDataBufferCount * 2,
+    };
+
+    addDescriptorSet(pRenderer, &desc, &pDSDynamicUniforms);
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
-        DescriptorSetDesc desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_PER_BATCH, 1};
-        addDescriptorSet(pRenderer, &desc, &pDescriptorSetsLightMap[i]);
+        DescriptorSetDesc desc = {
+            .pRootSignature = pRootSignature,
+            .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
+            .mMaxSets = 1,
+        };
+        addDescriptorSet(pRenderer, &desc, &pDSLightMap[i]);
     }
 
-    desc = {pRootSignature, DESCRIPTOR_UPDATE_FREQ_NONE, 1};
-    addDescriptorSet(pRenderer, &desc, &pDescriptorSetWorldTexture);
-    addDescriptorSet(pRenderer, &desc, &pDescriptorSetWorldWarpTexture);
+    desc = {
+        .pRootSignature = pRootSignature,
+        .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_NONE,
+        .mMaxSets = gDataBufferCount * 2,
+    };
+    addDescriptorSet(pRenderer, &desc, &pDSWorldTexture);
+    addDescriptorSet(pRenderer, &desc, &pDSWorldWarpTexture);
 
+    desc = {
+        .pRootSignature = pRootSignature,
+        .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_FRAME,
+        .mMaxSets = 1,
+    };
+
+    addDescriptorSet(pRenderer, &desc, &pDSUniform);
+    
     return true;
 }
 
@@ -1083,17 +1115,18 @@ bool _removeDescriptorSets()
 {
     for (int i = 0; i < MAX_VKTEXTURES; i++)
     {
-        removeDescriptorSet(pRenderer, pDescriptorSetsTexture[i]);
+        removeDescriptorSet(pRenderer, pDSTexture[i]);
     }
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
-        removeDescriptorSet(pRenderer, pDescriptorSetsLightMap[i]);
+        removeDescriptorSet(pRenderer, pDSLightMap[i]);
     }
 
-    removeDescriptorSet(pRenderer, pDescriptorSetUniforms);
-    removeDescriptorSet(pRenderer, pDescriptorSetWorldTexture);
-    removeDescriptorSet(pRenderer, pDescriptorSetWorldWarpTexture);
+    removeDescriptorSet(pRenderer, pDSDynamicUniforms);
+    removeDescriptorSet(pRenderer, pDSWorldTexture);
+    removeDescriptorSet(pRenderer, pDSWorldWarpTexture);
+    removeDescriptorSet(pRenderer, pDSUniform);
 
     return true;
 }
@@ -1127,7 +1160,7 @@ static void _addStaticBuffers()
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
     desc.mDesc.mSize = sizeof(texVerts);
     desc.pData = texVerts;
-    desc.ppBuffer = &texRectVbo;
+    desc.ppBuffer = &pBufferTexRectVbo;
     addResource(&desc, nullptr);
 
     desc = {};
@@ -1135,7 +1168,7 @@ static void _addStaticBuffers()
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
     desc.mDesc.mSize = sizeof(colorVerts);
     desc.pData = colorVerts;
-    desc.ppBuffer = &colorRectVbo;
+    desc.ppBuffer = &pBufferColorRectVbo;
     addResource(&desc, nullptr);
 
     desc = {};
@@ -1143,15 +1176,24 @@ static void _addStaticBuffers()
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
     desc.mDesc.mSize = sizeof(indices);
     desc.pData = indices;
-    desc.ppBuffer = &rectIbo;
+    desc.ppBuffer = &pBufferRectIbo;
+    addResource(&desc, nullptr);
+
+    desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(mat4);
+    desc.pData = &r_viewproj_matrix;
+    desc.ppBuffer = &pBufferUniform;
     addResource(&desc, nullptr);
 }
 
 static void _removeStaticBuffers()
 {
-    removeResource(texRectVbo);
-    removeResource(colorRectVbo);
-    removeResource(rectIbo);
+    removeResource(pBufferTexRectVbo);
+    removeResource(pBufferColorRectVbo);
+    removeResource(pBufferRectIbo);
+    removeResource(pBufferUniform);
 }
 
 void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
@@ -1160,8 +1202,8 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
     GRA_BindUniformBuffer(pCmd, ubo, uboSize);
-    cmdBindVertexBuffer(pCmd, 1, &colorRectVbo, &stride, 0);
-    cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
+    cmdBindVertexBuffer(pCmd, 1, &pBufferColorRectVbo, &stride, 0);
+    cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
@@ -1172,9 +1214,9 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
     GRA_BindUniformBuffer(pCmd, ubo, uboSize);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
-    cmdBindVertexBuffer(pCmd, 1, &texRectVbo, &stride, 0);
-    cmdBindIndexBuffer(pCmd, rectIbo, INDEX_TYPE_UINT32, 0);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+    cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);
+    cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
     cmdDrawIndexed(pCmd, 6, 0, 0);
 }
@@ -1221,7 +1263,7 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDescriptorSetUniforms, 1, params);
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDSDynamicUniforms, 1, params);
 }
 
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride)

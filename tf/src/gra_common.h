@@ -84,15 +84,17 @@ extern std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 extern Cmd *pCmd;
 
-extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
-extern DescriptorSet *pDescriptorSetUniforms;
-extern DescriptorSet *pDescriptorSetsLightMap[MAX_LIGHTMAPS * 2];
-extern DescriptorSet *pDescriptorSetWorldTexture;
-extern DescriptorSet *pDescriptorSetWorldWarpTexture;
+extern DescriptorSet *pDSTexture[MAX_VKTEXTURES];
+extern DescriptorSet *pDSDynamicUniforms;
+extern DescriptorSet *pDSLightMap[MAX_LIGHTMAPS * 2];
+extern DescriptorSet *pDSWorldTexture;
+extern DescriptorSet *pDSWorldWarpTexture;
+extern DescriptorSet *pDSUniform;
 
-extern Buffer *texRectVbo;
-extern Buffer *colorRectVbo;
-extern Buffer *rectIbo;
+extern Buffer *pBufferTexRectVbo;
+extern Buffer *pBufferColorRectVbo;
+extern Buffer *pBufferRectIbo;
+extern Buffer *pBufferUniform;
 
 extern uint32_t gPushConstant;
 
