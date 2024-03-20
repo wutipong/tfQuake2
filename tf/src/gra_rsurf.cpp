@@ -129,7 +129,7 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, vec4 color)
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, &color);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -171,7 +171,7 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, vec4 color)
     }
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, &color);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
@@ -204,7 +204,7 @@ void R_DrawTriangleOutlines(void)
     } triVert[4];
 
     cmdBindPipeline(pCmd, showTrisPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, color);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, color);
 
     for (i = 0; i < MAX_LIGHTMAPS; i++)
     {
@@ -472,7 +472,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantModel, &lmapPolyUbo);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &lmapPolyUbo);
 
     for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
     {

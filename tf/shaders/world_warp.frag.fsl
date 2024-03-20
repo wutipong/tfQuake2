@@ -1,6 +1,6 @@
 // Underwater screen warp effect similar to what software renderer provides
 
-PUSH_CONSTANT(uRootConstants, b1)
+PUSH_CONSTANT(rootconstant_small, b1)
 {
 	DATA(float, time, None);
 	DATA(float, scale, None);

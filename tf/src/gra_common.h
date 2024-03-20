@@ -96,8 +96,8 @@ extern Buffer *pBufferColorRectVbo;
 extern Buffer *pBufferRectIbo;
 extern Buffer *pBufferUniform;
 
-extern uint32_t gPushConstantFloat8;
-extern uint32_t gPushConstantModel;
+extern uint32_t gPushConstantSmall;
+extern uint32_t gPushConstantLarge;
 extern uint32_t gPushConstantPolygonWarp;
 
 extern ProfileToken gGpuProfileToken;
