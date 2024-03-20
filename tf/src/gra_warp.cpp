@@ -246,7 +246,7 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, vec4 c
     cmdBindPipeline(pCmd, drawPolyWarpPipeline);
 
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[texture->index]);
     GRA_BindUniformBuffer(pCmd, &polyUbo, sizeof(polyUbo));
 
     for (bp = fa->polys; bp; bp = bp->next)
@@ -607,7 +607,7 @@ void R_DrawSkyBox(void)
         std::array<polyvert, 6> verts = {skyVerts[0], skyVerts[1], skyVerts[2], skyVerts[0], skyVerts[2], skyVerts[3]};
 
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[sky_images[skytexorder[i]]->index]);
+        cmdBindDescriptorSet(pCmd, 0, pDSTexture[sky_images[skytexorder[i]]->index]);
 
         GRA_BindUniformBuffer(pCmd, model, sizeof(model));
 

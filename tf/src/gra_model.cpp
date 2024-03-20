@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <format>
 #include <string>
 
-extern DescriptorSet *pDescriptorSetsTexture[MAX_VKTEXTURES];
+extern DescriptorSet *pDSTexture[MAX_VKTEXTURES];
 extern image_t vktextures[MAX_VKTEXTURES];
 
 model_t *loadmodel;
@@ -1264,7 +1264,7 @@ void R_EndRegistration(void)
             .mIndex = index,
             .ppTextures = &tex.texture,
         };
-        updateDescriptorSet(pRenderer, 0, pDescriptorSetsTexture[i], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTexture[i], 1, &paramsTex);
     }
 }
 

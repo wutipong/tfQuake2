@@ -124,7 +124,7 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, vec4 color)
     }
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[texture->index]);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
 
     uint32_t stride = sizeof(polyvert);
@@ -175,7 +175,7 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, vec4 color)
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[texture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[texture->index]);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -559,8 +559,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
             if (scroll == 0.0)
                 scroll = -64.0;
 
-            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
-            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+            cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
 
             for (p = surf->polys; p; p = p->chain)
             {
@@ -581,8 +581,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
         }
         else
         {
-            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
-            cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+            cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
 
             for (p = surf->polys; p; p = p->chain)
             {
@@ -629,8 +629,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
                 constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
-                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
-                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+                cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
 
                 cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -653,8 +653,8 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
-                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[image->index]);
-                cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsLightMap[lmtex]);
+                cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
                 cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
             //==========
@@ -1146,7 +1146,7 @@ static void LM_UploadBlock(qboolean dynamic)
                 .mIndex = getDescriptorIndexFromName(pRootSignature, "sLightmap"),
                 .ppTextures = &vk_state.lightmap_textures[texture],
             };
-            updateDescriptorSet(pRenderer, 0, pDescriptorSetsLightMap[texture], 1, &paramsTex);
+            updateDescriptorSet(pRenderer, 0, pDSLightMap[texture], 1, &paramsTex);
         }
         if (++vk_lms.current_lightmap_texture == MAX_LIGHTMAPS)
         {

@@ -283,7 +283,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
         constexpr uint32_t stride = sizeof(float) * 9;
         GRA_BindVertexBuffer(pCmd, vertList[p], vaoSize, stride);
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[skin->index]);
+        cmdBindDescriptorSet(pCmd, 0, pDSTexture[skin->index]);
 
         if (p == TRIANGLE_STRIP)
         {

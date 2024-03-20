@@ -467,7 +467,7 @@ void Vk_DrawParticles(int num_particles, const particle_t particles[], const uns
     constexpr uint32_t stride = sizeof(pvertex);
     GRA_BindVertexBuffer(pCmd, &visibleParticles, vaoSize, stride);
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, r_viewproj_matrix);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetsTexture[r_particletexture->index]);
+    cmdBindDescriptorSet(pCmd, 0, pDSTexture[r_particletexture->index]);
     cmdDraw(pCmd, 3 * num_particles, 0);
 }
 
@@ -808,7 +808,7 @@ void R_EndWorldRenderpass(void)
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
     cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
-    cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldTexture);
+    cmdBindDescriptorSet(pCmd, 0, pDSWorldTexture);
     cmdBindPipeline(pCmd, worldWarpPipeline);
     cmdDraw(pCmd, 3, 0);
 
@@ -851,7 +851,7 @@ void R_SetVulkan2D(void)
     {
         float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
         cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
-        cmdBindDescriptorSet(pCmd, 0, pDescriptorSetWorldWarpTexture);
+        cmdBindDescriptorSet(pCmd, 0, pDSWorldWarpTexture);
         cmdBindPipeline(pCmd, postprocessPipeline);
         cmdDraw(pCmd, 3, 0);
     }
