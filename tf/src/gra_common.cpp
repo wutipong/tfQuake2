@@ -1201,7 +1201,10 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
     const uint32_t stride = sizeof(float) * 2;
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
+    uint32_t mRootConstantIndex = getDescriptorIndexFromName(pRootSignature, "uRootConstants");
+    cmdBindPushConstants(pCmd, pRootSignature, mRootConstantIndex, ubo);
+    
+    //GRA_BindUniformBuffer(pCmd, ubo, uboSize);
     cmdBindVertexBuffer(pCmd, 1, &pBufferColorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
@@ -1213,7 +1216,10 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
     const uint32_t stride = sizeof(float) * 4;
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
-    GRA_BindUniformBuffer(pCmd, ubo, uboSize);
+    //GRA_BindUniformBuffer(pCmd, ubo, uboSize);
+
+    uint32_t mRootConstantIndex = getDescriptorIndexFromName(pRootSignature, "uRootConstants");
+    cmdBindPushConstants(pCmd, pRootSignature, mRootConstantIndex, ubo);
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
