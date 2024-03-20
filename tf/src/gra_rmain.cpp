@@ -226,7 +226,7 @@ void R_DrawSpriteModel(entity_t *e)
     };
 
     cmdBindPipeline(pCmd, drawSpritePipeline);
-    GRA_BindUniformBuffer(pCmd, &alpha, sizeof(alpha));
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &alpha);
     constexpr uint32_t stride = sizeof(float) * 5;
     GRA_BindVertexBuffer(pCmd, quadVerts, sizeof(quadVerts), stride);
 
@@ -292,7 +292,7 @@ void R_DrawNullModel(void)
 
     cmdBindPipeline(pCmd, drawNullModelPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    GRA_BindUniformBuffer(pCmd, &model, sizeof(model));
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &model);
 
     constexpr uint32_t stride = sizeof(vec3_t);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(verts), stride);
@@ -535,7 +535,7 @@ void R_DrawParticles(void)
         }
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
-        GRA_BindUniformBuffer(pCmd, &particleUbo, sizeof(particleUbo));
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &particleUbo);
 
         constexpr uint32_t stride = sizeof(ppoint);
         GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
@@ -1482,7 +1482,7 @@ void R_DrawBeam(entity_t *e)
 
     cmdBindPipeline(pCmd, drawBeamPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    GRA_BindUniformBuffer(pCmd, color, sizeof(float) * 4);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, color);
 
     constexpr uint32_t stride = sizeof(float) * 3;
     GRA_BindVertexBuffer(pCmd, beamvertex, sizeof(beamvertex), stride);
