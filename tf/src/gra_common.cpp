@@ -678,12 +678,13 @@ static void _addPipelines()
         .mAttribCount = 3,
     };
 
+    // FIXME: cull mode is still not working perfectly. Need to investigate more.
     RasterizerStateDesc rasterizerStateCullBackDesc = {
-        .mCullMode = CULL_MODE_BACK,
+        .mCullMode = CULL_MODE_NONE,
     };
 
     RasterizerStateDesc rasterizerStateCullFrontDesc = {
-        .mCullMode = CULL_MODE_FRONT,
+        .mCullMode = CULL_MODE_BACK,
     };
 
     RasterizerStateDesc rasterizerStateCullNoneDesc = {
@@ -1098,16 +1099,32 @@ bool _removeDescriptorSets()
 
 static void _addStaticBuffers()
 {
-    const float texVerts[] = {-1., -1., 0., 0., 1., 1., 1., 1., -1., 1., 0., 1., 1., -1., 1., 0.};
+    struct texVert
+    {
+        vec2 position;
+        vec2 texcoord;
+    };
 
-    const float colorVerts[] = {-1., -1., 1., 1., -1., 1., 1., -1.};
+    const texVert texVerts[] = {
+        {{-1., -1.}, {0., 0.}},
+        {{1., 1.}, {1., 1.}},
+        {{-1., 1.}, {0., 1.}},
+        {{1., -1.}, {1., 0.}},
+    };
+
+    const vec2 colorVerts[] = {
+        {-1., -1.},
+        {1., 1.},
+        {-1., 1},
+        {1., -1.},
+    };
 
     const uint32_t indices[] = {0, 1, 2, 0, 3, 1};
 
     BufferLoadDesc desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(float) * 16;
+    desc.mDesc.mSize = sizeof(texVerts);
     desc.pData = texVerts;
     desc.ppBuffer = &pBufferTexRectVbo;
     addResource(&desc, nullptr);
@@ -1115,7 +1132,7 @@ static void _addStaticBuffers()
     desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(float) * 8;
+    desc.mDesc.mSize = sizeof(colorVerts);
     desc.pData = colorVerts;
     desc.ppBuffer = &pBufferColorRectVbo;
     addResource(&desc, nullptr);
@@ -1123,7 +1140,7 @@ static void _addStaticBuffers()
     desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
-    desc.mDesc.mSize = sizeof(float) * 6;
+    desc.mDesc.mSize = sizeof(indices);
     desc.pData = indices;
     desc.ppBuffer = &pBufferRectIbo;
     addResource(&desc, nullptr);

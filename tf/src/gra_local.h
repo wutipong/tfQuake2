@@ -184,7 +184,7 @@ extern "C"
 extern int c_visible_lightmaps;
 extern int c_visible_textures;
 
-extern float r_viewproj_matrix[16];
+extern mat4 r_viewproj_matrix;
 
 void R_LightPoint(vec3_t p, vec3_t color);
 void R_PushDlights(void);
