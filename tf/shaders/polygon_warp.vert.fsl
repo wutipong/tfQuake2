@@ -4,12 +4,12 @@ STRUCT(VSInput)
     DATA(float2, inTexCoord, TEXCOORD0);
 };
 
-CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b1, binding = 1)
+CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
     DATA(float4x4, vpMatrix, None);
 };
 
-PUSH_CONSTANT(uRootConstants, b0)
+PUSH_CONSTANT(rootconstant_polygonwarp, b3)
 {
     DATA(float4x4, model, None);
     DATA(float4, color, None);

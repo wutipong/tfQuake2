@@ -6,7 +6,7 @@ STRUCT(VSOutput)
     DATA(float, aTreshold, COLOR1);
 };
 
-PUSH_CONSTANT(uRootConstants, b0)
+PUSH_CONSTANT(uRootConstants, b1)
 {
     DATA(float2, offset, None);
     DATA(float2, scale, None);

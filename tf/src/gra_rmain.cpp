@@ -226,7 +226,7 @@ void R_DrawSpriteModel(entity_t *e)
     };
 
     cmdBindPipeline(pCmd, drawSpritePipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &alpha);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, &alpha);
     constexpr uint32_t stride = sizeof(float) * 5;
     GRA_BindVertexBuffer(pCmd, quadVerts, sizeof(quadVerts), stride);
 
@@ -535,7 +535,7 @@ void R_DrawParticles(void)
         }
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &particleUbo);
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, &particleUbo);
 
         constexpr uint32_t stride = sizeof(ppoint);
         GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
@@ -825,7 +825,7 @@ void R_EndWorldRenderpass(void)
 
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, pushConsts);
     cmdBindDescriptorSet(pCmd, 0, pDSWorldTexture);
     cmdBindPipeline(pCmd, worldWarpPipeline);
     cmdDraw(pCmd, 3, 0);
@@ -868,7 +868,7 @@ void R_SetVulkan2D(void)
     if (!(r_newrefdef.rdflags & RDF_NOWORLDMODEL))
     {
         float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, pushConsts);
+        cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, pushConsts);
         cmdBindDescriptorSet(pCmd, 0, pDSWorldWarpTexture);
         cmdBindPipeline(pCmd, postprocessPipeline);
         cmdDraw(pCmd, 3, 0);
@@ -1482,7 +1482,7 @@ void R_DrawBeam(entity_t *e)
 
     cmdBindPipeline(pCmd, drawBeamPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, color);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, color);
 
     constexpr uint32_t stride = sizeof(float) * 3;
     GRA_BindVertexBuffer(pCmd, beamvertex, sizeof(beamvertex), stride);

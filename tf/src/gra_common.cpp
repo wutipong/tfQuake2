@@ -91,8 +91,9 @@ Buffer *pBufferRectIbo;
 Buffer *pBufferTriangleFanIBO;
 Buffer *pBufferUniform;
 
-uint32_t gPushConstant;
+uint32_t gPushConstantFloat8;
 uint32_t gPushConstantModel;
+uint32_t gPushConstantPolygonWarp;
 
 static void _addShaders();
 static void _removeShaders();
@@ -453,8 +454,10 @@ bool _addRootSignatures()
     };
 
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
-    gPushConstant = getDescriptorIndexFromName(pRootSignature, "uRootConstants");
+    gPushConstantFloat8 = getDescriptorIndexFromName(pRootSignature, "uRootConstants");
     gPushConstantModel = getDescriptorIndexFromName(pRootSignature, "rootconstant_model");
+    gPushConstantPolygonWarp = getDescriptorIndexFromName(pRootSignature, "rootconstant_polygonwarp");
+    
     return pRootSignature != NULL;
 }
 
@@ -1202,7 +1205,7 @@ void GRA_DrawColorRect(float *ubo, size_t uboSize, RenderPass rpType)
     const uint32_t stride = sizeof(float) * 2;
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, ubo);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, ubo);
     cmdBindVertexBuffer(pCmd, 1, &pBufferColorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
@@ -1215,7 +1218,7 @@ void GRA_DrawTexRect(float *ubo, size_t uboSize, image_t *image)
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
     
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, ubo);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantFloat8, ubo);
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);

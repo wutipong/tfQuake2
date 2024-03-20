@@ -1,7 +1,9 @@
-PUSH_CONSTANT(PushConstant, b1)
+PUSH_CONSTANT(uRootConstants, b1)
 {
 	DATA(float, postprocess, None);
 	DATA(float, gamma, None);
+	DATA(float2, pad1, None);
+	DATA(float4, pad2, None);
 };
 
 RES(Tex2D(float4), sTexture, UPDATE_FREQ_NONE, t1, binding = 1);

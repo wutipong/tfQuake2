@@ -247,7 +247,7 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, vec4 c
 
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[texture->index]);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstant, &polyUbo);
+    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantPolygonWarp, &polyUbo);
 
     for (bp = fa->polys; bp; bp = bp->next)
     {
