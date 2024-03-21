@@ -1,6 +1,6 @@
 // Underwater screen warp effect similar to what software renderer provides
 
-PUSH_CONSTANT(rootconstant_small, b1)
+CBUFFER(UniformBufferImage_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
 	DATA(float, time, None);
 	DATA(float, scale, None);

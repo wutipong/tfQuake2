@@ -4,7 +4,7 @@ STRUCT(VSOutput)
 	DATA(float4, color,    COLOR);
 };
 
-PUSH_CONSTANT(rootconstant_small, b1)
+CBUFFER(UniformBufferImage_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(float2, offset, None);
     DATA(float2, scale, None);

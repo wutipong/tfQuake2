@@ -6,7 +6,7 @@ STRUCT(VSOutput)
     DATA(float, aTreshold, COLOR1);
 };
 
-PUSH_CONSTANT(rootconstant_small, b1)
+CBUFFER(UniformBufferImage_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(float2, offset, None);
     DATA(float2, scale, None);

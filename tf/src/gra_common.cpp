@@ -456,9 +456,9 @@ bool _addRootSignatures()
     };
 
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
-    gPushConstantSmall = getDescriptorIndexFromName(pRootSignature, "rootconstant_small");
-    gPushConstantLarge = getDescriptorIndexFromName(pRootSignature, "rootconstant_large");
-    gPushConstantPolygonWarp = getDescriptorIndexFromName(pRootSignature, "rootconstant_polygonwarp");
+    // gPushConstantSmall = getDescriptorIndexFromName(pRootSignature, "rootconstant_small");
+    // gPushConstantLarge = getDescriptorIndexFromName(pRootSignature, "rootconstant_large");
+    // gPushConstantPolygonWarp = getDescriptorIndexFromName(pRootSignature, "rootconstant_polygonwarp");
     
     return pRootSignature != NULL;
 }
@@ -1083,7 +1083,7 @@ bool _addDescriptorSets()
     DescriptorSetDesc desc = {
         .pRootSignature = pRootSignature,
         .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_DRAW,
-        .mMaxSets = gDataBufferCount * 2,
+        .mMaxSets = 1,
     };
 
     addDescriptorSet(pRenderer, &desc, &pDSDynamicUniforms);
@@ -1220,7 +1220,8 @@ void GRA_DrawColorRect(vec2 offset, vec2 scale, vec4 color, RenderPass rpType)
     };
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+    GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", &ubo, sizeof(ubo));
     cmdBindVertexBuffer(pCmd, 1, &pBufferColorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
@@ -1246,7 +1247,8 @@ void GRA_DrawTexRect(vec2 offset, vec2 scale, vec2 uvOffset, vec2 uvScale, image
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
     
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+    //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+    GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", &ubo, sizeof(ubo));
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
@@ -1279,7 +1281,7 @@ uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
     return indexCount;
 }
 
-void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
+void GRA_BindUniformBuffer(Cmd *pCmd, const char* name, void *uniform, uint32_t size)
 {
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffers[gFrameIndex], size);
     {
@@ -1292,7 +1294,7 @@ void GRA_BindUniformBuffer(Cmd *pCmd, void *uniform, uint32_t size)
 
     DescriptorDataRange range = {(uint32_t)uniformBlock.mOffset, size};
     DescriptorData params[1] = {};
-    params[0].pName = "UniformBufferObject_rootcbv";
+    params[0].pName = name;
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 

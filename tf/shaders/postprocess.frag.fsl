@@ -1,4 +1,4 @@
-PUSH_CONSTANT(rootconstant_small, b1)
+CBUFFER(UniformBufferImage_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
 	DATA(float, postprocess, None);
 	DATA(float, gamma, None);
