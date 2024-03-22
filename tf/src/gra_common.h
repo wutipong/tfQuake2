@@ -77,6 +77,8 @@ extern Pipeline *worldWarpPipeline;
 extern Pipeline *postprocessPipeline;
 
 extern RootSignature *pRootSignature;
+extern RootSignature *pRSModel;
+extern RootSignature *pRSPolyWarp;
 
 extern std::array<GPURingBuffer, gDataBufferCount> dynamicUniformBuffers;
 extern std::array<GPURingBuffer, gDataBufferCount> dynamicVertexBuffers;
@@ -86,13 +88,16 @@ extern Cmd *pCmd;
 
 extern std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexture;
 extern std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTextureModel;
+extern std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexturePolyWarp;
 extern std::array<DescriptorSet *, MAX_LIGHTMAPS * 2> pDSLightMap;
 extern DescriptorSet *pDSDynamicUniforms;
 extern DescriptorSet *pDSDynamicUniformsModel;
+extern DescriptorSet *pDSDynamicUniformsPolyWarp;
 extern DescriptorSet *pDSWorldTexture;
 extern DescriptorSet *pDSWorldWarpTexture;
 extern DescriptorSet *pDSUniform;
 extern DescriptorSet *pDSUniformModel;
+extern DescriptorSet *pDSUniformPolyWarp;
 
 extern Buffer *pBufferTexRectVbo;
 extern Buffer *pBufferColorRectVbo;

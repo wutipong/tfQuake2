@@ -71,8 +71,8 @@ Shader *worldWarpShader;
 Shader *postprocessShader;
 
 RootSignature *pRootSignature = NULL;
-
 RootSignature *pRSModel = NULL;
+RootSignature *pRSPolyWarp = NULL;
 
 std::array<GPURingBuffer, gDataBufferCount> dynamicUniformBuffers;
 std::array<GPURingBuffer, gDataBufferCount> dynamicVertexBuffers;
@@ -80,15 +80,18 @@ std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 Cmd *pCmd;
 
-std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexture{NULL};
-std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTextureModel{NULL};
-std::array<DescriptorSet *, MAX_LIGHTMAPS * 2> pDSLightMap{NULL};
-DescriptorSet *pDSDynamicUniforms{NULL};
-DescriptorSet *pDSDynamicUniformsModel{NULL};
-DescriptorSet *pDSWorldTexture{NULL};
-DescriptorSet *pDSWorldWarpTexture{NULL};
-DescriptorSet *pDSUniform{NULL};
-DescriptorSet *pDSUniformModel{NULL};
+std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexture;
+std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTextureModel;
+std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexturePolyWarp;
+std::array<DescriptorSet *, MAX_LIGHTMAPS * 2> pDSLightMap;
+DescriptorSet *pDSDynamicUniforms;
+DescriptorSet *pDSDynamicUniformsModel;
+DescriptorSet *pDSDynamicUniformsPolyWarp;
+DescriptorSet *pDSWorldTexture;
+DescriptorSet *pDSWorldWarpTexture;
+DescriptorSet *pDSUniform;
+DescriptorSet *pDSUniformModel;
+DescriptorSet *pDSUniformPolyWarp;
 
 Buffer *pBufferTexRectVbo;
 Buffer *pBufferColorRectVbo;
@@ -442,10 +445,9 @@ void _removeShaders()
 
 bool _addRootSignatures()
 {
-    std::array<Shader *, 11> shaders = {
-        drawTexQuadShader, drawColorQuadShader, drawParticlesShader, drawPointParticlesShader,
-        drawSpriteShader,  drawPolyShader,      drawPolyWarpShader,  drawBeamShader,
-        drawDLightShader,  worldWarpShader,     postprocessShader,
+    std::array<Shader *, 10> shaders = {
+        drawTexQuadShader, drawColorQuadShader, drawParticlesShader, drawPointParticlesShader, drawSpriteShader,
+        drawPolyShader,    drawBeamShader,      drawDLightShader,    worldWarpShader,          postprocessShader,
     };
     const char *pStaticSamplers[] = {"textureSampler"};
 
@@ -475,6 +477,19 @@ bool _addRootSignatures()
 
     addRootSignature(pRenderer, &rootDesc, &pRSModel);
 
+    std::array<Shader *, 1> polywarpShaders = {
+        drawPolyWarpShader,
+    };
+    rootDesc = {
+        .ppShaders = polywarpShaders.data(),
+        .mShaderCount = polywarpShaders.size(),
+        .ppStaticSamplerNames = pStaticSamplers,
+        .ppStaticSamplers = &pSampler,
+        .mStaticSamplerCount = 1,
+    };
+
+    addRootSignature(pRenderer, &rootDesc, &pRSPolyWarp);
+
     return pRootSignature != NULL;
 }
 
@@ -482,6 +497,7 @@ static void _removeRootSignatures()
 {
     removeRootSignature(pRenderer, pRootSignature);
     removeRootSignature(pRenderer, pRSModel);
+    removeRootSignature(pRenderer, pRSPolyWarp);
 }
 
 static void _addPipelines()
@@ -874,6 +890,7 @@ static void _addPipelines()
 
     desc = initDesc;
     desc.mGraphicsDesc.pShaderProgram = drawPolyWarpShader;
+    desc.mGraphicsDesc.pRootSignature = pRSPolyWarp;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosTexcoord;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
@@ -1078,6 +1095,7 @@ static bool _addRenderTarget(IApp *pApp)
     params[0].ppBuffers = &pBufferUniform;
     updateDescriptorSet(pRenderer, 0, pDSUniform, 1, params);
     updateDescriptorSet(pRenderer, 0, pDSUniformModel, 1, params);
+    updateDescriptorSet(pRenderer, 0, pDSUniformPolyWarp, 1, params);
 
     return true;
 }
@@ -1109,6 +1127,9 @@ bool _addDescriptorSets()
 
         desc.pRootSignature = pRSModel;
         addDescriptorSet(pRenderer, &desc, &pDSTextureModel[i]);
+
+        desc.pRootSignature = pRSPolyWarp;
+        addDescriptorSet(pRenderer, &desc, &pDSTexturePolyWarp[i]);
     }
 
     DescriptorSetDesc desc = {
@@ -1121,6 +1142,9 @@ bool _addDescriptorSets()
 
     desc.pRootSignature = pRSModel;
     addDescriptorSet(pRenderer, &desc, &pDSDynamicUniformsModel);
+
+    desc.pRootSignature = pRSPolyWarp;
+    addDescriptorSet(pRenderer, &desc, &pDSDynamicUniformsPolyWarp);
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
@@ -1151,6 +1175,9 @@ bool _addDescriptorSets()
     desc.pRootSignature = pRSModel;
     addDescriptorSet(pRenderer, &desc, &pDSUniformModel);
 
+    desc.pRootSignature = pRSModel;
+    addDescriptorSet(pRenderer, &desc, &pDSUniformPolyWarp);
+
     return true;
 }
 
@@ -1160,6 +1187,7 @@ bool _removeDescriptorSets()
     {
         removeDescriptorSet(pRenderer, pDSTexture[i]);
         removeDescriptorSet(pRenderer, pDSTextureModel[i]);
+        removeDescriptorSet(pRenderer, pDSTexturePolyWarp[i]);
     }
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
@@ -1173,6 +1201,7 @@ bool _removeDescriptorSets()
     removeDescriptorSet(pRenderer, pDSWorldWarpTexture);
     removeDescriptorSet(pRenderer, pDSUniform);
     removeDescriptorSet(pRenderer, pDSUniformModel);
+    removeDescriptorSet(pRenderer, pDSUniformPolyWarp);
 
     return true;
 }

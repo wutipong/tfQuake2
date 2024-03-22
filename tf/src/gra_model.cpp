@@ -1262,6 +1262,8 @@ void R_EndRegistration(void)
             .ppTextures = &tex.texture,
         };
         updateDescriptorSet(pRenderer, 0, pDSTexture[i], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTextureModel[i], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTexturePolyWarp[i], 1, &paramsTex);
     }
 }
 

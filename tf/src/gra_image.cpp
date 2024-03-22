@@ -811,6 +811,8 @@ image_t *GRA_FindImage(std::string name, imagetype_t type)
             .ppTextures = &image->texture,
         };
         updateDescriptorSet(pRenderer, 0, pDSTexture[image->index], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTextureModel[image->index], 1, &paramsTex);
+        updateDescriptorSet(pRenderer, 0, pDSTexturePolyWarp[image->index], 1, &paramsTex);
     }
 
     return image;
