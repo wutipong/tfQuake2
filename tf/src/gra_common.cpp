@@ -1338,7 +1338,7 @@ void GRA_BindUniformBuffer(Cmd *pCmd, DescriptorSet *pDS, void *uniform, uint32_
     params[0].ppBuffers = &uniformBlock.pBuffer;
     params[0].pRanges = &range;
 
-    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDSDynamicUniforms, 1, params);
+    cmdBindDescriptorSetWithRootCbvs(pCmd, 0, pDS, 1, params);
 }
 
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride)
