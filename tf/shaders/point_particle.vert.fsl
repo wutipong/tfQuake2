@@ -9,7 +9,7 @@ CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float4x4, vpMatrix, None);
 };
 
-CBUFFER(UniformBufferImage_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
+CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
 {
     DATA(float, pointSize, None);
     DATA(float, pointScale, None);

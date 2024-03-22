@@ -261,7 +261,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
     }
 
     //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &meshUbo);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferObject_rootcbv", &meshUbo, sizeof(meshUbo));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &meshUbo, sizeof(meshUbo));
     
     // player configuration screen model is using the UI renderpass
     int pidx = (int)(r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RenderPass::UI : RenderPass::WORLD);
@@ -344,7 +344,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
     height = -lheight + 1.0;
 
     //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &modelMatrix);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferObject_rootcbv", &modelMatrix, sizeof(modelMatrix));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &modelMatrix, sizeof(modelMatrix));
 
     static vec3_t shadowverts[MAX_VERTS];
     while (1)

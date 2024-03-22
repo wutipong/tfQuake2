@@ -27,7 +27,7 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp);
 void GRA_Unload(ReloadDesc *pReloadDesc);
 void GRA_Draw(IApp *pApp);
 
-void GRA_BindUniformBuffer(Cmd *pCmd, const char *name, void *uniform, uint32_t size);
+void GRA_BindUniformBuffer(Cmd *pCmd, DescriptorSet* pDS, void *uniform, uint32_t size);
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count);
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride);
 

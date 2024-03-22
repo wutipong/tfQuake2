@@ -130,7 +130,7 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, vec4 color)
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
     // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", &color, sizeof(color));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &color, sizeof(color));
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -173,7 +173,7 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, vec4 color)
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
     // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", &color, sizeof(color));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &color, sizeof(color));
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
@@ -207,7 +207,7 @@ void R_DrawTriangleOutlines(void)
 
     cmdBindPipeline(pCmd, showTrisPipeline);
     // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, color);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", color, sizeof(float) * 3);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, color, sizeof(float) * 3);
 
     for (i = 0; i < MAX_LIGHTMAPS; i++)
     {
@@ -476,7 +476,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &lmapPolyUbo);
-    GRA_BindUniformBuffer(pCmd, "UniformBufferObject_rootcbv", &lmapPolyUbo, sizeof(lmapPolyUbo));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &lmapPolyUbo, sizeof(lmapPolyUbo));
     
 
     for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
