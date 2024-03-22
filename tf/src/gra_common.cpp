@@ -72,18 +72,23 @@ Shader *postprocessShader;
 
 RootSignature *pRootSignature = NULL;
 
+RootSignature *pRSModel = NULL;
+
 std::array<GPURingBuffer, gDataBufferCount> dynamicUniformBuffers;
 std::array<GPURingBuffer, gDataBufferCount> dynamicVertexBuffers;
 std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 Cmd *pCmd;
 
-DescriptorSet *pDSTexture[MAX_VKTEXTURES]{NULL};
+std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexture{NULL};
+std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTextureModel{NULL};
+std::array<DescriptorSet *, MAX_LIGHTMAPS * 2> pDSLightMap{NULL};
 DescriptorSet *pDSDynamicUniforms{NULL};
-DescriptorSet *pDSLightMap[MAX_LIGHTMAPS * 2]{NULL};
+DescriptorSet *pDSDynamicUniformsModel{NULL};
 DescriptorSet *pDSWorldTexture{NULL};
 DescriptorSet *pDSWorldWarpTexture{NULL};
 DescriptorSet *pDSUniform{NULL};
+DescriptorSet *pDSUniformModel{NULL};
 
 Buffer *pBufferTexRectVbo;
 Buffer *pBufferColorRectVbo;
@@ -437,19 +442,16 @@ void _removeShaders()
 
 bool _addRootSignatures()
 {
-    Shader *shaders[] = {
-        drawTexQuadShader,        drawColorQuadShader, drawModelShader,  drawNullModelShader, drawParticlesShader,
-        drawPointParticlesShader, drawSpriteShader,    drawPolyShader,   drawPolyLmapShader,  drawPolyWarpShader,
-        drawBeamShader,           drawSkyboxShader,    drawDLightShader, shadowsShader,       worldWarpShader,
-        postprocessShader,
+    std::array<Shader *, 11> shaders = {
+        drawTexQuadShader, drawColorQuadShader, drawParticlesShader, drawPointParticlesShader,
+        drawSpriteShader,  drawPolyShader,      drawPolyWarpShader,  drawBeamShader,
+        drawDLightShader,  worldWarpShader,     postprocessShader,
     };
-    uint32_t shadersCount = 16;
-
     const char *pStaticSamplers[] = {"textureSampler"};
 
     RootSignatureDesc rootDesc = {
-        .ppShaders = shaders,
-        .mShaderCount = shadersCount,
+        .ppShaders = shaders.data(),
+        .mShaderCount = shaders.size(),
         .ppStaticSamplerNames = pStaticSamplers,
         .ppStaticSamplers = &pSampler,
         .mStaticSamplerCount = 1,
@@ -459,13 +461,27 @@ bool _addRootSignatures()
     // gPushConstantSmall = getDescriptorIndexFromName(pRootSignature, "rootconstant_small");
     // gPushConstantLarge = getDescriptorIndexFromName(pRootSignature, "rootconstant_large");
     // gPushConstantPolygonWarp = getDescriptorIndexFromName(pRootSignature, "rootconstant_polygonwarp");
-    
+
+    std::array<Shader *, 5> modelShaders = {
+        drawModelShader, drawNullModelShader, drawPolyLmapShader, shadowsShader, drawSkyboxShader,
+    };
+    rootDesc = {
+        .ppShaders = modelShaders.data(),
+        .mShaderCount = modelShaders.size(),
+        .ppStaticSamplerNames = pStaticSamplers,
+        .ppStaticSamplers = &pSampler,
+        .mStaticSamplerCount = 1,
+    };
+
+    addRootSignature(pRenderer, &rootDesc, &pRSModel);
+
     return pRootSignature != NULL;
 }
 
 static void _removeRootSignatures()
 {
     removeRootSignature(pRenderer, pRootSignature);
+    removeRootSignature(pRenderer, pRSModel);
 }
 
 static void _addPipelines()
@@ -768,6 +784,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawColorQuadPipeline[1]);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawNullModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF3Color;
     desc.mGraphicsDesc.pRasterizerState = &rasterizerStateCullNoneDesc;
@@ -775,6 +792,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawNullModelPipeline);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_STRIP;
@@ -784,6 +802,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawModelPipelineStrip[1]);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
@@ -793,6 +812,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawModelPipelineFan[1]);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_STRIP;
@@ -802,6 +822,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawNoDepthModelPipelineStrip);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;
@@ -811,6 +832,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawNoDepthModelPipelineFan);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pRasterizerState = &rasterizerStateCullFrontDesc;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
@@ -820,6 +842,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawLefthandModelPipelineStrip);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pRasterizerState = &rasterizerStateCullFrontDesc;
     desc.mGraphicsDesc.pShaderProgram = drawModelShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4ColorTexcoord;
@@ -843,6 +866,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawPolyPipeline);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawPolyLmapShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosTexcoordTexcoord;
 
@@ -866,6 +890,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &drawBeamPipeline);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = drawSkyboxShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosTexcoord;
 
@@ -898,6 +923,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &showTrisPipeline);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = shadowsShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF3Color;
     desc.mGraphicsDesc.pDepthState = NULL;
@@ -907,6 +933,7 @@ static void _addPipelines()
     addPipeline(pRenderer, &desc, &shadowsPipelineStrip);
 
     desc = initDesc;
+    desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = shadowsShader;
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF3Color;
     desc.mGraphicsDesc.pDepthState = NULL;
@@ -1050,6 +1077,7 @@ static bool _addRenderTarget(IApp *pApp)
     params[0].pName = "UniformBufferObject";
     params[0].ppBuffers = &pBufferUniform;
     updateDescriptorSet(pRenderer, 0, pDSUniform, 1, params);
+    updateDescriptorSet(pRenderer, 0, pDSUniformModel, 1, params);
 
     return true;
 }
@@ -1078,6 +1106,9 @@ bool _addDescriptorSets()
             .mMaxSets = gDataBufferCount * 2,
         };
         addDescriptorSet(pRenderer, &desc, &pDSTexture[i]);
+
+        desc.pRootSignature = pRSModel;
+        addDescriptorSet(pRenderer, &desc, &pDSTextureModel[i]);
     }
 
     DescriptorSetDesc desc = {
@@ -1088,10 +1119,13 @@ bool _addDescriptorSets()
 
     addDescriptorSet(pRenderer, &desc, &pDSDynamicUniforms);
 
+    desc.pRootSignature = pRSModel;
+    addDescriptorSet(pRenderer, &desc, &pDSDynamicUniformsModel);
+
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
     {
         DescriptorSetDesc desc = {
-            .pRootSignature = pRootSignature,
+            .pRootSignature = pRSModel,
             .mUpdateFrequency = DESCRIPTOR_UPDATE_FREQ_PER_BATCH,
             .mMaxSets = 1,
         };
@@ -1113,7 +1147,10 @@ bool _addDescriptorSets()
     };
 
     addDescriptorSet(pRenderer, &desc, &pDSUniform);
-    
+
+    desc.pRootSignature = pRSModel;
+    addDescriptorSet(pRenderer, &desc, &pDSUniformModel);
+
     return true;
 }
 
@@ -1122,6 +1159,7 @@ bool _removeDescriptorSets()
     for (int i = 0; i < MAX_VKTEXTURES; i++)
     {
         removeDescriptorSet(pRenderer, pDSTexture[i]);
+        removeDescriptorSet(pRenderer, pDSTextureModel[i]);
     }
 
     for (int i = 0; i < MAX_LIGHTMAPS * 2; i++)
@@ -1130,9 +1168,11 @@ bool _removeDescriptorSets()
     }
 
     removeDescriptorSet(pRenderer, pDSDynamicUniforms);
+    removeDescriptorSet(pRenderer, pDSDynamicUniformsModel);
     removeDescriptorSet(pRenderer, pDSWorldTexture);
     removeDescriptorSet(pRenderer, pDSWorldWarpTexture);
     removeDescriptorSet(pRenderer, pDSUniform);
+    removeDescriptorSet(pRenderer, pDSUniformModel);
 
     return true;
 }
@@ -1246,8 +1286,8 @@ void GRA_DrawTexRect(vec2 offset, vec2 scale, vec2 uvOffset, vec2 uvScale, image
     const uint32_t stride = sizeof(vec4);
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
-    
-    //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+
+    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
     GRA_BindUniformBuffer(pCmd, "UniformBufferImage_rootcbv", &ubo, sizeof(ubo));
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);
@@ -1281,7 +1321,7 @@ uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count)
     return indexCount;
 }
 
-void GRA_BindUniformBuffer(Cmd *pCmd, const char* name, void *uniform, uint32_t size)
+void GRA_BindUniformBuffer(Cmd *pCmd, const char *name, void *uniform, uint32_t size)
 {
     GPURingBufferOffset uniformBlock = getGPURingBufferOffset(&dynamicUniformBuffers[gFrameIndex], size);
     {

@@ -5,8 +5,8 @@
 
 #include <IApp.h>
 #include <IGraphics.h>
-#include <RingBuffer.h>
 #include <IProfiler.h>
+#include <RingBuffer.h>
 
 #include <array>
 
@@ -14,10 +14,10 @@ constexpr uint32_t gDataBufferCount = 2;
 
 enum class RenderPass
 {
-	WORLD = 0,      // renders game world to offscreen buffer
-	UI = 1,         // render UI elements and game console
-	WORLD_WARP = 2, // perform postprocessing on RP_WORLD (underwater screen warp)
-	COUNT = 3
+    WORLD = 0,      // renders game world to offscreen buffer
+    UI = 1,         // render UI elements and game console
+    WORLD_WARP = 2, // perform postprocessing on RP_WORLD (underwater screen warp)
+    COUNT = 3
 };
 
 bool GRA_InitGraphics(IApp *app);
@@ -27,7 +27,7 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp);
 void GRA_Unload(ReloadDesc *pReloadDesc);
 void GRA_Draw(IApp *pApp);
 
-void GRA_BindUniformBuffer(Cmd *pCmd, const char* name, void* uniform, uint32_t size);
+void GRA_BindUniformBuffer(Cmd *pCmd, const char *name, void *uniform, uint32_t size);
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count);
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride);
 
@@ -41,7 +41,7 @@ extern image_t vktextures[MAX_VKTEXTURES];
 extern Queue *pGraphicsQueue;
 extern GpuCmdRing gGraphicsCmdRing;
 
-extern SwapChain *pSwapChain ;
+extern SwapChain *pSwapChain;
 extern Semaphore *pImageAcquiredSemaphore;
 extern ProfileToken gGpuProfileToken;
 extern int gFrameIndex;
@@ -84,12 +84,15 @@ extern std::array<GPURingBuffer, gDataBufferCount> dynamicIndexBuffers;
 
 extern Cmd *pCmd;
 
-extern DescriptorSet *pDSTexture[MAX_VKTEXTURES];
+extern std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTexture;
+extern std::array<DescriptorSet *, MAX_VKTEXTURES> pDSTextureModel;
+extern std::array<DescriptorSet *, MAX_LIGHTMAPS * 2> pDSLightMap;
 extern DescriptorSet *pDSDynamicUniforms;
-extern DescriptorSet *pDSLightMap[MAX_LIGHTMAPS * 2];
+extern DescriptorSet *pDSDynamicUniformsModel;
 extern DescriptorSet *pDSWorldTexture;
 extern DescriptorSet *pDSWorldWarpTexture;
 extern DescriptorSet *pDSUniform;
+extern DescriptorSet *pDSUniformModel;
 
 extern Buffer *pBufferTexRectVbo;
 extern Buffer *pBufferColorRectVbo;
@@ -102,7 +105,7 @@ extern uint32_t gPushConstantPolygonWarp;
 
 extern ProfileToken gGpuProfileToken;
 
-extern IApp* pApp;
+extern IApp *pApp;
 
 extern bool vk_frameStarted;
 #endif
