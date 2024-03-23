@@ -150,7 +150,7 @@ bool GRA_InitGraphics(IApp *app)
 
     for (auto &buffer : dynamicUniformBuffers)
     {
-        addUniformGPURingBuffer(pRenderer, 65536, &buffer, true);
+        addUniformGPURingBuffer(pRenderer, 4 * 1024 * 1024, &buffer, true);
     }
 
     BufferDesc vbDesc = {};
@@ -166,7 +166,7 @@ bool GRA_InitGraphics(IApp *app)
     BufferDesc ibDesc = {};
     ibDesc.mDescriptors = DESCRIPTOR_TYPE_INDEX_BUFFER;
     ibDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_CPU_TO_GPU;
-    ibDesc.mSize = 65536;
+    ibDesc.mSize = 4 * 1024 * 1024;
     ibDesc.mFlags = BUFFER_CREATION_FLAG_PERSISTENT_MAP_BIT;
     for (auto &buffer : dynamicIndexBuffers)
     {
