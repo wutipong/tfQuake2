@@ -8,7 +8,7 @@ CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
     DATA(float4x4, vpMatrix, None);
 };
 
-PUSH_CONSTANT(rootconstant_large, b2)
+CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_DRAW, b2, binding = 2)
 {
     DATA(float4x4, model, None);
     DATA(float, pad, None);

@@ -85,6 +85,16 @@ bool MainApp::Init()
     fsSetPathForResourceDir(pSystemFileIO, RM_CONTENT, RD_SCRIPTS, "Scripts");
     fsSetPathForResourceDir(pSystemFileIO, RM_DEBUG, RD_DEBUG, "Debug");
 
+    extern PlatformParameters gPlatformParameters;
+
+    for (int i = 0; i < IApp::argc; i++)
+    {
+        if (std::string(argv[i]) == "--vulkan")
+        {
+            gPlatformParameters.mSelectedRendererApi = RENDERER_API_VULKAN;
+        }
+    }
+
     GRA_InitGraphics(this);
     refreshExport();
     InputSystemDesc inputDesc = {

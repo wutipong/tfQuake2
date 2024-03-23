@@ -129,7 +129,8 @@ void DrawVkPoly(vkpoly_t *p, image_t *texture, vec4 color)
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
+    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &color, sizeof(color));
 
     auto indexCount = GRA_BindTriangleFanIBO(pCmd, p->numverts);
     cmdDrawIndexed(pCmd, indexCount, 0, 0);
@@ -171,7 +172,8 @@ void DrawVkFlowingPoly(msurface_t *fa, image_t *texture, vec4 color)
     }
 
     cmdBindPipeline(pCmd, drawPolyPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
+    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &color);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &color, sizeof(color));
 
     uint32_t stride = sizeof(polyvert);
     GRA_BindVertexBuffer(pCmd, verts, sizeof(polyvert) * p->numverts, stride);
@@ -204,7 +206,8 @@ void R_DrawTriangleOutlines(void)
     } triVert[4];
 
     cmdBindPipeline(pCmd, showTrisPipeline);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, color);
+    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, color);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, color, sizeof(float) * 3);
 
     for (i = 0; i < MAX_LIGHTMAPS; i++)
     {
@@ -471,8 +474,10 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
     }
 
     cmdBindPipeline(pCmd, drawPolyLmapPipeline);
-    cmdBindDescriptorSet(pCmd, 0, pDSUniform);
-    cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &lmapPolyUbo);
+    cmdBindDescriptorSet(pCmd, 0, pDSUniformModel);
+    //cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, &lmapPolyUbo);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &lmapPolyUbo, sizeof(lmapPolyUbo));
+    
 
     for (map = 0; map < MAXLIGHTMAPS && surf->styles[map] != 255; map++)
     {
@@ -559,7 +564,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
             if (scroll == 0.0)
                 scroll = -64.0;
 
-            cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[image->index]);
             cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
 
             for (p = surf->polys; p; p = p->chain)
@@ -581,7 +586,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
         }
         else
         {
-            cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+            cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[image->index]);
             cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
 
             for (p = surf->polys; p; p = p->chain)
@@ -629,7 +634,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
 
                 constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
-                cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
 
@@ -653,7 +658,7 @@ static void Vk_RenderLightmappedPoly(msurface_t *surf, float *modelMatrix, float
                 constexpr uint32_t stride = sizeof(lmappolyvert);
                 GRA_BindVertexBuffer(pCmd, verts, sizeof(lmappolyvert) * nv, stride);
                 auto indexCount = GRA_BindTriangleFanIBO(pCmd, nv);
-                cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
+                cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[image->index]);
                 cmdBindDescriptorSet(pCmd, 0, pDSLightMap[lmtex]);
                 cmdDrawIndexed(pCmd, indexCount, 0, 0);
             }
@@ -703,8 +708,8 @@ void R_DrawInlineBModel(float *modelMatrix)
         // find which side of the node we are on
         cplane_t *pplane = psurf->plane;
         vec3 normal = {pplane->normal[0], pplane->normal[1], pplane->normal[2]};
-        float d  = dot(modelorg, normal) - pplane->dist;
-        
+        float d = dot(modelorg, normal) - pplane->dist;
+
         // draw the polygon
         if (((psurf->flags & SURF_PLANEBACK) && (d < -BACKFACE_EPSILON)) ||
             (!(psurf->flags & SURF_PLANEBACK) && (d > BACKFACE_EPSILON)))
@@ -1098,7 +1103,8 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(), BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(),
+                   BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
         }
         else
@@ -1138,7 +1144,8 @@ static void LM_UploadBlock(qboolean dynamic)
             beginUpdateResource(&updateDesc);
 
             TextureSubresourceUpdate subresource = updateDesc.getSubresourceUpdateDesc(0, 0);
-            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(), BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
+            memcpy(subresource.pMappedData, vk_lms.lightmap_buffer.data(),
+                   BLOCK_WIDTH * BLOCK_HEIGHT * sizeof(uint32_t));
             endUpdateResource(&updateDesc);
 
             DescriptorData paramsTex = {
