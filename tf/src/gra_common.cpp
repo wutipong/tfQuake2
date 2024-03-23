@@ -497,7 +497,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF2Pos = {
         .mBindings =
             {
-                {.mStride = sizeof(float2)},
+                {.mStride = sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -516,7 +516,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF2PosTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(float2) + sizeof(float2)},
+                {.mStride = sizeof(vec2) + sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -542,7 +542,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3Pos = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
+                {.mStride = sizeof(vec3)},
             },
         .mAttribs =
             {
@@ -926,7 +926,7 @@ static void _addPipelines()
     desc = initDesc;
     desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = shadowsShader;
-    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF3Color;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3Pos;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_STRIP;
@@ -936,7 +936,7 @@ static void _addPipelines()
     desc = initDesc;
     desc.mGraphicsDesc.pRootSignature = pRSModel;
     desc.mGraphicsDesc.pShaderProgram = shadowsShader;
-    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF3Color;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3Pos;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST;

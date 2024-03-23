@@ -954,7 +954,7 @@ void R_Register(void)
     vk_lockpvs = Cvar_Get("vk_lockpvs", "0", 0);
     vk_polyblend = Cvar_Get("vk_polyblend", "1", 0);
     vk_modulate = Cvar_Get("vk_modulate", "1", CVAR_ARCHIVE);
-    vk_shadows = Cvar_Get("vk_shadows", "0", CVAR_ARCHIVE);
+    vk_shadows = Cvar_Get("vk_shadows", "1", CVAR_ARCHIVE);
     vk_particle_size = Cvar_Get("vk_particle_size", "40", CVAR_ARCHIVE);
     vk_particle_att_a = Cvar_Get("vk_particle_att_a", "0.01", CVAR_ARCHIVE);
     vk_particle_att_b = Cvar_Get("vk_particle_att_b", "0.0", CVAR_ARCHIVE);

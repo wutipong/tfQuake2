@@ -262,7 +262,7 @@ void Vk_DrawAliasFrameLerp(dmdl_t *paliashdr, float backlerp, image_t *skin, flo
 
     //(pCmd, pRootSignature, gPushConstantLarge, &meshUbo);
     GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &meshUbo, sizeof(meshUbo));
-    
+
     // player configuration screen model is using the UI renderpass
     int pidx = (int)(r_newrefdef.rdflags & RDF_NOWORLDMODEL ? RenderPass::UI : RenderPass::WORLD);
     // non-depth write alias models don't occur with RF_WEAPONMODEL set, so no need for additional left-handed pipelines
@@ -344,9 +344,9 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
     height = -lheight + 1.0;
 
     //(pCmd, pRootSignature, gPushConstantLarge, &modelMatrix);
-    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, &modelMatrix, sizeof(modelMatrix));
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, modelMatrix, sizeof(float) * 16);
 
-    static vec3_t shadowverts[MAX_VERTS];
+    static vec3 shadowverts[MAX_VERTS];
     while (1)
     {
         i = 0;
@@ -373,9 +373,7 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
             point[1] -= shadevector[1] * (point[2] + lheight);
             point[2] = height;
 
-            shadowverts[i][0] = point[0];
-            shadowverts[i][1] = point[1];
-            shadowverts[i][2] = point[2];
+            shadowverts[i] = {point[0], point[1], point[2]};
 
             order += 3;
             i++;
@@ -384,8 +382,8 @@ void Vk_DrawAliasShadow(dmdl_t *paliashdr, int posenum, float *modelMatrix)
         if (i > 0)
         {
             cmdBindPipeline(pCmd, pipelines[pipelineIdx]);
-            uint32_t vaoSize = sizeof(vec3_t) * i;
-            constexpr uint32_t stride = sizeof(float) * 3;
+            uint32_t vaoSize = sizeof(vec3) * i;
+            constexpr uint32_t stride = sizeof(vec3);
             GRA_BindVertexBuffer(pCmd, shadowverts, vaoSize, stride);
             cmdBindDescriptorSet(pCmd, 0, pDSUniformModel);
 
@@ -699,10 +697,10 @@ void R_DrawAliasModel(entity_t *e)
         // FIXME: r_vulkan_correction_dh
         // Mat_Perspective(r_projection_matrix, r_vulkan_correction_dh, r_proj_fovy, r_proj_aspect, 4, 4096);
 
-        r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1/r_proj_aspect, 4, 4096);
-    //r_projection_matrix = r_vulkan_correction_dh * r_projection_matrix;
+        r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1 / r_proj_aspect, 4, 4096);
+        // r_projection_matrix = r_vulkan_correction_dh * r_projection_matrix;
 
-        r_viewproj_matrix =  r_projection_matrix * r_view_matrix;
+        r_viewproj_matrix = r_projection_matrix * r_view_matrix;
         // Mat_Mul(toFloatPtr(r_view_matrix), r_projection_matrix, toFloatPtr(r_viewproj_matrix));
     }
 
