@@ -96,12 +96,7 @@ DescriptorSet *pDSUniformPolyWarp;
 Buffer *pBufferTexRectVbo;
 Buffer *pBufferColorRectVbo;
 Buffer *pBufferRectIbo;
-Buffer *pBufferTriangleFanIBO;
 Buffer *pBufferUniform;
-
-uint32_t gPushConstantSmall;
-uint32_t gPushConstantLarge;
-uint32_t gPushConstantPolygonWarp;
 
 static void _addShaders();
 static void _removeShaders();
@@ -460,9 +455,6 @@ bool _addRootSignatures()
     };
 
     addRootSignature(pRenderer, &rootDesc, &pRootSignature);
-    // gPushConstantSmall = getDescriptorIndexFromName(pRootSignature, "rootconstant_small");
-    // gPushConstantLarge = getDescriptorIndexFromName(pRootSignature, "rootconstant_large");
-    // gPushConstantPolygonWarp = getDescriptorIndexFromName(pRootSignature, "rootconstant_polygonwarp");
 
     std::array<Shader *, 5> modelShaders = {
         drawModelShader, drawNullModelShader, drawPolyLmapShader, shadowsShader, drawSkyboxShader,
@@ -1189,6 +1181,7 @@ bool _removeDescriptorSets()
 
     removeDescriptorSet(pRenderer, pDSDynamicUniforms);
     removeDescriptorSet(pRenderer, pDSDynamicUniformsModel);
+    removeDescriptorSet(pRenderer, pDSDynamicUniformsPolyWarp);
     removeDescriptorSet(pRenderer, pDSWorldTexture);
     removeDescriptorSet(pRenderer, pDSWorldWarpTexture);
     removeDescriptorSet(pRenderer, pDSUniform);
@@ -1281,7 +1274,6 @@ void GRA_DrawColorRect(vec2 offset, vec2 scale, vec4 color, RenderPass rpType)
     };
 
     cmdBindPipeline(pCmd, drawColorQuadPipeline[static_cast<size_t>(rpType)]);
-    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
     GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &ubo, sizeof(ubo));
     cmdBindVertexBuffer(pCmd, 1, &pBufferColorRectVbo, &stride, 0);
     cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
@@ -1308,7 +1300,7 @@ void GRA_DrawTexRect(vec2 offset, vec2 scale, vec2 uvOffset, vec2 uvScale, image
 
     cmdBindPipeline(pCmd, drawTexQuadPipeline);
 
-    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantSmall, &ubo);
+    // (pCmd, pRootSignature, gPushConstantSmall, &ubo);
     GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &ubo, sizeof(ubo));
     cmdBindDescriptorSet(pCmd, 0, pDSTexture[image->index]);
     cmdBindVertexBuffer(pCmd, 1, &pBufferTexRectVbo, &stride, 0);

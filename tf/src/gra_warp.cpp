@@ -247,7 +247,7 @@ void EmitWaterPolys(msurface_t *fa, image_t *texture, float *modelMatrix, vec4 c
 
     cmdBindDescriptorSet(pCmd, 0, pDSUniformPolyWarp);
     cmdBindDescriptorSet(pCmd, 0, pDSTexturePolyWarp[texture->index]);
-    // cmdBindPushConstants(pCmd, pRootSignature, gPushConstantPolygonWarp, &polyUbo);
+    // (pCmd, pRootSignature, gPushConstantPolygonWarp, &polyUbo);
     GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsPolyWarp, &polyUbo, sizeof(polyUbo));
 
     for (bp = fa->polys; bp; bp = bp->next)
@@ -610,7 +610,7 @@ void R_DrawSkyBox(void)
         cmdBindDescriptorSet(pCmd, 0, pDSUniformModel);
         cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[sky_images[skytexorder[i]]->index]);
 
-        //cmdBindPushConstants(pCmd, pRSModel, gPushConstantLarge, model);
+        //(pCmd, pRSModel, gPushConstantLarge, model);
         GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, model, sizeof(float) * 16);
 
         constexpr uint32_t stride = sizeof(polyvert);
