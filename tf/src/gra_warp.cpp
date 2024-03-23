@@ -607,10 +607,10 @@ void R_DrawSkyBox(void)
 
         std::array<polyvert, 6> verts = {skyVerts[0], skyVerts[1], skyVerts[2], skyVerts[0], skyVerts[2], skyVerts[3]};
 
-        cmdBindDescriptorSet(pCmd, 0, pDSUniform);
+        cmdBindDescriptorSet(pCmd, 0, pDSUniformModel);
         cmdBindDescriptorSet(pCmd, 0, pDSTextureModel[sky_images[skytexorder[i]]->index]);
 
-        cmdBindPushConstants(pCmd, pRootSignature, gPushConstantLarge, model);
+        //cmdBindPushConstants(pCmd, pRSModel, gPushConstantLarge, model);
         GRA_BindUniformBuffer(pCmd, pDSDynamicUniformsModel, model, sizeof(float) * 16);
 
         constexpr uint32_t stride = sizeof(polyvert);
