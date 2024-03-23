@@ -524,8 +524,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF2PosTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(float2)},
-                {.mStride = sizeof(float2)},
+                {.mStride = sizeof(float2) + sizeof(float2)},
             },
         .mAttribs =
             {
@@ -570,8 +569,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(vec3)},
-                {.mStride = sizeof(vec2)},
+                {.mStride = sizeof(vec3) + sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -597,8 +595,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosF3Color = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
-                {.mStride = sizeof(float3)},
+                {.mStride = sizeof(float3) + sizeof(float3)},
             },
         .mAttribs =
             {
@@ -624,8 +621,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosF4Color = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
-                {.mStride = sizeof(float4)},
+                {.mStride = sizeof(float3) + sizeof(float4)},
             },
         .mAttribs =
             {
@@ -651,9 +647,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosTexcoordTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(vec3)},
-                {.mStride = sizeof(vec2)},
-                {.mStride = sizeof(vec2)},
+                {.mStride = sizeof(vec3) + sizeof(vec2) + sizeof(vec2)},
             },
         .mAttribs =
             {
@@ -686,9 +680,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosF4ColorTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(float3)},
-                {.mStride = sizeof(float4)},
-                {.mStride = sizeof(float2)},
+                {.mStride = sizeof(float3) + sizeof(float4) + sizeof(float2)},
             },
         .mAttribs =
             {
