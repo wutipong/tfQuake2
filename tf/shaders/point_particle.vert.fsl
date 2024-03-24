@@ -1,31 +1,26 @@
+#ifndef MAX_PARTICLES
+    #define MAX_PARTICLES 4096
+#endif
+
 STRUCT(VSInput)
 {
 	DATA(float3, inVertex, POSITION);
-    DATA(float4, inColor, COLOR);
+    DATA(float2, inTexCoord, TEXCOORD0);
 };
 
 CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
+    DATA(float4x4, toWorld[MAX_PARTICLES], None);
+    DATA(float4, color[MAX_PARTICLES], None);
     DATA(float4x4, vpMatrix, None);
+    DATA(float4x4, viewInverse, None);
 };
 
-CBUFFER(UniformBufferObject_rootcbv, UPDATE_FREQ_PER_DRAW, b1, binding = 1)
-{
-    DATA(float, pointSize, None);
-    DATA(float, pointScale, None);
-    DATA(float, minPointSize, None);
-    DATA(float, maxPointSize, None);
-    DATA(float, att_a, None);
-    DATA(float, att_b, None);
-    DATA(float, att_c, None);
-};
-
-//FIXME: SV_PointSize only works on GLSL (and posibly others). May need to change to quads.
 STRUCT(VSOutput)
 {
 	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
 	DATA(float4, color, COLOR);
-    DATA(float, pointSize, SV_PointSize);
 };
 
 VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
@@ -33,11 +28,9 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     INIT_MAIN;
     VSOutput Out;
 
-    Out.position = mul(Get(vpMatrix), float4(In.inVertex, 1.0));
-
-    float dist_atten = Get(pointScale) / (Get(att_a) + Get(att_b) * Out.position.w + Get(att_c) * pow(Out.position.w, 2) );
-    Out.pointSize = clamp(Get(pointScale) * Get(pointSize) * sqrt(dist_atten), Get(minPointSize), Get(maxPointSize));
-    Out.color = In.inColor;
+    Out.position = mul(Get(vpMatrix), mul(Get(toWorld[InstanceID]), float4(In.inVertex, 1.0)) );
+    Out.texCoord = (In.inTexCoord * float2(2, 2));// - float2(1, 1);
+    Out.color = Get(color[InstanceID]);
 
     RETURN(Out);
 }

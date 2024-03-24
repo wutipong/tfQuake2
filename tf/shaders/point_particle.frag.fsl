@@ -1,6 +1,7 @@
-STRUCT(VSOutput)
+STRUCT(VSInput)
 {
 	DATA(float4, position, SV_Position);
+    DATA(float2, texCoord, TEXCOORD0);
 	DATA(float4, color, COLOR);
 };
 
@@ -8,11 +9,5 @@ float4 PS_MAIN( VSOutput In )
 {
     INIT_MAIN;
 
-    float2 cxy = 2.0 * In.position.xy - 1.0;
-
-    /* 
-    if(dot(cxy, cxy) > 1.0)
-        discard;
-    */
     RETURN(In.color);
 }
