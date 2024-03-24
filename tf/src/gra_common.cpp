@@ -92,6 +92,7 @@ DescriptorSet *pDSWorldWarpTexture;
 DescriptorSet *pDSUniform;
 DescriptorSet *pDSUniformModel;
 DescriptorSet *pDSUniformPolyWarp;
+DescriptorSet *pDSPointParitcleUBO;
 
 Buffer *pBufferTexRectVbo;
 Buffer *pBufferColorRectVbo;
@@ -1082,6 +1083,10 @@ static bool _addRenderTarget(IApp *pApp)
     updateDescriptorSet(pRenderer, 0, pDSUniform, 1, params);
     updateDescriptorSet(pRenderer, 0, pDSUniformModel, 1, params);
     updateDescriptorSet(pRenderer, 0, pDSUniformPolyWarp, 1, params);
+    
+    params[0].pName = "UniformBufferObject";
+    params[0].ppBuffers = &pBufferParticleUBO;
+    updateDescriptorSet(pRenderer, 0, pDSPointParitcleUBO, 1, params);
 
     return true;
 }
@@ -1157,11 +1162,12 @@ bool _addDescriptorSets()
     };
 
     addDescriptorSet(pRenderer, &desc, &pDSUniform);
+    addDescriptorSet(pRenderer, &desc, &pDSPointParitcleUBO);
 
     desc.pRootSignature = pRSModel;
     addDescriptorSet(pRenderer, &desc, &pDSUniformModel);
 
-    desc.pRootSignature = pRSModel;
+    desc.pRootSignature = pRSPolyWarp;
     addDescriptorSet(pRenderer, &desc, &pDSUniformPolyWarp);
 
     return true;
@@ -1189,6 +1195,7 @@ bool _removeDescriptorSets()
     removeDescriptorSet(pRenderer, pDSUniform);
     removeDescriptorSet(pRenderer, pDSUniformModel);
     removeDescriptorSet(pRenderer, pDSUniformPolyWarp);
+    removeDescriptorSet(pRenderer, pDSPointParitcleUBO);
 
     return true;
 }

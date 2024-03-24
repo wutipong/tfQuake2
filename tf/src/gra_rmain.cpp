@@ -517,8 +517,11 @@ void R_DrawParticles(void)
         endUpdateResource(&desc);
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
+        cmdBindDescriptorSet(pCmd, 0, pDSPointParitcleUBO);
 
-        cmdBindDescriptorSet(pCmd, 0, pDSUniform);
+        const uint32_t stride =  sizeof(vec3) + sizeof(vec2);
+        cmdBindVertexBuffer(pCmd, 1, &pBufferTexQuadVbo, &stride, 0);
+        cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT16, 0);
 
         cmdDrawIndexedInstanced(pCmd, 6, 0, r_newrefdef.num_particles, 0, 0);
     }

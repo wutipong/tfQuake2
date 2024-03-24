@@ -106,6 +106,7 @@ extern DescriptorSet *pDSWorldWarpTexture;
 extern DescriptorSet *pDSUniform;
 extern DescriptorSet *pDSUniformModel;
 extern DescriptorSet *pDSUniformPolyWarp;
+extern DescriptorSet *pDSPointParitcleUBO;
 
 extern Buffer *pBufferTexRectVbo;
 extern Buffer *pBufferColorRectVbo;
