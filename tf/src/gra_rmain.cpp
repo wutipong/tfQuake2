@@ -490,34 +490,12 @@ void R_DrawParticles(void)
         unsigned char color[4];
         const particle_t *p;
 
-        if (!r_newrefdef.num_particles)
+        if (r_newrefdef.num_particles == 0)
             return;
 
-        typedef struct
-        {
-            float x, y, z, r, g, b, a;
-        } ppoint;
-
-        struct
-        {
-            float particleSize;
-            float particleScale;
-            float minPointSize;
-            float maxPointSize;
-            float att_a;
-            float att_b;
-            float att_c;
-        } particleUbo;
-
-        particleUbo.particleSize = vk_particle_size->value;
-        particleUbo.particleScale = vid.width * Cvar_Get("viewsize", "100", CVAR_ARCHIVE)->value / 102400;
-        particleUbo.minPointSize = vk_particle_min_size->value;
-        particleUbo.maxPointSize = vk_particle_max_size->value;
-        particleUbo.att_a = vk_particle_att_a->value;
-        particleUbo.att_b = vk_particle_att_b->value;
-        particleUbo.att_c = vk_particle_att_c->value;
-
-        static ppoint visibleParticles[MAX_PARTICLES];
+        PointParticleUniform uniform{};
+        uniform.viewInverse = inverse(r_view_matrix);
+        uniform.viewProj = r_viewproj_matrix;
 
         for (i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++)
         {
@@ -527,24 +505,22 @@ void R_DrawParticles(void)
             float g = color[1] / 255.f;
             float b = color[2] / 255.f;
 
-            visibleParticles[i].x = p->origin[0];
-            visibleParticles[i].y = p->origin[1];
-            visibleParticles[i].z = p->origin[2];
-            visibleParticles[i].r = r;
-            visibleParticles[i].g = g;
-            visibleParticles[i].b = b;
-            visibleParticles[i].a = p->alpha;
+            uniform.color[i] = {r, g, b, p->alpha};
+            uniform.transform[i] =
+                mat4::scale({vk_particle_size->value, vk_particle_size->value, vk_particle_size->value}) *
+                mat4::translation({p->origin[0], p->origin[1], p->origin[2]});
         }
 
-        cmdBindPipeline(pCmd, drawPointParticlesPipeline);
-        //(pCmd, pRootSignature, gPushConstantSmall, &particleUbo);
-        GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, &particleUbo, sizeof(particleUbo));
+        BufferUpdateDesc desc = {pBufferParticleUBO};
+        beginUpdateResource(&desc);
+        memcpy(desc.pMappedData, &uniform, sizeof(pBufferParticleUBO));
+        endUpdateResource(&desc);
 
-        constexpr uint32_t stride = sizeof(ppoint);
-        GRA_BindVertexBuffer(pCmd, visibleParticles, sizeof(ppoint) * r_newrefdef.num_particles, stride);
+        cmdBindPipeline(pCmd, drawPointParticlesPipeline);
+
         cmdBindDescriptorSet(pCmd, 0, pDSUniform);
 
-        cmdDraw(pCmd, r_newrefdef.num_particles, 0);
+        cmdDrawIndexedInstanced(pCmd, 6, 0, r_newrefdef.num_particles, 0, 0);
     }
     else
     {
@@ -697,8 +673,8 @@ void R_SetupVulkan(void)
     r_proj_fovy = r_newrefdef.fov_y;
     r_proj_aspect = (float)r_newrefdef.width / r_newrefdef.height;
 
-    // Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect, 4,
-    // 4096);
+    // Mat_Perspective(toFloatPtr(r_projection_matrix), toFloatPtr(r_vulkan_correction), r_proj_fovy, r_proj_aspect,
+    // 4, 4096);
     r_projection_matrix = mat4::perspectiveRH(degToRad(r_proj_fovx), 1 / r_proj_aspect, 4, 4096);
     // r_projection_matrix = r_vulkan_correction * r_projection_matrix;
 
@@ -823,8 +799,8 @@ void R_EndWorldRenderpass(void)
     cmdBeginGpuTimestampQuery(pCmd, gGpuProfileToken, "Game World Water Effect");
 
     // (pCmd, pRootSignature, gPushConstantSmall, pushConsts);
-    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, pushConsts, sizeof(float)*4);
-    
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, pushConsts, sizeof(float) * 4);
+
     cmdBindDescriptorSet(pCmd, 0, pDSWorldTexture);
     cmdBindPipeline(pCmd, worldWarpPipeline);
     cmdDraw(pCmd, 3, 0);
@@ -868,7 +844,7 @@ void R_SetVulkan2D(void)
     {
         float pushConsts[] = {vk_postprocess->value, vid_gamma->value};
         //(pCmd, pRootSignature, gPushConstantSmall, pushConsts);
-        GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, pushConsts, sizeof(float)*2);
+        GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, pushConsts, sizeof(float) * 2);
         cmdBindDescriptorSet(pCmd, 0, pDSWorldWarpTexture);
         cmdBindPipeline(pCmd, postprocessPipeline);
         cmdDraw(pCmd, 3, 0);
@@ -1483,7 +1459,7 @@ void R_DrawBeam(entity_t *e)
     cmdBindPipeline(pCmd, drawBeamPipeline);
     cmdBindDescriptorSet(pCmd, 0, pDSUniform);
     //(pCmd, pRootSignature, gPushConstantSmall, color);
-    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, color, sizeof(float)*4);
+    GRA_BindUniformBuffer(pCmd, pDSDynamicUniforms, color, sizeof(float) * 4);
 
     constexpr uint32_t stride = sizeof(float) * 3;
     GRA_BindVertexBuffer(pCmd, beamvertex, sizeof(beamvertex), stride);

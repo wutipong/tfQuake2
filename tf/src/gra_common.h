@@ -20,6 +20,14 @@ enum class RenderPass
     COUNT = 3
 };
 
+struct PointParticleUniform
+{
+    std::array<mat4, MAX_PARTICLES> transform;
+    std::array<vec4, MAX_PARTICLES> color;
+    mat4 viewProj;
+    mat4 viewInverse;
+};
+
 bool GRA_InitGraphics(IApp *app);
 bool GRA_ExitGraphics();
 
@@ -27,7 +35,7 @@ bool GRA_Load(ReloadDesc *pReloadDesc, IApp *pApp);
 void GRA_Unload(ReloadDesc *pReloadDesc);
 void GRA_Draw(IApp *pApp);
 
-void GRA_BindUniformBuffer(Cmd *pCmd, DescriptorSet* pDS, void *uniform, uint32_t size);
+void GRA_BindUniformBuffer(Cmd *pCmd, DescriptorSet *pDS, void *uniform, uint32_t size);
 uint32_t GRA_BindTriangleFanIBO(Cmd *pCmd, uint32_t count);
 void GRA_BindVertexBuffer(Cmd *pCmd, void *data, uint32_t size, uint32_t stride);
 
@@ -103,6 +111,8 @@ extern Buffer *pBufferTexRectVbo;
 extern Buffer *pBufferColorRectVbo;
 extern Buffer *pBufferRectIbo;
 extern Buffer *pBufferUniform;
+extern Buffer *pBufferTexQuadVbo;
+extern Buffer *pBufferParticleUBO;
 
 extern uint32_t gPushConstantSmall;
 extern uint32_t gPushConstantLarge;

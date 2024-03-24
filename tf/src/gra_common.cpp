@@ -97,6 +97,8 @@ Buffer *pBufferTexRectVbo;
 Buffer *pBufferColorRectVbo;
 Buffer *pBufferRectIbo;
 Buffer *pBufferUniform;
+Buffer *pBufferTexQuadVbo;
+Buffer *pBufferParticleUBO;
 
 static void _addShaders();
 static void _removeShaders();
@@ -1206,6 +1208,19 @@ static void _addStaticBuffers()
         {{1., -1.}, {1., 0.}},
     };
 
+    struct quadVert
+    {
+        vec3 position;
+        vec2 texcoord;
+    };
+
+    const quadVert quadVerts[] =
+    { {{-1., -1., 0}, {0., 0.}},
+      {{1., 1., 0}, {1., 1.}},
+      {{-1., 1., 0}, {0., 1.}},
+      {{1., -1., 0}, {1., 0.}},
+    };
+
     const vec2 colorVerts[] = {
         {-1., -1.},
         {1., 1.},
@@ -1221,6 +1236,14 @@ static void _addStaticBuffers()
     desc.mDesc.mSize = sizeof(texVerts);
     desc.pData = texVerts;
     desc.ppBuffer = &pBufferTexRectVbo;
+    addResource(&desc, nullptr);
+
+     desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(quadVerts);
+    desc.pData = quadVerts;
+    desc.ppBuffer = &pBufferTexQuadVbo;
     addResource(&desc, nullptr);
 
     desc = {};
@@ -1246,14 +1269,23 @@ static void _addStaticBuffers()
     desc.pData = &r_viewproj_matrix;
     desc.ppBuffer = &pBufferUniform;
     addResource(&desc, nullptr);
+
+    desc = {};
+    desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
+    desc.mDesc.mSize = sizeof(PointParticleUniform);
+    desc.ppBuffer = &pBufferParticleUBO;
+    addResource(&desc, nullptr);
 }
 
 static void _removeStaticBuffers()
 {
     removeResource(pBufferTexRectVbo);
+    removeResource(pBufferTexQuadVbo);
     removeResource(pBufferColorRectVbo);
     removeResource(pBufferRectIbo);
     removeResource(pBufferUniform);
+    removeResource(pBufferParticleUBO);
 }
 
 void GRA_DrawColorRect(vec2 offset, vec2 scale, vec4 color, RenderPass rpType)
