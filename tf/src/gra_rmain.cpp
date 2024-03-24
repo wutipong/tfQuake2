@@ -510,13 +510,13 @@ void R_DrawParticles(void)
 
             uniform.color[i] = {r, g, b, p->alpha};
             uniform.transform[i] =
-                mat4::scale({vk_particle_size->value, vk_particle_size->value, vk_particle_size->value}) *
-                mat4::translation({p->origin[0], p->origin[1], p->origin[2]});
+                mat4::translation({p->origin[0], p->origin[1], p->origin[2]}) *
+                mat4::scale({vk_particle_size->value, vk_particle_size->value, vk_particle_size->value});
         }
 
         BufferUpdateDesc desc = {pBufferParticleUBO};
         beginUpdateResource(&desc);
-        memcpy(desc.pMappedData, &uniform, sizeof(pBufferParticleUBO));
+        memcpy(desc.pMappedData, &uniform, sizeof(PointParticleUniform));
         endUpdateResource(&desc);
 
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
@@ -524,7 +524,7 @@ void R_DrawParticles(void)
 
         const uint32_t stride = sizeof(vec3) + sizeof(vec2);
         cmdBindVertexBuffer(pCmd, 1, &pBufferTexQuadVbo, &stride, 0);
-        cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT16, 0);
+        cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT32, 0);
 
         cmdDrawIndexedInstanced(pCmd, 6, 0, r_newrefdef.num_particles, 0, 0);
     }

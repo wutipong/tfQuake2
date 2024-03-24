@@ -564,7 +564,7 @@ static void _addPipelines()
     VertexLayout vertexLayoutF3PosTexcoord = {
         .mBindings =
             {
-                {.mStride = sizeof(vec3) + sizeof(vec2)},
+                {.mStride = 32},
             },
         .mAttribs =
             {
@@ -580,7 +580,7 @@ static void _addPipelines()
                     .mFormat = TinyImageFormat_R32G32_SFLOAT,
                     .mBinding = 0,
                     .mLocation = 1,
-                    .mOffset = sizeof(vec4),
+                    .mOffset = sizeof(vec3),
                 },
             },
         .mBindingCount = 1,
@@ -769,7 +769,7 @@ static void _addPipelines()
 
     desc = initDesc;
     desc.mGraphicsDesc.pShaderProgram = drawPointParticlesShader;
-    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosF4Color;
+    desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosTexcoord;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
     desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_POINT_LIST,
