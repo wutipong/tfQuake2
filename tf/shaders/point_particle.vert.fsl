@@ -1,5 +1,5 @@
-#ifndef MAX_PARTICLES
-    #define MAX_PARTICLES 4096
+#ifndef MAX_PARTICLE_INSTANCE
+    #define MAX_PARTICLE_INSTANCE 512
 #endif
 
 STRUCT(VSInput)
@@ -10,8 +10,8 @@ STRUCT(VSInput)
 
 CBUFFER(UniformBufferObject, UPDATE_FREQ_PER_FRAME, b0, binding = 0)
 {
-    DATA(float4x4, toWorld[MAX_PARTICLES], None);
-    DATA(float4, color[MAX_PARTICLES], None);
+    DATA(float4x4, toWorld[MAX_PARTICLE_INSTANCE], None);
+    DATA(float4, color[MAX_PARTICLE_INSTANCE], None);
     DATA(float4x4, vpMatrix, None);
     DATA(float4x4, viewInverse, None);
 };

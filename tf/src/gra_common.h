@@ -20,10 +20,11 @@ enum class RenderPass
     COUNT = 3
 };
 
+constexpr uint32_t MAX_PARTICLE_INSTANCE = 512;
 struct PointParticleUniform
 {
-    std::array<mat4, MAX_PARTICLES> transform;
-    std::array<vec4, MAX_PARTICLES> color;
+    std::array<mat4, MAX_PARTICLE_INSTANCE> transform;
+    std::array<vec4, MAX_PARTICLE_INSTANCE> color;
     mat4 viewProj;
     mat4 viewInverse;
 };

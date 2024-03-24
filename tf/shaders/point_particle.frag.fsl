@@ -1,4 +1,4 @@
-STRUCT(VSInput)
+STRUCT(VSOutput)
 {
 	DATA(float4, position, SV_Position);
     DATA(float2, texCoord, TEXCOORD0);

@@ -497,7 +497,10 @@ void R_DrawParticles(void)
         uniform.viewInverse = inverse(r_view_matrix);
         uniform.viewProj = r_viewproj_matrix;
 
-        for (i = 0, p = r_newrefdef.particles; i < r_newrefdef.num_particles; i++, p++)
+        uint32_t numParticle =
+            (r_newrefdef.num_particles < MAX_PARTICLE_INSTANCE) ? r_newrefdef.num_particles : MAX_PARTICLE_INSTANCE;
+
+        for (i = 0, p = r_newrefdef.particles; i < numParticle; i++, p++)
         {
             *(int *)color = d_8to24table[p->color];
 
@@ -519,7 +522,7 @@ void R_DrawParticles(void)
         cmdBindPipeline(pCmd, drawPointParticlesPipeline);
         cmdBindDescriptorSet(pCmd, 0, pDSPointParitcleUBO);
 
-        const uint32_t stride =  sizeof(vec3) + sizeof(vec2);
+        const uint32_t stride = sizeof(vec3) + sizeof(vec2);
         cmdBindVertexBuffer(pCmd, 1, &pBufferTexQuadVbo, &stride, 0);
         cmdBindIndexBuffer(pCmd, pBufferRectIbo, INDEX_TYPE_UINT16, 0);
 
