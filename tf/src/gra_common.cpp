@@ -772,7 +772,7 @@ static void _addPipelines()
     desc.mGraphicsDesc.pVertexLayout = &vertexLayoutF3PosTexcoord;
     desc.mGraphicsDesc.pDepthState = NULL;
     desc.mGraphicsDesc.pBlendState = &blendStateDesc;
-    desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_POINT_LIST,
+    desc.mGraphicsDesc.mPrimitiveTopo = PRIMITIVE_TOPO_TRI_LIST,
 
     addPipeline(pRenderer, &desc, &drawPointParticlesPipeline);
 
@@ -1083,7 +1083,7 @@ static bool _addRenderTarget(IApp *pApp)
     updateDescriptorSet(pRenderer, 0, pDSUniform, 1, params);
     updateDescriptorSet(pRenderer, 0, pDSUniformModel, 1, params);
     updateDescriptorSet(pRenderer, 0, pDSUniformPolyWarp, 1, params);
-    
+
     params[0].pName = "UniformBufferObject";
     params[0].ppBuffers = &pBufferParticleUBO;
     updateDescriptorSet(pRenderer, 0, pDSPointParitcleUBO, 1, params);
@@ -1217,15 +1217,15 @@ static void _addStaticBuffers()
 
     struct quadVert
     {
-        vec3 position;
-        vec2 texcoord;
+        alignas(16) vec3 position;
+        alignas(8) vec2 texcoord;
     };
 
-    const quadVert quadVerts[] =
-    { {{-1., -1., 0}, {0., 0.}},
-      {{1., 1., 0}, {1., 1.}},
-      {{-1., 1., 0}, {0., 1.}},
-      {{1., -1., 0}, {1., 0.}},
+    const std::array<quadVert, 4> quadVerts = {
+        quadVert{{-1., -1., 0}, {0., 0.}},
+        quadVert{{1., 1., 0}, {1., 1.}},
+        quadVert{{-1., 1., 0}, {0., 1.}},
+        quadVert{{1., -1., 0}, {1., 0.}},
     };
 
     const vec2 colorVerts[] = {
@@ -1245,11 +1245,11 @@ static void _addStaticBuffers()
     desc.ppBuffer = &pBufferTexRectVbo;
     addResource(&desc, nullptr);
 
-     desc = {};
+    desc = {};
     desc.mDesc.mDescriptors = DESCRIPTOR_TYPE_VERTEX_BUFFER;
     desc.mDesc.mMemoryUsage = RESOURCE_MEMORY_USAGE_GPU_ONLY;
     desc.mDesc.mSize = sizeof(quadVerts);
-    desc.pData = quadVerts;
+    desc.pData = quadVerts.data();
     desc.ppBuffer = &pBufferTexQuadVbo;
     addResource(&desc, nullptr);
 

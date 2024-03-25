@@ -28,8 +28,10 @@ VSOutput VS_MAIN( VSInput In, SV_InstanceID(uint) InstanceID )
     INIT_MAIN;
     VSOutput Out;
 
-    Out.position = mul(Get(vpMatrix), mul(Get(toWorld[InstanceID]), float4(In.inVertex, 1.0)) );
-    Out.texCoord = (In.inTexCoord * float2(2, 2));// - float2(1, 1);
+    Out.position = mul(Get(vpMatrix), mul(Get(toWorld[InstanceID]), float4(In.inVertex, 1.0)));
+    // Out.position = mul(Out.position, Get(viewInverse));
+
+    Out.texCoord = (In.inTexCoord * float2(2, 2)) - float2(1, 1);
     Out.color = Get(color[InstanceID]);
 
     RETURN(Out);
